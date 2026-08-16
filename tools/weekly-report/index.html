@@ -1,0 +1,2594 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="周报助手" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>周报填写助手</title>
+  <style>
+    :root {
+      /* 青春现代 · 提亮版：浅天空青 + 薄荷绿 + 柔珊瑚 */
+      --bg: #f8fbff;
+      --surface: #ffffff;
+      --text: #334155;
+      --muted: #94a3b8;
+      --border: #e8eef5;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --accent-soft: #f0f9ff;
+      --accent-mid: #7dd3fc;
+      --accent-light: #bae6fd;
+      --warn: #fb7185;
+      --warn-soft: #fff5f6;
+      --warn-border: #fecdd3;
+      --danger: #f43f5e;
+      --danger-soft: #fff1f2;
+      --ok: #34d399;
+      --ok-soft: #f0fdf6;
+      --ok-border: #a7f3d0;
+      --radius: 16px;
+      --shadow: 0 1px 2px rgba(148, 163, 184, 0.12), 0 10px 28px rgba(56, 189, 248, 0.08);
+      --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      --mono: "Cascadia Code", "Consolas", "SF Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.5;
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 28px 20px calc(96px + env(safe-area-inset-bottom));
+      padding-left: max(20px, env(safe-area-inset-left));
+      padding-right: max(20px, env(safe-area-inset-right));
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .home-link {
+      display: inline-block;
+      margin: 0 0 8px;
+      font-size: 0.9rem;
+      font-weight: 650;
+      color: var(--accent-hover);
+      text-decoration: none;
+    }
+
+    .home-link:hover {
+      text-decoration: underline;
+    }
+
+    header h1 {
+      margin: 0 0 6px;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #0f172a;
+    }
+
+    header .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .banner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .banner.is-ok {
+      border-color: var(--ok-border);
+      background: var(--ok-soft);
+      color: var(--ok);
+    }
+
+    .banner.is-warn {
+      border-color: var(--warn-border);
+      background: var(--warn-soft);
+      color: var(--warn);
+    }
+
+    .banner.is-info {
+      border-color: var(--accent-light);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .banner .detail {
+      font-weight: 500;
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+
+    .banner-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .editor-col,
+    .preview-col {
+      min-width: 0;
+    }
+
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr !important; }
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px 18px 16px;
+    }
+
+    .panel-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .section-hint {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .section-count {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 8px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 650;
+      background: var(--bg);
+      color: var(--muted);
+      vertical-align: middle;
+    }
+
+    .section-count.has-gap {
+      background: var(--warn-soft);
+      color: var(--warn);
+    }
+
+    .btn {
+      font: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 14px;
+      min-height: 44px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-size: 1.05rem;
+      padding: 12px 18px;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      color: #fff;
+    }
+
+    .btn-accent {
+      background: var(--accent-soft);
+      border-color: var(--accent-light);
+      color: var(--accent);
+    }
+
+    .btn-accent:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: transparent;
+      font-weight: 500;
+      color: var(--muted);
+    }
+
+    .btn-ghost:hover {
+      background: var(--bg);
+      color: var(--text);
+      border-color: transparent;
+    }
+
+    .btn-danger {
+      color: var(--danger);
+      border-color: transparent;
+      background: transparent;
+      padding: 8px 10px;
+      min-height: 40px;
+      font-weight: 600;
+    }
+
+    .btn-danger:hover {
+      background: var(--danger-soft);
+      border-color: transparent;
+      color: var(--danger);
+    }
+
+    .btn-sm {
+      min-height: 32px;
+      padding: 4px 10px;
+      font-size: 0.85rem;
+    }
+
+    .tag-bar {
+      margin-bottom: 20px;
+      padding: 14px;
+      background: var(--bg);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .tag-bar .tag-label {
+      display: block;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .tag-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+      min-height: 36px;
+    }
+
+    .tag-chip {
+      display: inline-flex;
+      align-items: flex-start;
+      gap: 6px;
+      max-width: 100%;
+      padding: 6px 8px 6px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .tag-chip .tag-chip-text {
+      flex: 1;
+      min-width: 0;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.35;
+      padding-top: 3px;
+    }
+
+    .tag-chip button {
+      flex: 0 0 auto;
+      border: none;
+      background: var(--bg);
+      color: var(--muted);
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-weight: 700;
+      line-height: 1;
+      font-size: 1rem;
+    }
+
+    .tag-chip button:hover {
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .tag-add {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .tag-add input {
+      flex: 1;
+      min-width: 160px;
+      font: inherit;
+      font-size: 1rem;
+      padding: 10px 12px;
+      min-height: 44px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .col-labels {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr) auto auto;
+      gap: 10px;
+      margin-bottom: 8px;
+      padding: 0 2px;
+      font-size: 0.85rem;
+      font-weight: 650;
+      color: var(--muted);
+    }
+
+    .col-labels.next {
+      grid-template-columns: 44px minmax(0, 1fr) auto;
+    }
+
+    @media (max-width: 700px) {
+      .col-labels { display: none; }
+    }
+
+    .rows { display: flex; flex-direction: column; gap: 14px; }
+
+    .row {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr) auto auto;
+      grid-template-areas:
+        "idx tag progress del"
+        "idx title title title";
+      gap: 8px 10px;
+      align-items: start;
+      padding: 14px 14px 14px 10px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      transition: border-color 0.15s, background 0.15s, opacity 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+
+    .row:nth-child(even) {
+      background: #fbfdff;
+      border-color: #e8eef5;
+    }
+
+    .row.next {
+      grid-template-columns: 44px minmax(0, 1fr) auto;
+      grid-template-areas:
+        "idx tag del"
+        "idx title title";
+    }
+
+    .row > .row-index { grid-area: idx; }
+    .row > .tag-select {
+      grid-area: tag;
+      max-width: 320px;
+    }
+    .row > textarea[data-field="title"] { grid-area: title; }
+    .row > .progress-wrap { grid-area: progress; }
+    .row > .btn-danger { grid-area: del; }
+
+    .row.is-incomplete {
+      border-color: var(--warn-border);
+      background: var(--warn-soft);
+      box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.12);
+    }
+
+    .row.is-incomplete input[data-field="title"],
+    .row.is-incomplete textarea[data-field="title"],
+    .row.is-incomplete .progress-wrap input[type="number"] {
+      border-color: var(--warn-border);
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+    }
+
+    .row.is-dragging {
+      opacity: 0.45;
+    }
+
+    .row.drop-before::before,
+    .row.drop-after::after {
+      content: "";
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      height: 3px;
+      border-radius: 3px;
+      background: var(--accent);
+      pointer-events: none;
+    }
+
+    .row.drop-before::before { top: -2px; }
+    .row.drop-after::after { bottom: -2px; }
+
+    .row-index {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      user-select: none;
+      cursor: grab;
+      color: var(--muted);
+      min-height: 46px;
+      border-radius: 10px;
+      margin-top: 2px;
+      padding: 4px 2px;
+      background: rgba(56, 189, 248, 0.12);
+    }
+
+    .row:nth-child(even) .row-index {
+      background: rgba(148, 163, 184, 0.12);
+    }
+
+    .row-index:active { cursor: grabbing; }
+
+    .row-index .grip {
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      line-height: 1;
+      color: #9ca3af;
+    }
+
+    .row-index .num {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1.1;
+    }
+
+    .row-tip {
+      grid-column: 1 / -1;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--warn);
+      margin-top: -2px;
+      display: none;
+    }
+
+    .row.is-incomplete .row-tip { display: block; }
+
+    @media (max-width: 700px) {
+      .row,
+      .row.next {
+        grid-template-columns: 44px minmax(0, 1fr);
+        grid-template-areas:
+          "idx tag"
+          "idx title"
+          "idx progress"
+          "idx del";
+      }
+      .row > .tag-select { max-width: none; }
+      .row.next {
+        grid-template-areas:
+          "idx tag"
+          "idx title"
+          "idx del";
+      }
+    }
+
+    .row textarea[data-field="title"],
+    .row input[type="number"] {
+      font: inherit;
+      font-size: 1rem;
+      width: 100%;
+      padding: 10px 12px;
+      min-height: 42px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .row .progress-wrap,
+    .row .btn-danger,
+    .row .tag-select {
+      margin-top: 2px;
+    }
+
+    .tag-select {
+      position: relative;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .tag-select-trigger {
+      width: 100%;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 46px;
+      padding: 10px 12px;
+      border: 1px solid var(--accent-light);
+      border-radius: 12px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.98rem;
+      font-weight: 650;
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .tag-select-trigger:hover {
+      border-color: var(--accent);
+    }
+
+    .tag-select.open .tag-select-trigger {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .tag-select-label {
+      flex: 1;
+      min-width: 0;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.35;
+    }
+
+    .tag-select-caret {
+      flex: 0 0 auto;
+      color: var(--accent);
+      font-size: 0.75rem;
+      line-height: 1.6;
+      transition: transform 0.15s;
+    }
+
+    .tag-select.open .tag-select-caret {
+      transform: rotate(180deg);
+    }
+
+    .tag-select-menu {
+      display: none;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      z-index: 30;
+      max-height: 240px;
+      overflow: auto;
+      padding: 6px;
+      background: #fff;
+      border: 1px solid var(--accent-light);
+      border-radius: 12px;
+      box-shadow: 0 12px 28px rgba(14, 165, 233, 0.14);
+    }
+
+    .tag-select.open .tag-select-menu {
+      display: block;
+    }
+
+    .tag-select-option {
+      display: block;
+      width: 100%;
+      border: none;
+      background: transparent;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.35;
+    }
+
+    .tag-select-option:hover,
+    .tag-select-option.is-active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .row textarea[data-field="title"] {
+      font-weight: 550;
+      resize: none;
+      line-height: 1.45;
+      min-height: 42px;
+      overflow: hidden;
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+      word-break: normal;
+    }
+
+    .row textarea:focus,
+    .row input:focus,
+    .tag-add input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .progress-wrap input[type="number"] {
+      width: 58px;
+      padding: 8px 4px;
+      text-align: center;
+      font-weight: 700;
+      min-height: 36px;
+    }
+
+    .progress-wrap .unit {
+      font-size: 0.95rem;
+      font-weight: 650;
+      color: var(--muted);
+    }
+
+    .progress-wrap .btn-step {
+      width: 36px;
+      min-height: 36px;
+      padding: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .progress-wrap .done-tag {
+      display: none;
+      font: inherit;
+      font-size: 0.95rem;
+      font-weight: 700;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--ok-border);
+      background: var(--ok-soft);
+      color: var(--ok);
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .progress-wrap .done-tag:hover {
+      background: #d1fae5;
+    }
+
+    .progress-wrap .btn-done {
+      min-height: 36px;
+      padding: 4px 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      border-color: var(--ok-border);
+      background: var(--ok-soft);
+      color: var(--ok);
+      white-space: nowrap;
+    }
+
+    .progress-wrap .btn-done:hover {
+      background: var(--ok);
+      border-color: var(--ok);
+      color: #fff;
+    }
+
+    /* 已完成：只留文字，不展示数字 */
+    .progress-wrap.is-done input[type="number"],
+    .progress-wrap.is-done .unit,
+    .progress-wrap.is-done .btn-step,
+    .progress-wrap.is-done .btn-done {
+      display: none;
+    }
+
+    .progress-wrap.is-done .done-tag {
+      display: inline-block;
+    }
+
+    .row.is-done:not(.is-incomplete) {
+      background: var(--ok-soft);
+      border-color: var(--ok-border);
+      box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.12);
+    }
+
+    .row.is-done:not(.is-incomplete) .row-index {
+      background: rgba(16, 185, 129, 0.12);
+    }
+
+    .row.is-done:not(.is-incomplete) .row-index .num {
+      color: var(--ok);
+    }
+
+    .section + .section {
+      margin-top: 26px;
+      padding-top: 22px;
+      border-top: 1px solid var(--border);
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 1rem;
+      padding: 14px 8px;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      text-align: center;
+      background: var(--surface);
+    }
+
+    .empty.is-warn {
+      border-color: var(--warn-border);
+      background: var(--warn-soft);
+      color: var(--warn);
+      font-weight: 600;
+    }
+
+    .preview-col {
+      position: sticky;
+      top: 12px;
+      align-self: start;
+      z-index: 5;
+      max-height: calc(100vh - 100px);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .preview-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      max-height: calc(100vh - 100px);
+    }
+
+    .preview-panel h2 {
+      font-size: 1.2rem;
+      color: var(--text);
+      flex: 0 0 auto;
+    }
+
+    .preview-text {
+      margin: 0;
+      padding: 12px;
+      background: var(--bg);
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      min-height: 200px;
+      flex: 1 1 auto;
+      overflow: auto;
+      color: var(--text);
+      max-height: calc(100vh - 180px);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .preview-section-title {
+      margin: 4px 0 2px;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .preview-section-title + .preview-section-title {
+      margin-top: 12px;
+    }
+
+    .preview-item {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--proj-border, var(--border));
+      border-left: 4px solid var(--proj-text, var(--accent));
+      background: var(--proj-bg, #fff);
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.55;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+    }
+
+    .preview-item.is-wrap {
+      white-space: normal;
+      overflow: visible;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .preview-item .preview-idx {
+      color: var(--proj-text, var(--accent));
+      font-weight: 800;
+      margin-right: 2px;
+    }
+
+    .preview-item .preview-tag {
+      color: var(--proj-text, var(--accent));
+      font-weight: 750;
+    }
+
+    .preview-item .preview-progress {
+      color: var(--muted);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .preview-empty {
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    footer.hint {
+      margin-top: 22px;
+      margin-bottom: 24px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    .scroll-jump {
+      position: fixed;
+      right: max(12px, env(safe-area-inset-right));
+      bottom: calc(88px + env(safe-area-inset-bottom));
+      z-index: 45;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .scroll-jump .btn {
+      width: 44px;
+      height: 44px;
+      min-height: 44px;
+      padding: 0;
+      border-radius: 12px;
+      font-size: 1.15rem;
+      font-weight: 800;
+      line-height: 1;
+      background: rgba(255, 255, 255, 0.96);
+      border-color: var(--accent-light);
+      color: var(--accent);
+      box-shadow: 0 8px 20px rgba(14, 165, 233, 0.16);
+    }
+
+    .scroll-jump .btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    @media (max-width: 700px) {
+      .scroll-jump {
+        right: max(8px, env(safe-area-inset-right));
+        bottom: calc(108px + env(safe-area-inset-bottom));
+      }
+      .scroll-jump .btn {
+        width: 40px;
+        height: 40px;
+        min-height: 40px;
+      }
+      .preview-col {
+        position: static;
+        max-height: none;
+      }
+      .preview-panel,
+      .preview-text {
+        max-height: none;
+      }
+      .dock {
+        bottom: max(10px, env(safe-area-inset-bottom));
+        gap: 6px;
+        padding: 8px 10px;
+      }
+      .dock .btn {
+        min-height: 40px;
+        padding: 8px 10px;
+        font-size: 0.88rem;
+      }
+    }
+
+    .dock {
+      position: fixed;
+      left: 50%;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      z-index: 40;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid rgba(14, 165, 233, 0.22);
+      border-radius: 16px;
+      box-shadow: 0 10px 32px rgba(15, 23, 42, 0.1);
+      max-width: calc(100vw - 24px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .dock .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 44px;
+      padding: 9px 14px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      white-space: nowrap;
+    }
+
+    .dock .btn .ico {
+      font-size: 1.05rem;
+      line-height: 1;
+      font-weight: 700;
+    }
+
+    /* 本周：浅天空青 */
+    .dock .btn-dock-this {
+      background: #f0f9ff;
+      border-color: #bae6fd;
+      color: #0284c7;
+    }
+    .dock .btn-dock-this:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* 下周：浅绿 */
+    .dock .btn-dock-next {
+      background: #f0fdf6;
+      border-color: #a7f3d0;
+      color: #059669;
+    }
+    .dock .btn-dock-next:hover {
+      background: var(--ok);
+      border-color: var(--ok);
+      color: #fff;
+    }
+
+    /* 带入：浅珊瑚 */
+    .dock .btn-dock-carry {
+      background: #fff5f6;
+      border-color: #fecdd3;
+      color: #e11d48;
+    }
+    .dock .btn-dock-carry:hover {
+      background: var(--warn);
+      border-color: var(--warn);
+      color: #fff;
+    }
+
+    /* 整理：浅灰 */
+    .dock .btn-dock-group {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+      color: #64748b;
+    }
+    .dock .btn-dock-group:hover {
+      background: #94a3b8;
+      border-color: #94a3b8;
+      color: #fff;
+    }
+
+    /* 复制：亮天空青 */
+    .dock .btn-dock-copy {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-size: 1.02rem;
+      padding: 9px 18px;
+    }
+    .dock .btn-dock-copy:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+      color: #fff;
+    }
+
+    /* 导入：浅绿灰 */
+    .dock .btn-dock-import {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+      color: #15803d;
+    }
+    .dock .btn-dock-import:hover {
+      background: #16a34a;
+      border-color: #16a34a;
+      color: #fff;
+    }
+
+    .import-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      align-items: center;
+      justify-content: center;
+      padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+      background: rgba(15, 23, 42, 0.45);
+    }
+
+    .import-overlay.show {
+      display: flex;
+    }
+
+    .import-dialog {
+      width: min(560px, 100%);
+      background: var(--surface);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+      padding: 18px 16px 14px;
+    }
+
+    .import-dialog h3 {
+      margin: 0 0 8px;
+      font-size: 1.15rem;
+      color: #0f172a;
+    }
+
+    .import-dialog p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .import-dialog textarea {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      font: inherit;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .import-dialog textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .import-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 88px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 18px;
+      border-radius: 999px;
+      font-size: 1rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 50;
+      max-width: min(90vw, 520px);
+      text-align: center;
+      line-height: 1.4;
+      cursor: default;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+
+    .toast.is-warn {
+      background: #e11d48;
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <a class="home-link" href="../../">← 工具箱</a>
+        <h1>周报填写助手</h1>
+        <p class="sub">离线单文件 · 草稿自动保存在本机 · 断网可用</p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="btn btn-accent" id="btnPromote">下周转本周</button>
+        <button type="button" class="btn btn-ghost" id="btnClear">清空</button>
+      </div>
+    </header>
+
+    <div class="banner is-warn" id="fillBanner">
+      <span id="fillBannerMain">请先填写工作事项</span>
+      <span class="detail" id="fillBannerDetail"></span>
+    </div>
+
+    <div class="layout">
+      <div class="editor-col">
+        <div class="panel">
+          <div class="tag-bar">
+            <span class="tag-label">项目标签（可添加 / 删除）</span>
+            <div class="tag-chips" id="tagChips"></div>
+            <div class="tag-add">
+              <input type="text" id="newTag" placeholder="新增标签，如 广东MSB" maxlength="80" />
+              <button type="button" class="btn" id="btnAddTag">添加标签</button>
+            </div>
+          </div>
+
+          <section class="section">
+            <div class="panel-head">
+              <h2>本周工作重点 <span class="section-count" id="thisCount">0 项</span></h2>
+            </div>
+            <p class="section-hint">进度默认留空，请手输或用 − / +（每次 5%）；完成点「完成」。底部可添加事项、整理与复制。</p>
+            <div class="col-labels">
+              <span>#</span>
+              <span>项目 / 事项内容</span>
+              <span>进度</span>
+              <span></span>
+            </div>
+            <div class="rows" id="thisWeekRows"></div>
+          </section>
+
+          <section class="section">
+            <div class="panel-head">
+              <h2>下周工作计划 <span class="section-count" id="nextCount">0 项</span></h2>
+            </div>
+            <p class="section-hint">底部「未完成带入」可写入下周；顶部可把下周转入本周。按住左侧序号可拖拽排序。</p>
+            <div class="col-labels next">
+              <span>#</span>
+              <span>项目 / 计划事项</span>
+              <span></span>
+            </div>
+            <div class="rows" id="nextWeekRows"></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="preview-col">
+        <div class="panel preview-panel">
+          <div class="panel-head">
+            <h2>预览</h2>
+          </div>
+          <div class="preview-text" id="preview"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="hint">草稿仅存本机 · 跨设备：一端「复制报告」发微信/备忘录 → 另一端「导入成稿」粘贴</footer>
+  </div>
+
+  <div class="scroll-jump" id="scrollJump">
+    <button type="button" class="btn" data-action="scroll-top" title="回到顶部">↑</button>
+    <button type="button" class="btn" data-action="scroll-bottom" title="去到底部">↓</button>
+  </div>
+
+  <div class="dock" id="actionDock">
+    <button type="button" class="btn btn-dock-this" data-action="add-this" title="新增本周工作事项">
+      <span class="ico">＋</span>本周事项
+    </button>
+    <button type="button" class="btn btn-dock-next" data-action="add-next" title="新增下周工作计划">
+      <span class="ico">＋</span>下周计划
+    </button>
+    <button type="button" class="btn btn-dock-carry" data-action="carry-incomplete" title="把本周未完成项带入下周">
+      <span class="ico">⤵</span>未完成带入
+    </button>
+    <button type="button" class="btn btn-dock-group" data-action="group-by-project" title="按项目分组整理">
+      <span class="ico">☰</span>按项目整理
+    </button>
+    <button type="button" class="btn btn-dock-import" data-action="import-report" title="粘贴复制出来的周报文字，导入到本机">
+      <span class="ico">⇩</span>导入成稿
+    </button>
+    <button type="button" class="btn btn-dock-copy" data-action="copy-report" title="按项目整理后复制；可粘贴到微信/备忘录发给其他设备">
+      <span class="ico">⧉</span>复制报告
+    </button>
+  </div>
+
+  <div class="import-overlay" id="importOverlay" aria-hidden="true">
+    <div class="import-dialog" role="dialog" aria-labelledby="importTitle">
+      <h3 id="importTitle">导入成稿</h3>
+      <p>粘贴另一端「复制报告」得到的全文。导入会替换当前本周/下周内容。</p>
+      <textarea id="importText" placeholder="本周工作重点：&#10;1、【广东MSB】……（80%）&#10;&#10;下周工作计划：&#10;1、【广东MSB】……"></textarea>
+      <div class="import-actions">
+        <button type="button" class="btn btn-ghost" id="btnImportCancel">取消</button>
+        <button type="button" class="btn btn-primary" id="btnImportConfirm">确认导入</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "msb-weekly-report-v2";
+  var DEFAULT_TAGS = ["广东MSB", "香港MSB"];
+  var MIN_PROGRESS = 1;
+  var PROJECT_COLORS = [
+    { bg: "#f0f9ff", border: "#bae6fd", text: "#0284c7" },
+    { bg: "#f0fdf6", border: "#a7f3d0", text: "#059669" },
+    { bg: "#fff5f6", border: "#fecdd3", text: "#e11d48" },
+    { bg: "#fff7ed", border: "#fed7aa", text: "#ea580c" },
+    { bg: "#f0fdf4", border: "#bbf7d0", text: "#16a34a" },
+    { bg: "#fefce8", border: "#fef08a", text: "#ca8a04" },
+    { bg: "#f8fafc", border: "#e2e8f0", text: "#64748b" },
+    { bg: "#faf5ff", border: "#e9d5ff", text: "#9333ea" }
+  ];
+
+  var state = {
+    weekKey: "",
+    tags: DEFAULT_TAGS.slice(),
+    thisWeek: [],
+    nextWeek: []
+  };
+
+  var els = {
+    thisWeekRows: document.getElementById("thisWeekRows"),
+    nextWeekRows: document.getElementById("nextWeekRows"),
+    preview: document.getElementById("preview"),
+    newTag: document.getElementById("newTag"),
+    tagChips: document.getElementById("tagChips"),
+    toast: document.getElementById("toast"),
+    fillBanner: document.getElementById("fillBanner"),
+    fillBannerMain: document.getElementById("fillBannerMain"),
+    fillBannerDetail: document.getElementById("fillBannerDetail"),
+    thisCount: document.getElementById("thisCount"),
+    nextCount: document.getElementById("nextCount")
+  };
+
+  function pad(n) {
+    return n < 10 ? "0" + n : String(n);
+  }
+
+  function isoWeekInfo(d) {
+    var date = new Date(d.getTime());
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
+    var week1 = new Date(date.getFullYear(), 0, 4);
+    var week =
+      1 +
+      Math.round(
+        ((date.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
+      );
+    return { year: date.getFullYear(), week: week };
+  }
+
+  function currentWeekKey() {
+    var info = isoWeekInfo(new Date());
+    return info.year + "-W" + pad(info.week);
+  }
+
+  function uid() {
+    return "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function defaultTag() {
+    return state.tags[0] || "广东MSB";
+  }
+
+  function emptyThisItem() {
+    return {
+      id: uid(),
+      tag: defaultTag(),
+      title: "",
+      progress: ""
+    };
+  }
+
+  function emptyNextItem() {
+    return {
+      id: uid(),
+      tag: defaultTag(),
+      title: ""
+    };
+  }
+
+  function isBlankTitle(item) {
+    return !String(item.title || "").trim();
+  }
+
+  function normalizeTitle(title) {
+    return String(title || "").trim().replace(/\s+/g, " ");
+  }
+
+  /** 同一列表内，同项目下事项内容是否与其他行重复 */
+  function isDuplicateTitle(item, kind) {
+    var title = normalizeTitle(item.title);
+    if (!title) return false;
+    var list = kind === "this" ? state.thisWeek : state.nextWeek;
+    var count = 0;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].tag === item.tag && normalizeTitle(list[i].title) === title) {
+        count += 1;
+        if (count > 1) return true;
+      }
+    }
+    return false;
+  }
+
+  function clampProgress(value) {
+    var n = Number(value);
+    if (isNaN(n)) n = MIN_PROGRESS;
+    return Math.max(MIN_PROGRESS, Math.min(100, Math.round(n)));
+  }
+
+  function isBadProgress(item) {
+    var n = Number(item.progress);
+    if (isNaN(n)) return true;
+    return n < MIN_PROGRESS || n > 100;
+  }
+
+  function isRowIncomplete(item, kind) {
+    if (isBlankTitle(item)) return true;
+    if (kind === "this" && isBadProgress(item)) return true;
+    if (isDuplicateTitle(item, kind)) return true;
+    return false;
+  }
+
+  function rowTipText(item, kind) {
+    if (isBlankTitle(item)) {
+      return kind === "this" ? "事项内容还没填" : "计划事项还没填";
+    }
+    if (isDuplicateTitle(item, kind)) {
+      return "同一项目下事项内容不能重复";
+    }
+    if (kind === "this" && isBadProgress(item)) {
+      return "进度还没填，请填 1～100";
+    }
+    return "";
+  }
+
+  function countDuplicates(list) {
+    var seen = {};
+    var dup = 0;
+    list.forEach(function (item) {
+      var title = normalizeTitle(item.title);
+      if (!title) return;
+      var key = String(item.tag || "") + "\0" + title;
+      if (seen[key]) {
+        if (seen[key] === 1) dup += 1;
+        dup += 1;
+        seen[key] += 1;
+      } else {
+        seen[key] = 1;
+      }
+    });
+    return dup;
+  }
+
+  function getFillStatus() {
+    var thisEmpty = state.thisWeek.filter(isBlankTitle).length;
+    var thisBadProgress = state.thisWeek.filter(function (item) {
+      return !isBlankTitle(item) && isBadProgress(item);
+    }).length;
+    var thisDup = countDuplicates(state.thisWeek);
+    var nextDup = countDuplicates(state.nextWeek);
+    var nextEmpty = state.nextWeek.filter(isBlankTitle).length;
+    var thisFilled = state.thisWeek.length - thisEmpty;
+    var nextFilled = state.nextWeek.length - nextEmpty;
+    var complete =
+      thisFilled > 0 &&
+      nextFilled > 0 &&
+      thisEmpty === 0 &&
+      nextEmpty === 0 &&
+      thisBadProgress === 0 &&
+      thisDup === 0 &&
+      nextDup === 0;
+    return {
+      thisEmpty: thisEmpty,
+      thisBadProgress: thisBadProgress,
+      thisDup: thisDup,
+      nextDup: nextDup,
+      nextEmpty: nextEmpty,
+      thisFilled: thisFilled,
+      nextFilled: nextFilled,
+      complete: complete
+    };
+  }
+
+  function showToast(msg, isWarn) {
+    els.toast.textContent = msg;
+    els.toast.classList.toggle("is-warn", !!isWarn);
+    els.toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._hovering = false;
+    scheduleToastHide(4500);
+  }
+
+  function scheduleToastHide(delayMs) {
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function () {
+      if (showToast._hovering) return;
+      els.toast.classList.remove("show");
+    }, delayMs);
+  }
+
+  function hideToastSoon() {
+    scheduleToastHide(1200);
+  }
+
+  function migrateOldStorage() {
+    try {
+      var oldRaw = localStorage.getItem("msb-weekly-report-v1");
+      if (!oldRaw || localStorage.getItem(STORAGE_KEY)) return;
+      var old = JSON.parse(oldRaw);
+      if (!old || typeof old !== "object") return;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        weekKey: currentWeekKey(),
+        tags: Array.isArray(old.tags) && old.tags.length ? old.tags : DEFAULT_TAGS.slice(),
+        thisWeek: Array.isArray(old.thisWeek) ? old.thisWeek : [],
+        nextWeek: Array.isArray(old.nextWeek) ? old.nextWeek : []
+      }));
+    } catch (err) { /* ignore */ }
+  }
+
+  function loadState() {
+    migrateOldStorage();
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      var data = JSON.parse(raw);
+      if (!data || typeof data !== "object") return false;
+      state.weekKey = data.weekKey || currentWeekKey();
+      state.tags = Array.isArray(data.tags) && data.tags.length ? data.tags : DEFAULT_TAGS.slice();
+      state.thisWeek = Array.isArray(data.thisWeek) ? data.thisWeek : [];
+      state.nextWeek = Array.isArray(data.nextWeek) ? data.nextWeek : [];
+      state.thisWeek.forEach(function (item) {
+        if (item.progress === 0 || item.progress === "0") item.progress = "";
+      });
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        weekKey: state.weekKey,
+        tags: state.tags,
+        thisWeek: state.thisWeek,
+        nextWeek: state.nextWeek
+      }));
+    } catch (err) {
+      showToast("本地保存失败", true);
+    }
+  }
+
+  function groupByProject(items) {
+    var tagOrder = [];
+    var buckets = {};
+    items.forEach(function (item) {
+      var tag = String(item.tag || "").trim() || defaultTag();
+      if (!buckets[tag]) {
+        buckets[tag] = [];
+        tagOrder.push(tag);
+      }
+      buckets[tag].push(item);
+    });
+    var grouped = [];
+    tagOrder.forEach(function (tag) {
+      // 同项目内按进度正序（小到大）
+      buckets[tag].sort(function (left, right) {
+        var leftProgress = Number(left.progress);
+        var rightProgress = Number(right.progress);
+        if (isNaN(leftProgress)) leftProgress = 0;
+        if (isNaN(rightProgress)) rightProgress = 0;
+        return leftProgress - rightProgress;
+      });
+      for (var i = 0; i < buckets[tag].length; i++) {
+        grouped.push(buckets[tag][i]);
+      }
+    });
+    return grouped;
+  }
+
+  function projectColor(tag) {
+    var name = String(tag || "").trim() || defaultTag();
+    var idx = state.tags.indexOf(name);
+    if (idx < 0) {
+      var hash = 0;
+      for (var i = 0; i < name.length; i++) {
+        hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
+      }
+      idx = Math.abs(hash) % PROJECT_COLORS.length;
+    } else {
+      idx = idx % PROJECT_COLORS.length;
+    }
+    return PROJECT_COLORS[idx];
+  }
+
+  function projectColorStyle(tag) {
+    var color = projectColor(tag);
+    return (
+      "--proj-bg:" + color.bg + ";" +
+      "--proj-border:" + color.border + ";" +
+      "--proj-text:" + color.text
+    );
+  }
+
+  function buildReportText(itemsThis, itemsNext) {
+    var lines = ["本周工作重点："];
+    var thisItems = (itemsThis || state.thisWeek).filter(function (item) {
+      return !isBlankTitle(item);
+    });
+    if (thisItems.length === 0) {
+      lines.push("（暂无）");
+    } else {
+      thisItems.forEach(function (item, index) {
+        var progress = clampProgress(item.progress);
+        lines.push(
+          (index + 1) + "、【" + String(item.tag || "").trim() + "】" +
+          normalizeTitle(item.title) +
+          (isBadProgress(item) ? "" : "（" + progress + "%）")
+        );
+      });
+    }
+    lines.push("");
+    lines.push("下周工作计划：");
+    var nextItems = (itemsNext || state.nextWeek).filter(function (item) {
+      return !isBlankTitle(item);
+    });
+    if (nextItems.length === 0) {
+      lines.push("（暂无）");
+    } else {
+      nextItems.forEach(function (item, index) {
+        lines.push(
+          (index + 1) + "、【" + String(item.tag || "").trim() + "】" +
+          normalizeTitle(item.title)
+        );
+      });
+    }
+    return lines.join("\n");
+  }
+
+  function buildPreviewHtml() {
+    var html = [];
+    html.push("<div class=\"preview-section-title\">本周工作重点：</div>");
+    var thisItems = state.thisWeek.filter(function (item) {
+      return !isBlankTitle(item);
+    });
+    if (thisItems.length === 0) {
+      html.push("<div class=\"preview-empty\">（暂无）</div>");
+    } else {
+      thisItems.forEach(function (item, index) {
+        var progress = clampProgress(item.progress);
+        var tag = String(item.tag || "").trim();
+        html.push(
+          "<div class=\"preview-item\" style=\"" + projectColorStyle(tag) + "\">" +
+            "<span class=\"preview-idx\">" + (index + 1) + "、</span>" +
+            "<span class=\"preview-tag\">【" + escapeHtml(tag) + "】</span>" +
+            escapeHtml(normalizeTitle(item.title)) +
+            (isBadProgress(item) ? "" : "<span class=\"preview-progress\">（" + progress + "%）</span>") +
+          "</div>"
+        );
+      });
+    }
+    html.push("<div class=\"preview-section-title\">下周工作计划：</div>");
+    var nextItems = state.nextWeek.filter(function (item) {
+      return !isBlankTitle(item);
+    });
+    if (nextItems.length === 0) {
+      html.push("<div class=\"preview-empty\">（暂无）</div>");
+    } else {
+      nextItems.forEach(function (item, index) {
+        var tag = String(item.tag || "").trim();
+        html.push(
+          "<div class=\"preview-item\" style=\"" + projectColorStyle(tag) + "\">" +
+            "<span class=\"preview-idx\">" + (index + 1) + "、</span>" +
+            "<span class=\"preview-tag\">【" + escapeHtml(tag) + "】</span>" +
+            escapeHtml(normalizeTitle(item.title)) +
+          "</div>"
+        );
+      });
+    }
+    return html.join("");
+  }
+
+  function applyOrganizeByProject() {
+    var beforeThis = state.thisWeek.map(function (item) { return item.id; }).join(",");
+    var beforeNext = state.nextWeek.map(function (item) { return item.id; }).join(",");
+    state.thisWeek = groupByProject(state.thisWeek);
+    state.nextWeek = groupByProject(state.nextWeek);
+    var changed =
+      beforeThis !== state.thisWeek.map(function (item) { return item.id; }).join(",") ||
+      beforeNext !== state.nextWeek.map(function (item) { return item.id; }).join(",");
+    if (changed) {
+      saveState();
+      renderAll();
+    }
+    return changed;
+  }
+
+  function organizeByProject() {
+    var changed = applyOrganizeByProject();
+    showToast(changed ? "列表已按项目整理（预览同步为当前列表顺序）" : "已经是整理后的顺序");
+  }
+
+  function tagSelectHtml(selected) {
+    var current = selected || defaultTag();
+    var options = [];
+    if (selected && state.tags.indexOf(selected) < 0) {
+      options.push(
+        "<button type=\"button\" class=\"tag-select-option is-active\" data-value=\"" +
+          escapeAttr(selected) + "\">" + escapeHtml(selected) + "（已删除）</button>"
+      );
+    }
+    state.tags.forEach(function (tag) {
+      var active = tag === current ? " is-active" : "";
+      options.push(
+        "<button type=\"button\" class=\"tag-select-option" + active + "\" data-value=\"" +
+          escapeAttr(tag) + "\">" + escapeHtml(tag) + "</button>"
+      );
+    });
+    return (
+      "<div class=\"tag-select\" data-field=\"tag\">" +
+        "<button type=\"button\" class=\"tag-select-trigger\" title=\"" + escapeAttr(current) + "\">" +
+          "<span class=\"tag-select-label\">" + escapeHtml(current) + "</span>" +
+          "<span class=\"tag-select-caret\">▾</span>" +
+        "</button>" +
+        "<div class=\"tag-select-menu\">" + options.join("") + "</div>" +
+      "</div>"
+    );
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function escapeAttr(str) {
+    return escapeHtml(str);
+  }
+
+  function renderTags() {
+    if (!state.tags.length) {
+      els.tagChips.innerHTML = "<span class=\"empty\" style=\"border:none;padding:4px 0;\">还没有标签，请先添加</span>";
+      return;
+    }
+    els.tagChips.innerHTML = state.tags.map(function (tag) {
+      return (
+        "<span class=\"tag-chip\" title=\"" + escapeAttr(tag) + "\">" +
+          "<span class=\"tag-chip-text\">" + escapeHtml(tag) + "</span>" +
+          "<button type=\"button\" data-action=\"del-tag\" data-tag=\"" + escapeAttr(tag) +
+          "\" title=\"删除标签\">×</button>" +
+        "</span>"
+      );
+    }).join("");
+  }
+
+  function indexCellHtml(index) {
+    return (
+      "<div class=\"row-index\" data-drag-handle title=\"按住拖拽排序\">" +
+        "<span class=\"grip\">⋮⋮</span>" +
+        "<span class=\"num\">" + (index + 1) + "</span>" +
+      "</div>"
+    );
+  }
+
+  function renderRows() {
+    if (state.thisWeek.length === 0) {
+      els.thisWeekRows.innerHTML =
+        "<div class=\"empty is-warn\">本周还没有事项。点底部「本周事项」添加。</div>";
+    } else {
+      els.thisWeekRows.innerHTML = state.thisWeek.map(function (item, index) {
+        var incomplete = isRowIncomplete(item, "this") ? " is-incomplete" : "";
+        var progressEmpty = isBadProgress(item);
+        var progress = progressEmpty ? "" : clampProgress(item.progress);
+        var done = !incomplete && progress !== "" && Number(progress) >= 100;
+        var doneClass = done ? " is-done" : "";
+        return (
+          "<div class=\"row" + incomplete + doneClass + "\" data-id=\"" + item.id + "\" data-kind=\"this\">" +
+            indexCellHtml(index) +
+            tagSelectHtml(item.tag) +
+            "<textarea data-field=\"title\" rows=\"1\" placeholder=\"必填：写清楚做了什么\">" +
+              escapeHtml(item.title || "") + "</textarea>" +
+            "<div class=\"progress-wrap" + (done ? " is-done" : "") + "\">" +
+              "<button type=\"button\" class=\"btn btn-step\" data-action=\"step-progress\" data-delta=\"-5\" title=\"减少 5%\">−</button>" +
+              "<input type=\"number\" data-field=\"progressNum\" min=\"" + MIN_PROGRESS +
+                "\" max=\"100\" step=\"1\" placeholder=\"进度\" value=\"" + progress + "\" />" +
+              "<span class=\"unit\">%</span>" +
+              "<button type=\"button\" class=\"btn btn-step\" data-action=\"step-progress\" data-delta=\"5\" title=\"增加 5%\">+</button>" +
+              "<button type=\"button\" class=\"btn btn-done\" data-action=\"done\" title=\"一键设为完成\">完成</button>" +
+              "<button type=\"button\" class=\"done-tag\" data-action=\"undone\" title=\"点击可改回进行中\">已完成</button>" +
+            "</div>" +
+            "<button type=\"button\" class=\"btn btn-danger\" data-action=\"remove\">删除</button>" +
+            "<div class=\"row-tip\">" + escapeHtml(rowTipText(item, "this")) + "</div>" +
+          "</div>"
+        );
+      }).join("");
+    }
+
+    if (state.nextWeek.length === 0) {
+      els.nextWeekRows.innerHTML =
+        "<div class=\"empty is-warn\">下周计划还是空的。点底部「下周计划」或「未完成带入」。</div>";
+    } else {
+      els.nextWeekRows.innerHTML = state.nextWeek.map(function (item, index) {
+        var incomplete = isRowIncomplete(item, "next") ? " is-incomplete" : "";
+        return (
+          "<div class=\"row next" + incomplete + "\" data-id=\"" + item.id + "\" data-kind=\"next\">" +
+            indexCellHtml(index) +
+            tagSelectHtml(item.tag) +
+            "<textarea data-field=\"title\" rows=\"1\" placeholder=\"必填：下周要做什么\">" +
+              escapeHtml(item.title || "") + "</textarea>" +
+            "<button type=\"button\" class=\"btn btn-danger\" data-action=\"remove\">删除</button>" +
+            "<div class=\"row-tip\">" + escapeHtml(rowTipText(item, "next")) + "</div>" +
+          "</div>"
+        );
+      }).join("");
+    }
+    autoGrowAllTitles();
+  }
+
+  function autoGrowTitle(el) {
+    if (!el) return;
+    el.style.height = "0px";
+    el.style.height = Math.max(el.scrollHeight, 42) + "px";
+  }
+
+  function autoGrowAllTitles() {
+    var run = function () {
+      var areas = document.querySelectorAll("textarea[data-field=\"title\"]");
+      for (var i = 0; i < areas.length; i++) {
+        autoGrowTitle(areas[i]);
+      }
+    };
+    run();
+    requestAnimationFrame(run);
+  }
+
+  function updateFillBanner() {
+    var status = getFillStatus();
+    els.thisCount.textContent = status.thisFilled + " / " + state.thisWeek.length + " 项";
+    els.nextCount.textContent = status.nextFilled + " / " + state.nextWeek.length + " 项";
+    els.thisCount.classList.toggle(
+      "has-gap",
+      status.thisEmpty > 0 || status.thisBadProgress > 0 || status.thisDup > 0 || status.thisFilled === 0
+    );
+    els.nextCount.classList.toggle(
+      "has-gap",
+      status.nextEmpty > 0 || status.nextDup > 0 || status.nextFilled === 0
+    );
+
+    if (status.complete) {
+      els.fillBanner.className = "banner is-ok";
+      els.fillBannerMain.textContent = "填写完整，可以复制发出去了";
+      els.fillBannerDetail.textContent =
+        "本周 " + status.thisFilled + " 项 · 下周 " + status.nextFilled + " 项";
+      return;
+    }
+
+    els.fillBanner.className = "banner is-warn";
+    var parts = [];
+    if (status.thisFilled === 0) parts.push("本周工作重点还没写");
+    else if (status.thisEmpty > 0) parts.push("本周有 " + status.thisEmpty + " 行没填事项");
+    if (status.thisBadProgress > 0) parts.push("有 " + status.thisBadProgress + " 项进度还没填（需 1～100）");
+    if (status.thisDup > 0) parts.push("本周有重复事项");
+    if (status.nextFilled === 0) parts.push("下周工作计划还没写");
+    else if (status.nextEmpty > 0) parts.push("下周有 " + status.nextEmpty + " 行没填事项");
+    if (status.nextDup > 0) parts.push("下周有重复事项");
+    els.fillBannerMain.textContent = parts.join("；") || "请继续填写";
+    els.fillBannerDetail.textContent = "橙色高亮的是未填完整或重复的行";
+  }
+
+  function syncLayoutSplit() {
+    var layout = document.querySelector(".layout");
+    if (!layout) return;
+
+    var items = els.preview ? els.preview.querySelectorAll(".preview-item") : [];
+    if (window.innerWidth <= 960) {
+      layout.style.gridTemplateColumns = "";
+      for (var mobileIdx = 0; mobileIdx < items.length; mobileIdx++) {
+        items[mobileIdx].classList.add("is-wrap");
+      }
+      return;
+    }
+
+    var gap = 16;
+    var total = layout.clientWidth;
+    if (total < 640) return;
+
+    var editorMin = 400;
+    var previewChrome = 64;
+    var previewNeed = 280;
+    var itemIdx;
+    for (itemIdx = 0; itemIdx < items.length; itemIdx++) {
+      items[itemIdx].classList.remove("is-wrap");
+      previewNeed = Math.max(previewNeed, items[itemIdx].scrollWidth + previewChrome);
+    }
+
+    var rowCount = state.thisWeek.length + state.nextWeek.length;
+    var editorNeed = rowCount <= 2 ? 440 : 520;
+    if (rowCount >= 8) editorNeed = 560;
+
+    var available = total - gap;
+    var previewW = Math.min(previewNeed, available - editorMin);
+    var editorW = available - previewW;
+
+    // 预览内容短：预览收窄，多留给填写区
+    if (previewNeed < available * 0.38) {
+      previewW = Math.max(280, Math.min(previewNeed + 24, Math.floor(available * 0.4)));
+      editorW = available - previewW;
+    }
+
+    // 预览内容长：尽量让一条事项单行展示，压缩填写区冗余宽度
+    if (previewNeed >= available * 0.42) {
+      previewW = Math.min(previewNeed, available - editorMin);
+      editorW = available - previewW;
+      if (editorW > editorNeed + 80) {
+        var give = Math.min(editorW - editorNeed, previewNeed - previewW);
+        if (give > 0) {
+          editorW -= give;
+          previewW += give;
+        }
+      }
+    }
+
+    // 填写区事项很少时进一步收窄左侧
+    if (rowCount <= 2 && editorW > 480 && previewW < previewNeed) {
+      var shift = Math.min(editorW - 440, previewNeed - previewW);
+      editorW -= shift;
+      previewW += shift;
+    }
+
+    layout.style.gridTemplateColumns =
+      Math.floor(editorW) + "px " + Math.floor(previewW) + "px";
+
+    var fitWidth = Math.floor(previewW) - previewChrome;
+    for (itemIdx = 0; itemIdx < items.length; itemIdx++) {
+      items[itemIdx].classList.remove("is-wrap");
+      if (items[itemIdx].scrollWidth > fitWidth) {
+        items[itemIdx].classList.add("is-wrap");
+      }
+    }
+  }
+
+  function refreshPreview() {
+    els.preview.innerHTML = buildPreviewHtml();
+    updateFillBanner();
+    requestAnimationFrame(function () {
+      syncLayoutSplit();
+    });
+  }
+
+  function renderAll() {
+    renderTags();
+    renderRows();
+    refreshPreview();
+  }
+
+  function findItem(kind, id) {
+    var list = kind === "this" ? state.thisWeek : state.nextWeek;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === id) return list[i];
+    }
+    return null;
+  }
+
+  function syncRowIncomplete(row, item, kind) {
+    var incomplete = isRowIncomplete(item, kind);
+    row.classList.toggle("is-incomplete", incomplete);
+    var tip = row.querySelector(".row-tip");
+    if (tip) tip.textContent = rowTipText(item, kind);
+    if (kind === "this") {
+      var done = !incomplete && Number(item.progress) >= 100;
+      row.classList.toggle("is-done", done);
+      var wrap = row.querySelector(".progress-wrap");
+      if (wrap) wrap.classList.toggle("is-done", done);
+    }
+  }
+
+  function syncAllRowHighlights(kind) {
+    var container = kind === "this" ? els.thisWeekRows : els.nextWeekRows;
+    var list = kind === "this" ? state.thisWeek : state.nextWeek;
+    list.forEach(function (item) {
+      var row = container.querySelector(".row[data-id=\"" + item.id + "\"]");
+      if (row) syncRowIncomplete(row, item, kind);
+    });
+  }
+
+  function onRowsInput(event) {
+    var target = event.target;
+    var row = target.closest(".row");
+    if (!row) return;
+    var id = row.getAttribute("data-id");
+    var kind = row.getAttribute("data-kind");
+    var item = findItem(kind, id);
+    if (!item) return;
+
+    var field = target.getAttribute("data-field");
+    if (field === "title") {
+      item.title = target.value;
+      if (target.tagName === "TEXTAREA") autoGrowTitle(target);
+      saveState();
+      syncAllRowHighlights(kind);
+      refreshPreview();
+      return;
+    } else if (field === "progressNum") {
+      var raw = String(target.value).trim();
+      if (raw === "") {
+        item.progress = "";
+        syncRowIncomplete(row, item, kind);
+        saveState();
+        refreshPreview();
+        return;
+      }
+      var typed = Number(raw);
+      if (isNaN(typed)) return;
+      item.progress = Math.round(typed);
+      syncRowIncomplete(row, item, kind);
+    } else {
+      return;
+    }
+    saveState();
+    refreshPreview();
+  }
+
+  function applyProgress(row, item, progress) {
+    var wasDone = Number(item.progress) >= 100;
+    item.progress = clampProgress(progress);
+    var num = row.querySelector("[data-field=\"progressNum\"]");
+    if (num) num.value = item.progress;
+    syncRowIncomplete(row, item, "this");
+    saveState();
+    var nowDone = item.progress >= 100;
+    if (wasDone !== nowDone) {
+      renderAll();
+    } else {
+      refreshPreview();
+    }
+  }
+
+  function onProgressNumBlur(event) {
+    var target = event.target;
+    if (!target || target.getAttribute("data-field") !== "progressNum") return;
+    var row = target.closest(".row");
+    if (!row) return;
+    var item = findItem(row.getAttribute("data-kind"), row.getAttribute("data-id"));
+    if (!item) return;
+    if (String(target.value).trim() === "") {
+      item.progress = "";
+      if (target) target.value = "";
+      syncRowIncomplete(row, item, "this");
+      saveState();
+      refreshPreview();
+      return;
+    }
+    applyProgress(row, item, target.value);
+  }
+
+  function closeAllTagSelects(except) {
+    var opens = document.querySelectorAll(".tag-select.open");
+    for (var i = 0; i < opens.length; i++) {
+      if (except && opens[i] === except) continue;
+      opens[i].classList.remove("open");
+    }
+  }
+
+  function onRowsClick(event) {
+    var tagSelect = event.target.closest(".tag-select");
+    if (tagSelect) {
+      var row = tagSelect.closest(".row");
+      var trigger = event.target.closest(".tag-select-trigger");
+      var option = event.target.closest(".tag-select-option");
+      if (trigger) {
+        var willOpen = !tagSelect.classList.contains("open");
+        closeAllTagSelects();
+        if (willOpen) tagSelect.classList.add("open");
+        return;
+      }
+      if (option && row) {
+        var kind = row.getAttribute("data-kind");
+        var item = findItem(kind, row.getAttribute("data-id"));
+        if (item) {
+          item.tag = option.getAttribute("data-value") || defaultTag();
+          saveState();
+          renderAll();
+        }
+        return;
+      }
+    }
+
+    var stepBtn = event.target.closest("[data-action=\"step-progress\"]");
+    if (stepBtn) {
+      var stepRow = stepBtn.closest(".row");
+      if (!stepRow) return;
+      var stepItem = findItem(stepRow.getAttribute("data-kind"), stepRow.getAttribute("data-id"));
+      if (!stepItem) return;
+      var delta = Number(stepBtn.getAttribute("data-delta")) || 0;
+      var current = Number(stepItem.progress);
+      if (isNaN(current)) current = 0;
+      applyProgress(stepRow, stepItem, current + delta);
+      return;
+    }
+    var doneBtn = event.target.closest("[data-action=\"done\"]");
+    if (doneBtn) {
+      var doneRow = doneBtn.closest(".row");
+      if (!doneRow) return;
+      var doneItem = findItem(doneRow.getAttribute("data-kind"), doneRow.getAttribute("data-id"));
+      if (!doneItem) return;
+      applyProgress(doneRow, doneItem, 100);
+      return;
+    }
+    var undoneBtn = event.target.closest("[data-action=\"undone\"]");
+    if (undoneBtn) {
+      var undoneRow = undoneBtn.closest(".row");
+      if (!undoneRow) return;
+      var undoneItem = findItem(undoneRow.getAttribute("data-kind"), undoneRow.getAttribute("data-id"));
+      if (!undoneItem) return;
+      applyProgress(undoneRow, undoneItem, 80);
+      return;
+    }
+    var btn = event.target.closest("[data-action=\"remove\"]");
+    if (!btn) return;
+    var row = btn.closest(".row");
+    if (!row) return;
+    var id = row.getAttribute("data-id");
+    var kind = row.getAttribute("data-kind");
+    if (kind === "this") {
+      state.thisWeek = state.thisWeek.filter(function (item) { return item.id !== id; });
+    } else {
+      state.nextWeek = state.nextWeek.filter(function (item) { return item.id !== id; });
+    }
+    saveState();
+    renderAll();
+  }
+
+  var dragState = { id: null, kind: null };
+
+  function clearDropMarkers(container) {
+    var marked = container.querySelectorAll(".row.drop-before, .row.drop-after");
+    for (var i = 0; i < marked.length; i++) {
+      marked[i].classList.remove("drop-before", "drop-after");
+    }
+  }
+
+  function moveItem(kind, fromId, toId, placeAfter) {
+    var list = kind === "this" ? state.thisWeek : state.nextWeek;
+    var fromIndex = -1;
+    var toIndex = -1;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === fromId) fromIndex = i;
+      if (list[i].id === toId) toIndex = i;
+    }
+    if (fromIndex < 0 || toIndex < 0 || fromId === toId) return false;
+    var moved = list.splice(fromIndex, 1)[0];
+    toIndex = -1;
+    for (var j = 0; j < list.length; j++) {
+      if (list[j].id === toId) {
+        toIndex = j;
+        break;
+      }
+    }
+    if (toIndex < 0) {
+      list.push(moved);
+    } else if (placeAfter) {
+      list.splice(toIndex + 1, 0, moved);
+    } else {
+      list.splice(toIndex, 0, moved);
+    }
+    return true;
+  }
+
+  function bindDrag(container) {
+    container.addEventListener("mousedown", function (event) {
+      var handle = event.target.closest("[data-drag-handle]");
+      if (!handle) return;
+      var row = handle.closest(".row");
+      if (!row) return;
+      row.setAttribute("draggable", "true");
+    });
+
+    container.addEventListener("dragstart", function (event) {
+      var row = event.target.closest(".row");
+      if (!row || row.getAttribute("draggable") !== "true") {
+        event.preventDefault();
+        return;
+      }
+      dragState.id = row.getAttribute("data-id");
+      dragState.kind = row.getAttribute("data-kind");
+      row.classList.add("is-dragging");
+      event.dataTransfer.effectAllowed = "move";
+      try {
+        event.dataTransfer.setData("text/plain", dragState.id);
+      } catch (err) { /* ignore */ }
+    });
+
+    container.addEventListener("dragover", function (event) {
+      if (!dragState.id) return;
+      var row = event.target.closest(".row");
+      if (!row || row.getAttribute("data-kind") !== dragState.kind) return;
+      if (row.getAttribute("data-id") === dragState.id) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      clearDropMarkers(container);
+      var rect = row.getBoundingClientRect();
+      var before = event.clientY < rect.top + rect.height / 2;
+      row.classList.add(before ? "drop-before" : "drop-after");
+    });
+
+    container.addEventListener("dragleave", function (event) {
+      var row = event.target.closest(".row");
+      if (!row) return;
+      if (row.contains(event.relatedTarget)) return;
+      row.classList.remove("drop-before", "drop-after");
+    });
+
+    container.addEventListener("drop", function (event) {
+      if (!dragState.id) return;
+      var row = event.target.closest(".row");
+      if (!row || row.getAttribute("data-kind") !== dragState.kind) return;
+      event.preventDefault();
+      var toId = row.getAttribute("data-id");
+      var placeAfter = row.classList.contains("drop-after");
+      clearDropMarkers(container);
+      if (moveItem(dragState.kind, dragState.id, toId, placeAfter)) {
+        saveState();
+        renderAll();
+      }
+      dragState.id = null;
+      dragState.kind = null;
+    });
+
+    container.addEventListener("dragend", function (event) {
+      var row = event.target.closest(".row");
+      if (row) {
+        row.removeAttribute("draggable");
+        row.classList.remove("is-dragging");
+      }
+      clearDropMarkers(container);
+      dragState.id = null;
+      dragState.kind = null;
+    });
+  }
+
+  function addTag() {
+    var tag = String(els.newTag.value || "").trim();
+    if (!tag) {
+      showToast("请输入标签名", true);
+      return;
+    }
+    if (state.tags.indexOf(tag) >= 0) {
+      showToast("标签已存在", true);
+      return;
+    }
+    state.tags.push(tag);
+    els.newTag.value = "";
+    saveState();
+    renderAll();
+    showToast("已添加标签");
+  }
+
+  function deleteTag(tag) {
+    if (state.tags.length <= 1) {
+      showToast("至少保留一个标签", true);
+      return;
+    }
+    if (!window.confirm("删除标签「" + tag + "」？已用该标签的事项会保留文字，可再改选。")) {
+      return;
+    }
+    state.tags = state.tags.filter(function (item) { return item !== tag; });
+    var fallback = defaultTag();
+    state.thisWeek.forEach(function (item) {
+      if (item.tag === tag) item.tag = fallback;
+    });
+    state.nextWeek.forEach(function (item) {
+      if (item.tag === tag) item.tag = fallback;
+    });
+    saveState();
+    renderAll();
+    showToast("已删除标签");
+  }
+
+  function carryIncomplete() {
+    var incomplete = state.thisWeek.filter(function (item) {
+      return !isBlankTitle(item) && clampProgress(item.progress) < 100;
+    });
+    if (incomplete.length === 0) {
+      showToast("没有未完成项可带入", true);
+      return;
+    }
+    var added = 0;
+    incomplete.forEach(function (item) {
+      var title = String(item.title).trim();
+      var tag = item.tag;
+      var exists = state.nextWeek.some(function (nextItem) {
+        return normalizeTitle(nextItem.title) === title && nextItem.tag === tag;
+      });
+      if (!exists) {
+        state.nextWeek.push({ id: uid(), tag: tag, title: title });
+        added += 1;
+      }
+    });
+    saveState();
+    renderAll();
+    showToast(added ? "已带入 " + added + " 项" : "下周已包含这些项");
+  }
+
+  function promoteNextToThis() {
+    var plans = state.nextWeek.filter(function (item) { return !isBlankTitle(item); });
+    if (plans.length === 0) {
+      showToast("下周计划是空的，没法转入", true);
+      return;
+    }
+    var hasThis = state.thisWeek.some(function (item) { return !isBlankTitle(item); });
+    var msg = hasThis
+      ? "把「下周计划」转成「本周工作」？当前本周内容会被替换，下周计划会清空。"
+      : "把「下周计划」转成「本周工作」？转入后进度先空着，请按实际填写。";
+    if (!window.confirm(msg)) return;
+
+    state.thisWeek = plans.map(function (item) {
+      return {
+        id: uid(),
+        tag: item.tag || defaultTag(),
+        title: String(item.title).trim(),
+        progress: ""
+      };
+    });
+    // 同项目同事项去重，保留首次出现
+    var seen = {};
+    state.thisWeek = state.thisWeek.filter(function (item) {
+      var key = String(item.tag || "") + "\0" + normalizeTitle(item.title);
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+    state.nextWeek = [];
+    state.weekKey = currentWeekKey();
+    saveState();
+    renderAll();
+    showToast("已转入本周，请更新进度并补下周计划");
+  }
+
+  function clearAll() {
+    if (!window.confirm("清空本周和下周全部内容？")) return;
+    state.weekKey = currentWeekKey();
+    state.thisWeek = [emptyThisItem()];
+    state.nextWeek = [];
+    saveState();
+    renderAll();
+    showToast("已清空");
+  }
+
+  function incompleteHint() {
+    var status = getFillStatus();
+    if (status.complete) return "";
+    var msg = [];
+    if (status.thisFilled === 0) msg.push("本周还没写");
+    else if (status.thisEmpty > 0) msg.push("本周有空行");
+    if (status.thisBadProgress > 0) msg.push("进度未填");
+    if (status.thisDup > 0 || status.nextDup > 0) msg.push("有重复事项");
+    if (status.nextFilled === 0) msg.push("下周还没写");
+    else if (status.nextEmpty > 0) msg.push("下周有空行");
+    return msg.join("、");
+  }
+
+  function doneToast(okMsg) {
+    var gap = incompleteHint();
+    if (gap) showToast(okMsg + "（注意：还没填完整 — " + gap + "）", true);
+    else showToast(okMsg);
+  }
+
+  function ensureTagExists(tag) {
+    var name = String(tag || "").trim();
+    if (!name) return defaultTag();
+    if (state.tags.indexOf(name) < 0) state.tags.push(name);
+    return name;
+  }
+
+  function parseItemLine(line, withProgress) {
+    var text = String(line || "").trim();
+    if (!text || text === "（暂无）" || text === "(暂无)") return null;
+    var matched = text.match(/^\d+[、\.．]\s*【([^】]*)】(.*)$/);
+    if (!matched) return null;
+    var tag = ensureTagExists(matched[1]);
+    var rest = String(matched[2] || "").trim();
+    var progress = "";
+    if (withProgress) {
+      var progressMatch = rest.match(/（\s*(\d+)\s*%\s*）\s*$/);
+      if (progressMatch) {
+        progress = clampProgress(progressMatch[1]);
+        rest = rest.slice(0, progressMatch.index).trim();
+      } else if (/（\s*已完成\s*）\s*$/.test(rest)) {
+        progress = 100;
+        rest = rest.replace(/（\s*已完成\s*）\s*$/, "").trim();
+      }
+    }
+    if (!rest) return null;
+    if (withProgress) {
+      return { id: uid(), tag: tag, title: rest, progress: progress };
+    }
+    return { id: uid(), tag: tag, title: rest };
+  }
+
+  function parseReportText(raw) {
+    var lines = String(raw || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+    var section = "";
+    var thisWeek = [];
+    var nextWeek = [];
+    for (var i = 0; i < lines.length; i++) {
+      var line = String(lines[i] || "").trim();
+      if (!line) continue;
+      if (line.indexOf("本周工作重点") === 0) {
+        section = "this";
+        continue;
+      }
+      if (line.indexOf("下周工作计划") === 0) {
+        section = "next";
+        continue;
+      }
+      if (section === "this") {
+        var thisItem = parseItemLine(line, true);
+        if (thisItem) thisWeek.push(thisItem);
+      } else if (section === "next") {
+        var nextItem = parseItemLine(line, false);
+        if (nextItem) nextWeek.push(nextItem);
+      }
+    }
+    return { thisWeek: thisWeek, nextWeek: nextWeek };
+  }
+
+  function openImportModal() {
+    var overlay = document.getElementById("importOverlay");
+    var area = document.getElementById("importText");
+    if (!overlay || !area) return;
+    area.value = "";
+    overlay.classList.add("show");
+    overlay.setAttribute("aria-hidden", "false");
+    setTimeout(function () { area.focus(); }, 0);
+  }
+
+  function closeImportModal() {
+    var overlay = document.getElementById("importOverlay");
+    if (!overlay) return;
+    overlay.classList.remove("show");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+
+  function confirmImportReport() {
+    var area = document.getElementById("importText");
+    var raw = area ? area.value : "";
+    if (!String(raw).trim()) {
+      showToast("请先粘贴周报全文", true);
+      return;
+    }
+    var parsed = parseReportText(raw);
+    if (!parsed.thisWeek.length && !parsed.nextWeek.length) {
+      showToast("没识别到事项，请检查格式是否与「复制报告」一致", true);
+      return;
+    }
+    var hasLocal =
+      state.thisWeek.some(function (item) { return !isBlankTitle(item); }) ||
+      state.nextWeek.some(function (item) { return !isBlankTitle(item); });
+    if (hasLocal && !window.confirm("导入会替换当前本周/下周内容，确定继续？")) return;
+
+    state.thisWeek = parsed.thisWeek.length ? parsed.thisWeek : [emptyThisItem()];
+    state.nextWeek = parsed.nextWeek;
+    state.weekKey = currentWeekKey();
+    saveState();
+    closeImportModal();
+    renderAll();
+    showToast(
+      "已导入：本周 " + parsed.thisWeek.length + " 项 · 下周 " + parsed.nextWeek.length + " 项"
+    );
+  }
+
+  function copyReport() {
+    var organized = applyOrganizeByProject();
+    var text = buildReportText();
+    var okMsg = organized
+      ? "已整理并复制，可粘贴到微信/备忘录"
+      : "已复制，可粘贴到微信/备忘录";
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        doneToast(okMsg);
+      }).catch(function () {
+        fallbackCopy(text, okMsg);
+      });
+    } else {
+      fallbackCopy(text, okMsg);
+    }
+  }
+
+  function fallbackCopy(text, okMsg) {
+    var area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.left = "-9999px";
+    document.body.appendChild(area);
+    area.select();
+    try {
+      document.execCommand("copy");
+      doneToast(okMsg || "已复制到剪贴板");
+    } catch (err) {
+      showToast("复制失败，请手动选中预览文本", true);
+    }
+    document.body.removeChild(area);
+  }
+
+  function addThisItem() {
+    state.thisWeek.push(emptyThisItem());
+    saveState();
+    renderAll();
+  }
+
+  function addNextItem() {
+    state.nextWeek.push(emptyNextItem());
+    saveState();
+    renderAll();
+  }
+
+  function onGlobalActionClick(event) {
+    var btn = event.target.closest("[data-action]");
+    if (!btn) return;
+    var action = btn.getAttribute("data-action");
+    if (action === "add-this") addThisItem();
+    else if (action === "add-next") addNextItem();
+    else if (action === "carry-incomplete") carryIncomplete();
+    else if (action === "group-by-project") organizeByProject();
+    else if (action === "import-report") openImportModal();
+    else if (action === "copy-report") copyReport();
+    else if (action === "scroll-top") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (action === "scroll-bottom") {
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
+    }
+  }
+
+  function init() {
+    var loaded = loadState();
+    if (!loaded) {
+      state.weekKey = currentWeekKey();
+      state.tags = DEFAULT_TAGS.slice();
+      state.thisWeek = [emptyThisItem()];
+      state.nextWeek = [];
+    }
+    if (!state.thisWeek.length && !state.nextWeek.length) {
+      state.thisWeek = [emptyThisItem()];
+    }
+    if (!state.weekKey) state.weekKey = currentWeekKey();
+
+    document.getElementById("btnAddTag").addEventListener("click", addTag);
+    els.newTag.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") addTag();
+    });
+    els.tagChips.addEventListener("click", function (event) {
+      var btn = event.target.closest("[data-action=\"del-tag\"]");
+      if (!btn) return;
+      deleteTag(btn.getAttribute("data-tag"));
+    });
+
+    document.getElementById("btnPromote").addEventListener("click", promoteNextToThis);
+    document.getElementById("btnClear").addEventListener("click", clearAll);
+    document.getElementById("actionDock").addEventListener("click", onGlobalActionClick);
+    document.getElementById("scrollJump").addEventListener("click", onGlobalActionClick);
+    document.getElementById("btnImportCancel").addEventListener("click", closeImportModal);
+    document.getElementById("btnImportConfirm").addEventListener("click", confirmImportReport);
+    document.getElementById("importOverlay").addEventListener("click", function (event) {
+      if (event.target === event.currentTarget) closeImportModal();
+    });
+
+    var resizeTimer = null;
+    window.addEventListener("resize", function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(syncLayoutSplit, 80);
+    });
+
+    document.addEventListener("click", function (event) {
+      if (event.target.closest(".tag-select")) return;
+      closeAllTagSelects();
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        closeImportModal();
+        closeAllTagSelects();
+      }
+    });
+
+    els.toast.addEventListener("mouseenter", function () {
+      showToast._hovering = true;
+      clearTimeout(showToast._t);
+    });
+    els.toast.addEventListener("mouseleave", function () {
+      showToast._hovering = false;
+      hideToastSoon();
+    });
+
+    els.thisWeekRows.addEventListener("input", onRowsInput);
+    els.thisWeekRows.addEventListener("change", onRowsInput);
+    els.thisWeekRows.addEventListener("blur", onProgressNumBlur, true);
+    els.thisWeekRows.addEventListener("click", onRowsClick);
+    els.nextWeekRows.addEventListener("input", onRowsInput);
+    els.nextWeekRows.addEventListener("change", onRowsInput);
+    els.nextWeekRows.addEventListener("click", onRowsClick);
+    bindDrag(els.thisWeekRows);
+    bindDrag(els.nextWeekRows);
+
+    renderAll();
+    saveState();
+  }
+
+  init();
+})();
+  </script>
+</body>
+</html>

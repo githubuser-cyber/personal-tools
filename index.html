@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="工具箱" />
+  <title>个人工具箱</title>
+  <style>
+    :root {
+      --bg: #f8fbff;
+      --surface: #ffffff;
+      --text: #334155;
+      --muted: #94a3b8;
+      --border: #e8eef5;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+      --accent-soft: #f0f9ff;
+      --radius: 16px;
+      --shadow: 0 1px 2px rgba(148, 163, 184, 0.12), 0 10px 28px rgba(56, 189, 248, 0.08);
+      --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.5;
+      min-height: 100vh;
+      font-size: 16px;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .app {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 36px 20px 48px;
+      padding-left: max(20px, env(safe-area-inset-left));
+      padding-right: max(20px, env(safe-area-inset-right));
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: 1.85rem;
+      font-weight: 750;
+      letter-spacing: -0.02em;
+      color: #0f172a;
+    }
+
+    header p {
+      margin: 0 0 28px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .tools {
+      display: grid;
+      gap: 14px;
+    }
+
+    .tool-card {
+      display: block;
+      padding: 18px 18px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+
+    .tool-card:hover,
+    .tool-card:focus-visible {
+      border-color: #bae6fd;
+      box-shadow: 0 8px 24px rgba(14, 165, 233, 0.12);
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    .tool-card h2 {
+      margin: 0 0 6px;
+      font-size: 1.2rem;
+      color: #0f172a;
+    }
+
+    .tool-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .tool-card .go {
+      display: inline-block;
+      margin-top: 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent-hover);
+    }
+
+    footer {
+      margin-top: 32px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>个人工具箱</h1>
+      <p>离线可用的小工具合集 · 草稿存在本机浏览器</p>
+    </header>
+
+    <div class="tools" id="toolList"></div>
+
+    <footer>跨设备：工具内「复制 / 导入」成稿文字即可</footer>
+  </div>
+
+  <script>
+(function () {
+  var tools = [
+    {
+      name: "周报填写助手",
+      desc: "本周 / 下周事项填写、预览、按项目整理、复制与导入成稿",
+      href: "./tools/weekly-report/"
+    }
+  ];
+
+  var list = document.getElementById("toolList");
+  list.innerHTML = tools.map(function (tool) {
+    return (
+      '<a class="tool-card" href="' + tool.href + '">' +
+        "<h2>" + tool.name + "</h2>" +
+        "<p>" + tool.desc + "</p>" +
+        '<span class="go">打开 →</span>' +
+      "</a>"
+    );
+  }).join("");
+})();
+  </script>
+</body>
+</html>
