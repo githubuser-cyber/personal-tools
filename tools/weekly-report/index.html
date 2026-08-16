@@ -1342,6 +1342,112 @@
       background: #e11d48;
       color: #ffffff;
     }
+
+    /* 移动端必须放在最后，避免被桌面样式覆盖 */
+    @media (max-width: 700px) {
+      .scroll-jump {
+        display: none !important;
+      }
+
+      .app {
+        padding: 12px 12px calc(168px + env(safe-area-inset-bottom)) !important;
+      }
+
+      header h1 {
+        font-size: 1.3rem;
+      }
+
+      header .sub {
+        display: none;
+      }
+
+      .banner {
+        padding: 10px 12px;
+        font-size: 0.88rem;
+      }
+
+      .banner .detail {
+        display: none;
+      }
+
+      .section-hint {
+        display: none !important;
+      }
+
+      .dock {
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        transform: none !important;
+        width: 100% !important;
+        max-width: none !important;
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        align-items: stretch !important;
+        gap: 0 !important;
+        padding: 10px 10px calc(10px + env(safe-area-inset-bottom)) !important;
+        border-radius: 16px 16px 0 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.12) !important;
+      }
+
+      .dock-main,
+      .dock-more {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+      }
+
+      .dock-more {
+        margin-top: 8px !important;
+      }
+
+      .dock .btn[data-action="toggle-dock-more"] {
+        display: none !important;
+      }
+
+      .dock .btn {
+        display: flex !important;
+        width: 100% !important;
+        min-height: 44px !important;
+        padding: 10px 8px !important;
+        font-size: 0.92rem !important;
+        font-weight: 700 !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+      }
+
+      .dock .btn .ico {
+        display: none !important;
+      }
+
+      .dock .label-full {
+        display: inline !important;
+      }
+
+      .dock .label-short {
+        display: none !important;
+      }
+
+      .toast {
+        bottom: calc(160px + env(safe-area-inset-bottom)) !important;
+        left: 12px !important;
+        right: 12px !important;
+        transform: translateY(8px) !important;
+        max-width: none !important;
+        border-radius: 12px !important;
+      }
+
+      .toast.show {
+        transform: translateY(0) !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1425,27 +1531,24 @@
   <div class="dock" id="actionDock">
     <div class="dock-main">
       <button type="button" class="btn btn-dock-this" data-action="add-this" title="新增本周工作事项">
-        <span class="ico">＋</span><span class="label-full">本周事项</span><span class="label-short">本周</span>
+        <span class="ico">＋</span><span class="label-full">＋ 本周事项</span><span class="label-short">本周</span>
       </button>
       <button type="button" class="btn btn-dock-next" data-action="add-next" title="新增下周工作计划">
-        <span class="ico">＋</span><span class="label-full">下周计划</span><span class="label-short">下周</span>
+        <span class="ico">＋</span><span class="label-full">＋ 下周计划</span><span class="label-short">下周</span>
       </button>
-      <button type="button" class="btn btn-dock-copy" data-action="copy-report" title="按项目整理后复制；可粘贴到微信/备忘录">
+      <button type="button" class="btn btn-dock-copy" data-action="copy-report" title="按项目整理后复制">
         <span class="ico">⧉</span><span class="label-full">复制报告</span><span class="label-short">复制</span>
       </button>
-      <button type="button" class="btn btn-dock-group" data-action="toggle-dock-more" title="更多操作" id="btnDockMore">
-        <span class="ico">···</span><span class="label-full">更多</span><span class="label-short">更多</span>
+      <button type="button" class="btn btn-dock-import" data-action="import-report" title="导入成稿">
+        <span class="ico">⇩</span><span class="label-full">导入成稿</span><span class="label-short">导入</span>
       </button>
     </div>
     <div class="dock-more" id="dockMore">
-      <button type="button" class="btn btn-dock-carry" data-action="carry-incomplete" title="把本周未完成项带入下周">
+      <button type="button" class="btn btn-dock-carry" data-action="carry-incomplete" title="未完成带入下周">
         <span class="ico">⤵</span><span class="label-full">未完成带入</span><span class="label-short">带入</span>
       </button>
-      <button type="button" class="btn btn-dock-group" data-action="group-by-project" title="按项目分组整理">
+      <button type="button" class="btn btn-dock-group" data-action="group-by-project" title="按项目整理">
         <span class="ico">☰</span><span class="label-full">按项目整理</span><span class="label-short">整理</span>
-      </button>
-      <button type="button" class="btn btn-dock-import" data-action="import-report" title="粘贴复制出来的周报文字，导入到本机">
-        <span class="ico">⇩</span><span class="label-full">导入成稿</span><span class="label-short">导入</span>
       </button>
     </div>
   </div>
