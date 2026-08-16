@@ -921,32 +921,202 @@
     }
 
     @media (max-width: 700px) {
-      .scroll-jump {
-        right: max(8px, env(safe-area-inset-right));
-        bottom: calc(108px + env(safe-area-inset-bottom));
+      .scroll-jump { display: none; }
+
+      .app {
+        padding: 14px 12px calc(88px + env(safe-area-inset-bottom));
       }
-      .scroll-jump .btn {
-        width: 40px;
-        height: 40px;
+
+      header {
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      header h1 {
+        font-size: 1.35rem;
+        margin-bottom: 2px;
+      }
+
+      header .sub {
+        font-size: 0.85rem;
+      }
+
+      .header-actions {
+        width: 100%;
+        gap: 8px;
+      }
+
+      .header-actions .btn {
+        flex: 1;
         min-height: 40px;
+        padding: 8px 10px;
+        font-size: 0.9rem;
       }
+
+      .banner {
+        padding: 10px 12px;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+        gap: 4px;
+      }
+
+      .banner .detail {
+        font-size: 0.8rem;
+        width: 100%;
+      }
+
+      .panel {
+        padding: 14px 12px 12px;
+      }
+
+      .tag-bar {
+        padding: 10px;
+        margin-bottom: 14px;
+      }
+
+      .tag-add {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .tag-add .btn {
+        width: 100%;
+      }
+
+      .section-hint {
+        display: none;
+      }
+
+      .section + .section {
+        margin-top: 18px;
+        padding-top: 16px;
+      }
+
+      .panel-head h2 {
+        font-size: 1.05rem;
+      }
+
+      .row,
+      .row.next {
+        grid-template-columns: 36px minmax(0, 1fr);
+        grid-template-areas:
+          "idx tag"
+          "idx title"
+          "idx progress"
+          "idx del";
+        gap: 8px;
+        padding: 10px;
+      }
+
+      .row > .tag-select { max-width: none; }
+
+      .row.next {
+        grid-template-areas:
+          "idx tag"
+          "idx title"
+          "idx del";
+      }
+
+      .row > .btn-danger {
+        justify-self: start;
+      }
+
+      .progress-wrap {
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .progress-wrap input[type="number"] {
+        width: 64px;
+      }
+
       .preview-col {
         position: static;
         max-height: none;
+        margin-top: 12px;
       }
+
       .preview-panel,
       .preview-text {
         max-height: none;
       }
+
       .dock {
-        bottom: max(10px, env(safe-area-inset-bottom));
-        gap: 6px;
-        padding: 8px 10px;
+        left: 8px;
+        right: 8px;
+        bottom: max(8px, env(safe-area-inset-bottom));
+        transform: none;
+        width: auto;
+        max-width: none;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding: 8px;
+        border-radius: 14px;
       }
-      .dock .btn {
+
+      .dock-main {
+        display: flex;
+        gap: 6px;
+        width: 100%;
+      }
+
+      .dock-main > .btn {
+        flex: 1;
+        min-width: 0;
+        min-height: 42px;
+        padding: 8px 4px;
+        font-size: 0.82rem;
+        gap: 2px;
+      }
+
+      .dock .btn[data-action="toggle-dock-more"] {
+        display: inline-flex;
+      }
+
+      .dock-main > .btn .ico {
+        font-size: 0.95rem;
+      }
+
+      .dock-more {
+        display: none;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+      }
+
+      .dock.is-more-open .dock-more {
+        display: grid;
+      }
+
+      .dock-more > .btn {
         min-height: 40px;
-        padding: 8px 10px;
-        font-size: 0.88rem;
+        padding: 8px 4px;
+        font-size: 0.78rem;
+      }
+
+      .label-full { display: none; }
+      .label-short { display: inline; }
+
+      .toast {
+        bottom: calc(96px + env(safe-area-inset-bottom));
+        left: 12px;
+        right: 12px;
+        transform: translateY(12px);
+        max-width: none;
+        border-radius: 14px;
+      }
+
+      .toast.show {
+        transform: translateY(0);
+      }
+
+      footer.hint {
+        font-size: 0.8rem;
+        margin-top: 16px;
+        padding: 0 4px;
       }
     }
 
@@ -970,9 +1140,24 @@
       -webkit-backdrop-filter: blur(8px);
     }
 
+    .dock-main {
+      display: contents;
+    }
+
+    .dock-more {
+      display: contents;
+    }
+
+    .label-short { display: none; }
+
+    .dock .btn[data-action="toggle-dock-more"] {
+      display: none;
+    }
+
     .dock .btn {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
       min-height: 44px;
       padding: 9px 14px;
@@ -1238,24 +1423,31 @@
   </div>
 
   <div class="dock" id="actionDock">
-    <button type="button" class="btn btn-dock-this" data-action="add-this" title="新增本周工作事项">
-      <span class="ico">＋</span>本周事项
-    </button>
-    <button type="button" class="btn btn-dock-next" data-action="add-next" title="新增下周工作计划">
-      <span class="ico">＋</span>下周计划
-    </button>
-    <button type="button" class="btn btn-dock-carry" data-action="carry-incomplete" title="把本周未完成项带入下周">
-      <span class="ico">⤵</span>未完成带入
-    </button>
-    <button type="button" class="btn btn-dock-group" data-action="group-by-project" title="按项目分组整理">
-      <span class="ico">☰</span>按项目整理
-    </button>
-    <button type="button" class="btn btn-dock-import" data-action="import-report" title="粘贴复制出来的周报文字，导入到本机">
-      <span class="ico">⇩</span>导入成稿
-    </button>
-    <button type="button" class="btn btn-dock-copy" data-action="copy-report" title="按项目整理后复制；可粘贴到微信/备忘录发给其他设备">
-      <span class="ico">⧉</span>复制报告
-    </button>
+    <div class="dock-main">
+      <button type="button" class="btn btn-dock-this" data-action="add-this" title="新增本周工作事项">
+        <span class="ico">＋</span><span class="label-full">本周事项</span><span class="label-short">本周</span>
+      </button>
+      <button type="button" class="btn btn-dock-next" data-action="add-next" title="新增下周工作计划">
+        <span class="ico">＋</span><span class="label-full">下周计划</span><span class="label-short">下周</span>
+      </button>
+      <button type="button" class="btn btn-dock-copy" data-action="copy-report" title="按项目整理后复制；可粘贴到微信/备忘录">
+        <span class="ico">⧉</span><span class="label-full">复制报告</span><span class="label-short">复制</span>
+      </button>
+      <button type="button" class="btn btn-dock-group" data-action="toggle-dock-more" title="更多操作" id="btnDockMore">
+        <span class="ico">···</span><span class="label-full">更多</span><span class="label-short">更多</span>
+      </button>
+    </div>
+    <div class="dock-more" id="dockMore">
+      <button type="button" class="btn btn-dock-carry" data-action="carry-incomplete" title="把本周未完成项带入下周">
+        <span class="ico">⤵</span><span class="label-full">未完成带入</span><span class="label-short">带入</span>
+      </button>
+      <button type="button" class="btn btn-dock-group" data-action="group-by-project" title="按项目分组整理">
+        <span class="ico">☰</span><span class="label-full">按项目整理</span><span class="label-short">整理</span>
+      </button>
+      <button type="button" class="btn btn-dock-import" data-action="import-report" title="粘贴复制出来的周报文字，导入到本机">
+        <span class="ico">⇩</span><span class="label-full">导入成稿</span><span class="label-short">导入</span>
+      </button>
+    </div>
   </div>
 
   <div class="import-overlay" id="importOverlay" aria-hidden="true">
@@ -2407,6 +2599,8 @@
   }
 
   function openImportModal() {
+    var dock = document.getElementById("actionDock");
+    if (dock) dock.classList.remove("is-more-open");
     var overlay = document.getElementById("importOverlay");
     var area = document.getElementById("importText");
     if (!overlay || !area) return;
@@ -2507,7 +2701,10 @@
     else if (action === "group-by-project") organizeByProject();
     else if (action === "import-report") openImportModal();
     else if (action === "copy-report") copyReport();
-    else if (action === "scroll-top") {
+    else if (action === "toggle-dock-more") {
+      var dock = document.getElementById("actionDock");
+      if (dock) dock.classList.toggle("is-more-open");
+    } else if (action === "scroll-top") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else if (action === "scroll-bottom") {
       window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
