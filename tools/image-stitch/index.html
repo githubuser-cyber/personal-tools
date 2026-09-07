@@ -434,7 +434,24 @@
       border-top: 1px solid var(--border);
     }
 
-    .compose-dock .btn { flex: 1; max-width: 220px; justify-content: center; }
+    .compose-dock .btn { flex: 1; max-width: 200px; justify-content: center; }
+
+    .preview-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .preview-head h2 { margin: 0; }
+
+    .preview-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
 
     .toast {
       position: fixed;
@@ -520,14 +537,14 @@
         <div class="field">
           <label for="scaleMode">对齐缩放</label>
           <select id="scaleMode">
+            <option value="max" selected>按最长边对齐（放大）</option>
             <option value="min">按最短边对齐（缩小）</option>
-            <option value="max">按最长边对齐（放大）</option>
             <option value="none">保持原尺寸</option>
           </select>
         </div>
         <div class="field">
           <label for="gap">间距 (px)</label>
-          <input type="number" id="gap" min="0" max="200" value="0" />
+          <input type="number" id="gap" min="0" max="200" value="50" />
         </div>
         <div class="field">
           <label for="bgColor">底色 / 间距色</label>
@@ -539,8 +556,16 @@
     </section>
 
     <section class="panel compose-only">
-      <h2>拼接预览</h2>
-      <p class="hint">预览为缩小显示；进入标注后可在原图像素上编辑并导出。</p>
+      <div class="preview-head">
+        <div>
+          <h2>拼接预览</h2>
+          <p class="hint" style="margin-bottom:0">预览为缩小显示；可直接复制/下载成图，不必进入标注。</p>
+        </div>
+        <div class="preview-actions">
+          <button type="button" class="btn btn-ghost" id="btnCopyStitch" disabled>复制图片</button>
+          <button type="button" class="btn btn-primary" id="btnDownloadStitch" disabled>下载图片</button>
+        </div>
+      </div>
       <div class="preview-wrap" id="previewWrap">
         <div class="preview-empty" id="previewEmpty">添加至少 1 张图片后显示预览</div>
         <canvas id="previewCanvas" hidden></canvas>
@@ -548,7 +573,9 @@
     </section>
 
     <div class="compose-dock compose-only">
-      <button type="button" class="btn btn-primary" id="btnEnterEdit" disabled>进入标注编辑</button>
+      <button type="button" class="btn btn-ghost" id="btnCopyStitchDock" disabled>复制</button>
+      <button type="button" class="btn btn-ghost" id="btnDownloadStitchDock" disabled>下载</button>
+      <button type="button" class="btn btn-primary" id="btnEnterEdit" disabled>进入标注</button>
     </div>
 
     <!-- 编辑态 -->
@@ -651,6 +678,10 @@
     previewCanvas: document.getElementById("previewCanvas"),
     previewEmpty: document.getElementById("previewEmpty"),
     btnEnterEdit: document.getElementById("btnEnterEdit"),
+    btnCopyStitch: document.getElementById("btnCopyStitch"),
+    btnDownloadStitch: document.getElementById("btnDownloadStitch"),
+    btnCopyStitchDock: document.getElementById("btnCopyStitchDock"),
+    btnDownloadStitchDock: document.getElementById("btnDownloadStitchDock"),
     btnClearAll: document.getElementById("btnClearAll"),
     editCanvas: document.getElementById("editCanvas"),
     editFrame: document.getElementById("editFrame"),
@@ -806,6 +837,15 @@
       els.thumbList.appendChild(row);
     });
     els.btnEnterEdit.disabled = images.length === 0;
+    setStitchExportEnabled(images.length > 0);
+  }
+
+  function setStitchExportEnabled(enabled) {
+    var disabled = !enabled;
+    els.btnCopyStitch.disabled = disabled;
+    els.btnDownloadStitch.disabled = disabled;
+    els.btnCopyStitchDock.disabled = disabled;
+    els.btnDownloadStitchDock.disabled = disabled;
   }
 
   function escapeHtml(str) {
@@ -936,6 +976,7 @@
       els.previewCanvas.hidden = true;
       els.previewEmpty.hidden = false;
       els.btnEnterEdit.disabled = true;
+      setStitchExportEnabled(false);
       return;
     }
     var canvas = stitchToCanvas(getSettings(), 1400);
@@ -949,6 +990,66 @@
     preview.hidden = false;
     els.previewEmpty.hidden = true;
     els.btnEnterEdit.disabled = false;
+    setStitchExportEnabled(true);
+  }
+
+  /** 导出用原图像素拼接（过大则缩到边长 8000） */
+  function stitchFullForExport() {
+    if (!images.length) return null;
+    var full = stitchToCanvas(getSettings(), 0);
+    if (!full) return null;
+    var edge = Math.max(full.width, full.height);
+    if (edge > 8000) {
+      var scaled = document.createElement("canvas");
+      var s = 8000 / edge;
+      scaled.width = Math.round(full.width * s);
+      scaled.height = Math.round(full.height * s);
+      scaled.getContext("2d").drawImage(full, 0, 0, scaled.width, scaled.height);
+      return scaled;
+    }
+    return full;
+  }
+
+  function downloadStitchPng() {
+    var out = stitchFullForExport();
+    if (!out) {
+      showToast("请先添加图片", true);
+      return;
+    }
+    canvasToBlob(out).then(function (blob) {
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "stitch-" + formatStamp() + ".png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+      showToast("已开始下载");
+    }).catch(function () {
+      showToast("下载失败", true);
+    });
+  }
+
+  function copyStitchPng() {
+    var out = stitchFullForExport();
+    if (!out) {
+      showToast("请先添加图片", true);
+      return;
+    }
+    if (!navigator.clipboard || !window.ClipboardItem) {
+      showToast("当前浏览器不支持复制图片，请改用下载", true);
+      return;
+    }
+    canvasToBlob(out).then(function (blob) {
+      return navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob })
+      ]);
+    }).then(function () {
+      showToast("已复制到剪贴板");
+    }).catch(function (err) {
+      console.error(err);
+      showToast("复制失败，请改用下载", true);
+    });
   }
 
   /* —— 编辑态 —— */
@@ -1509,6 +1610,10 @@
 
   els.btnClearAll.addEventListener("click", clearAll);
   els.btnEnterEdit.addEventListener("click", enterEdit);
+  els.btnCopyStitch.addEventListener("click", copyStitchPng);
+  els.btnDownloadStitch.addEventListener("click", downloadStitchPng);
+  els.btnCopyStitchDock.addEventListener("click", copyStitchPng);
+  els.btnDownloadStitchDock.addEventListener("click", downloadStitchPng);
   document.getElementById("btnCancelEdit").addEventListener("click", leaveEdit);
   document.getElementById("btnDownload").addEventListener("click", downloadPng);
   document.getElementById("btnCopyEdit").addEventListener("click", copyPng);
