@@ -352,6 +352,10 @@
       display: inline-block;
     }
 
+    .preview-empty[hidden] {
+      display: none !important;
+    }
+
     /* —— 标注编辑态 —— */
     body.is-edit {
       overflow: hidden;
@@ -1111,12 +1115,18 @@
     if (!images.length) {
       els.previewCanvas.hidden = true;
       els.previewEmpty.hidden = false;
+      els.previewEmpty.style.display = "";
       els.btnEnterEdit.disabled = true;
       setStitchExportEnabled(false);
       return;
     }
     var canvas = stitchToCanvas(getSettings(), 1400);
-    if (!canvas) return;
+    if (!canvas) {
+      els.previewCanvas.hidden = true;
+      els.previewEmpty.hidden = false;
+      els.previewEmpty.style.display = "";
+      return;
+    }
     var preview = els.previewCanvas;
     var ctx = preview.getContext("2d");
     preview.width = canvas.width;
@@ -1125,6 +1135,7 @@
     ctx.drawImage(canvas, 0, 0);
     preview.hidden = false;
     els.previewEmpty.hidden = true;
+    els.previewEmpty.style.display = "none";
     els.btnEnterEdit.disabled = false;
     setStitchExportEnabled(true);
   }
