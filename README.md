@@ -1,4 +1,4 @@
-# 个人工具箱
+ 个人工具箱
 
 离线单页小工具集合，可部署到 GitHub Pages。
 
@@ -24,6 +24,7 @@ python -m http.server 8080
 ```text
 index.html                 # 工具主页
 tools/weekly-report/       # 周报填写助手
+tools/image-stitch/        # 图片拼接 + 标注
 ```
 
 新增工具：在 `tools/` 下新建目录放 `index.html`，并在根目录 `index.html` 的 `tools` 数组里加一项。
