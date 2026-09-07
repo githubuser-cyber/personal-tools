@@ -353,27 +353,33 @@
     }
 
     /* —— 标注编辑态 —— */
+    body.is-edit {
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
     body.is-edit .compose-only { display: none !important; }
     body:not(.is-edit) .edit-only { display: none !important; }
 
     .edit-stage {
-      position: relative;
-      min-height: calc(100vh - 40px);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 56px 12px 88px;
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      padding: 72px 12px 110px;
+      padding-top: max(72px, calc(12px + env(safe-area-inset-top)));
+      padding-bottom: max(110px, calc(88px + env(safe-area-inset-bottom)));
       background: #64748b;
-      margin: -18px -16px calc(-1 * var(--dock-h) - 28px);
-      margin-left: calc(-1 * max(16px, env(safe-area-inset-left)));
-      margin-right: calc(-1 * max(16px, env(safe-area-inset-right)));
+      margin: 0;
     }
 
     .edit-frame {
       position: relative;
-      display: inline-block;
+      display: block;
+      width: fit-content;
       max-width: min(96vw, 1100px);
+      margin: 0 auto;
       line-height: 0;
       border: 2px solid #38bdf8;
       box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
@@ -385,6 +391,18 @@
       max-width: 100%;
       height: auto;
       cursor: crosshair;
+      touch-action: none;
+    }
+
+    .edit-frame[data-tool="pan"] canvas {
+      cursor: grab;
+      touch-action: pan-x pan-y;
+    }
+
+    .edit-frame[data-tool="pan"] canvas:active { cursor: grabbing; }
+
+    .edit-frame[data-tool="select"] canvas {
+      cursor: default;
       touch-action: none;
     }
 
@@ -683,7 +701,7 @@
 
     <!-- 编辑态 -->
     <div class="edit-stage edit-only" id="editStage">
-      <div class="edit-frame" id="editFrame" data-tool="pen">
+      <div class="edit-frame" id="editFrame" data-tool="pan">
         <div class="beautify-bar">
           <label>圆角 <input type="range" id="cornerRadius" min="0" max="48" value="0" /> <span id="cornerVal">0</span></label>
           <label><input type="checkbox" id="dropShadow" /> 阴影</label>
@@ -706,7 +724,13 @@
       </select>
     </div>
     <span class="sep"></span>
-    <button type="button" class="tb is-active" data-tool="rect" title="矩形">
+    <button type="button" class="tb is-active" data-tool="pan" title="滑动浏览">
+      <svg viewBox="0 0 24 24"><path d="M8 13 V7 a1.5 1.5 0 0 1 3 0 v4"/><path d="M11 11 V6 a1.5 1.5 0 0 1 3 0 v5"/><path d="M14 11 V7.5 a1.5 1.5 0 0 1 3 0 V14"/><path d="M8 13 c0 4 2.5 7 5.5 7 s4-1 4-3 V11"/><path d="M8 13 H6.5 A1.5 1.5 0 0 0 5 14.5 V15"/></svg>
+    </button>
+    <button type="button" class="tb" data-tool="select" title="选择/修改">
+      <svg viewBox="0 0 24 24"><path d="M5 4 L5 18 L9 14 L12 21 L14 20 L11 13 L17 13 Z" fill="currentColor" stroke="none"/></svg>
+    </button>
+    <button type="button" class="tb" data-tool="rect" title="矩形">
       <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1" /></svg>
     </button>
     <button type="button" class="tb" data-tool="ellipse" title="椭圆">
@@ -739,6 +763,9 @@
     <button type="button" class="tb" id="btnRedo" title="重做" disabled>
       <svg viewBox="0 0 24 24"><path d="M15 14 L20 9 L15 4" /><path d="M20 9 H10 A6 6 0 0 0 10 21 H14" /></svg>
     </button>
+    <button type="button" class="tb tb-cancel" id="btnDeleteShape" title="删除选中" disabled>
+      <svg viewBox="0 0 24 24"><path d="M5 7 H19"/><path d="M9 7 V5 H15 V7"/><path d="M8 7 V19 H16 V7"/></svg>
+    </button>
     <span class="sep"></span>
     <button type="button" class="tb" id="btnDownload" title="下载">
       <svg viewBox="0 0 24 24"><path d="M12 3 V15" /><path d="M7 10 L12 15 L17 10" /><path d="M5 21 H19" /></svg>
@@ -759,7 +786,7 @@
 
   var images = []; // { id, name, bitmap, width, height, url }
   var previewTimer = null;
-  var tool = "rect";
+  var tool = "pan";
   var drawing = false;
   var startPt = null;
   var currentPath = null;
@@ -769,6 +796,11 @@
   var baseBitmap = null; // ImageBitmap of stitched (current base, after crop/mosaic bake)
   var editScale = 1; // CSS display scale vs canvas pixels
   var textPopPending = null;
+  var selectedIndex = -1;
+  var movingSelection = false;
+  var moveLastPt = null;
+  var moveDirty = false;
+  var textCommitLock = false;
 
   var els = {
     dropzone: document.getElementById("dropzone"),
@@ -797,7 +829,8 @@
     textPop: document.getElementById("textPop"),
     toast: document.getElementById("toast"),
     btnUndo: document.getElementById("btnUndo"),
-    btnRedo: document.getElementById("btnRedo")
+    btnRedo: document.getElementById("btnRedo"),
+    btnDeleteShape: document.getElementById("btnDeleteShape")
   };
 
   function uid() {
@@ -1197,9 +1230,11 @@
     shapes = JSON.parse(JSON.stringify(snap.shapes));
     baseBitmap = cloneCanvas(snap.base);
     historyIndex = index;
+    if (selectedIndex >= shapes.length) selectedIndex = shapes.length - 1;
     syncEditCanvasSize();
     redrawEdit();
     updateUndoRedo();
+    updateDeleteBtn();
   }
 
   function updateUndoRedo() {
@@ -1242,27 +1277,172 @@
     historyIndex = -1;
     pushHistory();
     document.body.classList.add("is-edit");
-    setTool("rect");
+    // 触屏默认「滑动」，避免长图一划就变成标注
+    var preferPan =
+      (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
+      window.innerWidth < 900;
+    setTool(preferPan ? "pan" : "rect");
     syncEditCanvasSize();
     redrawEdit();
-    requestAnimationFrame(updateEditScale);
+    requestAnimationFrame(function () {
+      updateEditScale();
+      var stage = document.getElementById("editStage");
+      if (stage) stage.scrollTop = 0;
+    });
+    if (preferPan) {
+      showToast("已开启滑动浏览长图，选下方工具后再标注");
+    }
   }
 
   function leaveEdit() {
-    commitTextPop(false);
+    commitTextPop(true);
     document.body.classList.remove("is-edit");
     drawing = false;
     startPt = null;
     currentPath = null;
+    selectedIndex = -1;
+    movingSelection = false;
+    moveLastPt = null;
+    moveDirty = false;
   }
 
   function setTool(name) {
+    commitTextPop(true);
     tool = name;
     els.editFrame.setAttribute("data-tool", name);
     document.querySelectorAll(".edit-toolbar [data-tool]").forEach(function (btn) {
       btn.classList.toggle("is-active", btn.getAttribute("data-tool") === name);
     });
-    commitTextPop(false);
+    drawing = false;
+    startPt = null;
+    currentPath = null;
+    movingSelection = false;
+    moveLastPt = null;
+    redrawEdit();
+    updateDeleteBtn();
+  }
+
+  function updateDeleteBtn() {
+    if (els.btnDeleteShape) {
+      els.btnDeleteShape.disabled = selectedIndex < 0 || !shapes[selectedIndex];
+    }
+  }
+
+  function shapeBounds(s) {
+    var pad = Math.max(8, (s.width || 4) * 1.5);
+    if (s.type === "rect" || s.type === "ellipse") {
+      return { x: s.x, y: s.y, w: s.w, h: s.h };
+    }
+    if (s.type === "arrow") {
+      return normalizeRect(s.x1, s.y1, s.x2, s.y2);
+    }
+    if (s.type === "pen" && s.points && s.points.length) {
+      var minX = s.points[0].x;
+      var minY = s.points[0].y;
+      var maxX = minX;
+      var maxY = minY;
+      s.points.forEach(function (p) {
+        if (p.x < minX) minX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y > maxY) maxY = p.y;
+      });
+      return { x: minX - pad, y: minY - pad, w: maxX - minX + pad * 2, h: maxY - minY + pad * 2 };
+    }
+    if (s.type === "text") {
+      var fontSize = Math.max(14, (s.width || 4) * 5);
+      var w = Math.max(fontSize, String(s.text || "").length * fontSize * 0.62);
+      return { x: s.x, y: s.y, w: w, h: fontSize * 1.35 };
+    }
+    return { x: 0, y: 0, w: 0, h: 0 };
+  }
+
+  function distToSegment(px, py, x1, y1, x2, y2) {
+    var dx = x2 - x1;
+    var dy = y2 - y1;
+    var len2 = dx * dx + dy * dy;
+    if (len2 <= 0) return Math.hypot(px - x1, py - y1);
+    var t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / len2));
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+  }
+
+  function shapeContains(s, pt) {
+    var hitPad = Math.max(14, (s.width || 4) * 2.5);
+    if (s.type === "rect" || s.type === "ellipse") {
+      return pt.x >= s.x - hitPad && pt.x <= s.x + s.w + hitPad &&
+        pt.y >= s.y - hitPad && pt.y <= s.y + s.h + hitPad;
+    }
+    if (s.type === "arrow") {
+      return distToSegment(pt.x, pt.y, s.x1, s.y1, s.x2, s.y2) <= hitPad;
+    }
+    if (s.type === "pen" && s.points) {
+      for (var i = 1; i < s.points.length; i++) {
+        if (distToSegment(pt.x, pt.y, s.points[i - 1].x, s.points[i - 1].y, s.points[i].x, s.points[i].y) <= hitPad) {
+          return true;
+        }
+      }
+      return false;
+    }
+    if (s.type === "text") {
+      var b = shapeBounds(s);
+      return pt.x >= b.x - 4 && pt.x <= b.x + b.w + 4 && pt.y >= b.y - 4 && pt.y <= b.y + b.h + 4;
+    }
+    return false;
+  }
+
+  function hitTestShape(pt) {
+    for (var i = shapes.length - 1; i >= 0; i--) {
+      if (shapeContains(shapes[i], pt)) return i;
+    }
+    return -1;
+  }
+
+  function translateShape(s, dx, dy) {
+    if (!s) return;
+    if (s.type === "rect" || s.type === "ellipse" || s.type === "text") {
+      s.x += dx;
+      s.y += dy;
+    } else if (s.type === "arrow") {
+      s.x1 += dx;
+      s.y1 += dy;
+      s.x2 += dx;
+      s.y2 += dy;
+    } else if (s.type === "pen" && s.points) {
+      s.points.forEach(function (p) {
+        p.x += dx;
+        p.y += dy;
+      });
+    }
+  }
+
+  function drawSelection(ctx, s) {
+    var b = shapeBounds(s);
+    ctx.save();
+    ctx.setLineDash([8, 5]);
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = Math.max(2, 2 / (editScale || 1));
+    ctx.strokeRect(b.x - 6, b.y - 6, b.w + 12, b.h + 12);
+    ctx.restore();
+  }
+
+  function deleteSelectedShape() {
+    if (selectedIndex < 0 || !shapes[selectedIndex]) return;
+    shapes.splice(selectedIndex, 1);
+    selectedIndex = -1;
+    pushHistory();
+    redrawEdit();
+    updateDeleteBtn();
+    showToast("已删除选中标注");
+  }
+
+  function applyStyleToSelected() {
+    if (selectedIndex < 0 || !shapes[selectedIndex]) return;
+    var style = strokeStyle();
+    var shape = shapes[selectedIndex];
+    shape.color = style.color;
+    shape.width = style.width;
+    pushHistory();
+    redrawEdit();
   }
 
   function pointerToCanvas(event) {
@@ -1359,6 +1539,9 @@
     shapes.forEach(function (shape) {
       drawShape(ctx, shape, false);
     });
+    if (selectedIndex >= 0 && shapes[selectedIndex]) {
+      drawSelection(ctx, shapes[selectedIndex]);
+    }
     if (draftShape) drawShape(ctx, draftShape, true);
   }
 
@@ -1379,6 +1562,7 @@
     // 先画已有标注进底图
     shapes.forEach(function (shape) { drawShape(bctx, shape, false); });
     shapes = [];
+    selectedIndex = -1;
 
     var block = Math.max(8, Math.round(Math.min(r.w, r.h) / 12));
     var sx = Math.floor(r.x);
@@ -1400,6 +1584,7 @@
     syncEditCanvasSize();
     pushHistory();
     redrawEdit();
+    updateDeleteBtn();
   }
 
   function applyCrop(rect) {
@@ -1409,6 +1594,7 @@
     var bctx = baked.getContext("2d");
     shapes.forEach(function (shape) { drawShape(bctx, shape, false); });
     shapes = [];
+    selectedIndex = -1;
 
     var out = document.createElement("canvas");
     out.width = Math.max(1, Math.round(r.w));
@@ -1422,18 +1608,63 @@
     syncEditCanvasSize();
     pushHistory();
     redrawEdit();
+    updateDeleteBtn();
   }
 
   function onPointerDown(event) {
     if (!document.body.classList.contains("is-edit")) return;
+    if (event.target === els.textPop) return;
+    // 点画布其它位置先确认文字
+    if (!els.textPop.hidden) {
+      commitTextPop(true);
+    }
+    if (tool === "pan") return;
+    if (event.touches && event.touches.length > 1) return;
     if (event.button != null && event.button !== 0) return;
     event.preventDefault();
     updateEditScale();
     var pt = pointerToCanvas(event);
-    if (tool === "text") {
-      openTextPop(pt);
+
+    if (tool === "select") {
+      var hit = hitTestShape(pt);
+      selectedIndex = hit;
+      updateDeleteBtn();
+      if (hit >= 0) {
+        var shape = shapes[hit];
+        if (shape.color) els.strokeColor.value = shape.color;
+        if (shape.width) {
+          var w = String(shape.width);
+          if (["2", "4", "8", "14"].indexOf(w) >= 0) els.strokeWidth.value = w;
+        }
+        movingSelection = true;
+        moveLastPt = pt;
+        moveDirty = false;
+        startPt = pt;
+      } else {
+        movingSelection = false;
+        moveLastPt = null;
+      }
+      redrawEdit();
       return;
     }
+
+    if (tool === "text") {
+      // 点到已有文字则编辑，否则新建
+      var textHit = hitTestShape(pt);
+      if (textHit >= 0 && shapes[textHit].type === "text") {
+        selectedIndex = textHit;
+        updateDeleteBtn();
+        openTextPop(pt, shapes[textHit], textHit);
+        return;
+      }
+      selectedIndex = -1;
+      updateDeleteBtn();
+      openTextPop(pt, null, -1);
+      return;
+    }
+
+    selectedIndex = -1;
+    updateDeleteBtn();
     drawing = true;
     startPt = pt;
     var style = strokeStyle();
@@ -1448,7 +1679,29 @@
   }
 
   function onPointerMove(event) {
+    if (tool === "select" && movingSelection && moveLastPt && selectedIndex >= 0) {
+      if (event.touches && event.touches.length > 1) return;
+      event.preventDefault();
+      var ptMove = pointerToCanvas(event);
+      var dx = ptMove.x - moveLastPt.x;
+      var dy = ptMove.y - moveLastPt.y;
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+        translateShape(shapes[selectedIndex], dx, dy);
+        moveLastPt = ptMove;
+        moveDirty = true;
+        redrawEdit();
+      }
+      return;
+    }
+
     if (!drawing || !startPt) return;
+    if (event.touches && event.touches.length > 1) {
+      drawing = false;
+      startPt = null;
+      currentPath = null;
+      redrawEdit();
+      return;
+    }
     event.preventDefault();
     var pt = pointerToCanvas(event);
     var style = strokeStyle();
@@ -1482,7 +1735,32 @@
   }
 
   function onPointerUp(event) {
+    if (tool === "select") {
+      if (movingSelection && selectedIndex >= 0) {
+        var shape = shapes[selectedIndex];
+        var movedFar = moveDirty;
+        // 文字：几乎没拖动则打开编辑
+        if (!movedFar && shape && shape.type === "text" && startPt) {
+          openTextPop(startPt, shape, selectedIndex);
+        } else if (movedFar) {
+          pushHistory();
+        }
+      }
+      movingSelection = false;
+      moveLastPt = null;
+      moveDirty = false;
+      startPt = null;
+      redrawEdit();
+      updateDeleteBtn();
+      return;
+    }
+
     if (!drawing || !startPt) return;
+    if (tool === "pan") {
+      drawing = false;
+      startPt = null;
+      return;
+    }
     event.preventDefault();
     var pt = pointerToCanvas(event);
     var style = strokeStyle();
@@ -1491,10 +1769,12 @@
     if (tool === "pen" && currentPath) {
       if (currentPath.points.length > 1) {
         shapes.push(currentPath);
+        selectedIndex = shapes.length - 1;
         pushHistory();
       }
       currentPath = null;
       redrawEdit();
+      updateDeleteBtn();
       startPt = null;
       return;
     }
@@ -1510,6 +1790,7 @@
           x2: pt.x,
           y2: pt.y
         });
+        selectedIndex = shapes.length - 1;
         pushHistory();
       }
     } else if (tool === "rect" || tool === "ellipse") {
@@ -1524,6 +1805,7 @@
           w: r.w,
           h: r.h
         });
+        selectedIndex = shapes.length - 1;
         pushHistory();
       }
     } else if (tool === "mosaic") {
@@ -1540,42 +1822,64 @@
 
     startPt = null;
     redrawEdit();
+    updateDeleteBtn();
   }
 
-  function openTextPop(pt) {
-    commitTextPop(false);
+  function openTextPop(pt, existingShape, editIndex) {
+    if (!els.textPop.hidden) commitTextPop(true);
     var pop = els.textPop;
     var canvas = els.editCanvas;
     var rect = canvas.getBoundingClientRect();
     var frameRect = els.editFrame.getBoundingClientRect();
+    var x = existingShape ? existingShape.x : pt.x;
+    var y = existingShape ? existingShape.y : pt.y;
     pop.hidden = false;
-    pop.value = "";
-    pop.style.left = (rect.left - frameRect.left + pt.x * (rect.width / canvas.width)) + "px";
-    pop.style.top = (rect.top - frameRect.top + pt.y * (rect.height / canvas.height)) + "px";
-    pop.style.color = strokeStyle().color;
-    textPopPending = { x: pt.x, y: pt.y };
+    pop.value = existingShape ? String(existingShape.text || "") : "";
+    pop.style.left = (rect.left - frameRect.left + x * (rect.width / canvas.width)) + "px";
+    pop.style.top = (rect.top - frameRect.top + y * (rect.height / canvas.height)) + "px";
+    pop.style.color = existingShape && existingShape.color ? existingShape.color : strokeStyle().color;
+    textPopPending = {
+      x: x,
+      y: y,
+      editIndex: typeof editIndex === "number" ? editIndex : -1
+    };
     setTimeout(function () { pop.focus(); }, 0);
   }
 
   function commitTextPop(save) {
     var pop = els.textPop;
-    if (pop.hidden) return;
-    var text = String(pop.value || "").trim();
-    pop.hidden = true;
-    if (save && text && textPopPending) {
-      var style = strokeStyle();
-      shapes.push({
-        type: "text",
-        color: style.color,
-        width: style.width,
-        x: textPopPending.x,
-        y: textPopPending.y,
-        text: text
-      });
-      pushHistory();
-      redrawEdit();
+    if (pop.hidden || textCommitLock) return;
+    textCommitLock = true;
+    try {
+      var text = String(pop.value || "").trim();
+      pop.hidden = true;
+      if (save && text && textPopPending) {
+        var style = strokeStyle();
+        var idx = textPopPending.editIndex;
+        if (idx >= 0 && shapes[idx] && shapes[idx].type === "text") {
+          shapes[idx].text = text;
+          shapes[idx].color = style.color;
+          shapes[idx].width = style.width;
+          selectedIndex = idx;
+        } else {
+          shapes.push({
+            type: "text",
+            color: style.color,
+            width: style.width,
+            x: textPopPending.x,
+            y: textPopPending.y,
+            text: text
+          });
+          selectedIndex = shapes.length - 1;
+        }
+        pushHistory();
+        redrawEdit();
+        updateDeleteBtn();
+      }
+      textPopPending = null;
+    } finally {
+      textCommitLock = false;
     }
-    textPopPending = null;
   }
 
   function exportCanvas(applyBeautify) {
@@ -1727,6 +2031,18 @@
   els.btnRedo.addEventListener("click", function () {
     if (historyIndex < history.length - 1) restoreHistory(historyIndex + 1);
   });
+  if (els.btnDeleteShape) {
+    els.btnDeleteShape.addEventListener("click", function () {
+      commitTextPop(true);
+      deleteSelectedShape();
+    });
+  }
+  els.strokeColor.addEventListener("change", function () {
+    if (selectedIndex >= 0) applyStyleToSelected();
+  });
+  els.strokeWidth.addEventListener("change", function () {
+    if (selectedIndex >= 0) applyStyleToSelected();
+  });
 
   document.getElementById("editToolbar").addEventListener("click", function (event) {
     var btn = event.target.closest("[data-tool]");
@@ -1747,8 +2063,18 @@
     }
   });
   els.textPop.addEventListener("blur", function () {
-    commitTextPop(true);
+    // 延迟，避免点工具栏时先 blur 丢焦点再误伤
+    setTimeout(function () {
+      if (document.activeElement !== els.textPop) commitTextPop(true);
+    }, 0);
   });
+
+  // 点输入框外任意处确认文字（含工具栏、空白区）
+  document.addEventListener("pointerdown", function (event) {
+    if (els.textPop.hidden) return;
+    if (event.target === els.textPop) return;
+    commitTextPop(true);
+  }, true);
 
   var canvas = els.editCanvas;
   canvas.addEventListener("mousedown", onPointerDown);
@@ -1780,6 +2106,10 @@
       downloadPng();
     } else if (event.key === "Escape") {
       leaveEdit();
+    } else if ((event.key === "Delete" || event.key === "Backspace") && selectedIndex >= 0) {
+      if (document.activeElement === els.textPop) return;
+      event.preventDefault();
+      deleteSelectedShape();
     }
   });
 })();
