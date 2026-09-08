@@ -258,18 +258,18 @@
     .thumbs {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
       margin-top: 14px;
     }
 
     .thumb {
       display: grid;
-      grid-template-columns: 76px 1fr auto;
-      gap: 12px;
+      grid-template-columns: 148px 1fr auto;
+      gap: 12px 14px;
       align-items: center;
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 10px;
+      padding: 12px;
       background: #fff;
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
     }
@@ -277,17 +277,23 @@
     .thumb.is-dragging { opacity: 0.55; }
 
     .thumb-preview {
-      width: 76px;
-      height: 58px;
+      width: 148px;
+      height: 110px;
       border-radius: 10px;
       object-fit: cover;
       background: #e2e8f0;
       display: block;
+      cursor: zoom-in;
+      border: 1px solid var(--border);
+    }
+
+    .thumb-preview:hover {
+      box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.35);
     }
 
     .thumb-meta {
       min-width: 0;
-      font-size: 0.86rem;
+      font-size: 0.9rem;
     }
 
     .thumb-meta .name {
@@ -297,24 +303,48 @@
       font-weight: 700;
     }
 
-    .thumb-meta .size { color: var(--muted); margin-top: 2px; }
+    .thumb-meta .size { color: var(--muted); margin-top: 4px; font-size: 0.84rem; }
 
     .thumb-actions {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 8px;
+      min-width: 72px;
     }
 
     .thumb-actions button {
       border: 1px solid var(--border);
-      background: #fff;
-      border-radius: 8px;
-      width: 32px;
-      height: 28px;
+      background: #f8fafc;
+      border-radius: 10px;
+      min-height: 40px;
+      width: 100%;
       cursor: pointer;
-      padding: 0;
-      line-height: 1;
-      color: #475569;
+      padding: 8px 12px;
+      line-height: 1.2;
+      color: #334155;
+      font-size: 0.9rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .thumb-actions button:hover:not(:disabled) {
+      border-color: #94a3b8;
+      background: #fff;
+    }
+
+    .thumb-actions button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .thumb-actions button.is-danger {
+      color: var(--danger);
+      border-color: #fecaca;
+      background: #fff5f5;
+    }
+
+    .thumb-actions button.is-danger:hover:not(:disabled) {
+      background: #fee2e2;
     }
 
     .preview-wrap {
@@ -341,6 +371,7 @@
       background: transparent;
       border-radius: 4px;
       box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+      cursor: zoom-in;
     }
 
     .preview-empty {
@@ -353,6 +384,117 @@
     }
 
     .preview-empty[hidden] {
+      display: none !important;
+    }
+
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+      padding: 0;
+      background: rgba(15, 23, 42, 0.52);
+      backdrop-filter: blur(2px);
+    }
+
+    .lightbox[hidden] {
+      display: none !important;
+    }
+
+    .lightbox-panel {
+      width: 100%;
+      height: 100%;
+      max-height: none;
+      display: flex;
+      flex-direction: column;
+      background: transparent;
+      border-radius: 0;
+      overflow: hidden;
+      box-shadow: none;
+    }
+
+    .lightbox-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      padding-top: max(10px, env(safe-area-inset-top));
+      background: rgba(30, 41, 59, 0.96);
+      color: #e2e8f0;
+      font-size: 0.92rem;
+      font-weight: 650;
+      flex-shrink: 0;
+    }
+
+    .lightbox-bar .title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    .lightbox-bar .bar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .lightbox-bar .zoom-val {
+      font-variant-numeric: tabular-nums;
+      min-width: 3.2em;
+      text-align: right;
+      color: #cbd5e1;
+      font-size: 0.84rem;
+    }
+
+    .lightbox-body {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+      padding: 0;
+      text-align: center;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      background: transparent;
+    }
+
+    .lightbox-body.is-dragging {
+      cursor: grabbing;
+    }
+
+    .lightbox-stage {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%) translate(0px, 0px) scale(1);
+      transform-origin: center center;
+      will-change: transform;
+      line-height: 0;
+    }
+
+    .lightbox-stage img,
+    .lightbox-stage canvas {
+      display: block;
+      max-width: none;
+      max-height: none;
+      width: auto;
+      height: auto;
+      border-radius: 4px;
+      background: transparent;
+      pointer-events: none;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    /* 避免 display:block 盖过 hidden，露出空白 canvas 白块 */
+    .lightbox-stage img[hidden],
+    .lightbox-stage canvas[hidden] {
       display: none !important;
     }
 
@@ -613,7 +755,21 @@
         z-index: 41;
       }
       .size-badge { top: 8px; left: 8px; }
-      .thumb { grid-template-columns: 64px 1fr auto; }
+      .thumb {
+        grid-template-columns: 120px 1fr auto;
+      }
+      .thumb-preview {
+        width: 120px;
+        height: 90px;
+      }
+      .thumb-actions {
+        min-width: 64px;
+      }
+      .thumb-actions button {
+        min-height: 38px;
+        padding: 6px 10px;
+        font-size: 0.86rem;
+      }
       .preview-actions { width: 100%; }
       .preview-actions .btn { flex: 1; }
     }
@@ -684,7 +840,7 @@
             <span class="step">2</span>
             <h2>拼接预览</h2>
           </div>
-          <p class="hint" style="margin-bottom:0">预览为缩小显示；可直接复制/下载成图，不必进入标注。</p>
+          <p class="hint" style="margin-bottom:0">预览为缩小显示；可直接复制/下载成图，点击预览图可看大图。</p>
         </div>
         <div class="preview-actions">
           <button type="button" class="btn btn-ghost" id="btnCopyStitch" disabled>复制图片</button>
@@ -784,6 +940,25 @@
 
   <div class="toast" id="toast"></div>
 
+  <div class="lightbox" id="lightbox" hidden>
+    <div class="lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="lightboxTitle">
+      <div class="lightbox-bar">
+        <span class="title" id="lightboxTitle">预览</span>
+        <div class="bar-actions">
+          <span class="zoom-val" id="lightboxZoomVal">100%</span>
+          <button type="button" class="btn btn-ghost" id="btnLightboxReset" style="color:#e2e8f0;background:#334155;border-color:#475569;">重置</button>
+          <button type="button" class="btn btn-ghost" id="btnLightboxClose" style="color:#e2e8f0;background:#334155;border-color:#475569;">关闭</button>
+        </div>
+      </div>
+      <div class="lightbox-body" id="lightboxBody">
+        <div class="lightbox-stage" id="lightboxStage">
+          <img id="lightboxImg" alt="预览图" hidden />
+          <canvas id="lightboxCanvas" hidden></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
 (function () {
   "use strict";
@@ -822,6 +997,15 @@
     btnCopyStitchDock: document.getElementById("btnCopyStitchDock"),
     btnDownloadStitchDock: document.getElementById("btnDownloadStitchDock"),
     btnClearAll: document.getElementById("btnClearAll"),
+    lightbox: document.getElementById("lightbox"),
+    lightboxTitle: document.getElementById("lightboxTitle"),
+    lightboxBody: document.getElementById("lightboxBody"),
+    lightboxStage: document.getElementById("lightboxStage"),
+    lightboxImg: document.getElementById("lightboxImg"),
+    lightboxCanvas: document.getElementById("lightboxCanvas"),
+    lightboxZoomVal: document.getElementById("lightboxZoomVal"),
+    btnLightboxClose: document.getElementById("btnLightboxClose"),
+    btnLightboxReset: document.getElementById("btnLightboxReset"),
     editCanvas: document.getElementById("editCanvas"),
     editFrame: document.getElementById("editFrame"),
     sizeBadge: document.getElementById("sizeBadge"),
@@ -929,6 +1113,11 @@
       img.className = "thumb-preview";
       img.src = item.url;
       img.alt = item.name;
+      img.title = "点击预览大图";
+      img.addEventListener("click", function (event) {
+        event.stopPropagation();
+        openLightboxUrl(item.url, item.name + "（" + item.width + " × " + item.height + "）");
+      });
 
       var meta = document.createElement("div");
       meta.className = "thumb-meta";
@@ -939,13 +1128,14 @@
       var actions = document.createElement("div");
       actions.className = "thumb-actions";
       actions.innerHTML =
-        '<button type="button" data-act="up" title="上移">↑</button>' +
-        '<button type="button" data-act="down" title="下移">↓</button>' +
-        '<button type="button" data-act="del" title="删除">×</button>';
+        '<button type="button" data-act="up"' + (index === 0 ? " disabled" : "") + ">上移</button>" +
+        '<button type="button" data-act="down"' + (index === images.length - 1 ? " disabled" : "") + ">下移</button>" +
+        '<button type="button" class="is-danger" data-act="del">删除</button>';
 
       actions.addEventListener("click", function (event) {
         var btn = event.target.closest("button");
-        if (!btn) return;
+        if (!btn || btn.disabled) return;
+        event.stopPropagation();
         var act = btn.getAttribute("data-act");
         if (act === "up") moveItem(index, index - 1);
         else if (act === "down") moveItem(index, index + 1);
@@ -953,6 +1143,10 @@
       });
 
       row.addEventListener("dragstart", function (event) {
+        if (event.target && event.target.closest && event.target.closest("button")) {
+          event.preventDefault();
+          return;
+        }
         row.classList.add("is-dragging");
         event.dataTransfer.setData("text/plain", String(index));
         event.dataTransfer.effectAllowed = "move";
@@ -986,6 +1180,183 @@
     els.btnDownloadStitch.disabled = disabled;
     els.btnCopyStitchDock.disabled = disabled;
     els.btnDownloadStitchDock.disabled = disabled;
+  }
+
+  var lightboxView = {
+    scale: 1,
+    x: 0,
+    y: 0,
+    min: 0.08,
+    max: 12,
+    dragging: false,
+    lastX: 0,
+    lastY: 0,
+    moved: false
+  };
+
+  function applyLightboxTransform() {
+    if (!els.lightboxStage) return;
+    els.lightboxStage.style.transform =
+      "translate(-50%, -50%) translate(" + lightboxView.x + "px," + lightboxView.y + "px) scale(" + lightboxView.scale + ")";
+    if (els.lightboxZoomVal) {
+      els.lightboxZoomVal.textContent = Math.round(lightboxView.scale * 100) + "%";
+    }
+  }
+
+  function resetLightboxView(fit) {
+    lightboxView.scale = 1;
+    lightboxView.x = 0;
+    lightboxView.y = 0;
+    lightboxView.dragging = false;
+    lightboxView.moved = false;
+    if (els.lightboxBody) els.lightboxBody.classList.remove("is-dragging");
+    applyLightboxTransform();
+    if (fit) {
+      requestAnimationFrame(function () {
+        fitLightboxToView();
+      });
+    }
+  }
+
+  function getLightboxMediaSize() {
+    if (els.lightboxImg && !els.lightboxImg.hidden && els.lightboxImg.naturalWidth) {
+      return { w: els.lightboxImg.naturalWidth, h: els.lightboxImg.naturalHeight };
+    }
+    if (els.lightboxCanvas && !els.lightboxCanvas.hidden) {
+      return { w: els.lightboxCanvas.width, h: els.lightboxCanvas.height };
+    }
+    return null;
+  }
+
+  function fitLightboxToView() {
+    var size = getLightboxMediaSize();
+    var body = els.lightboxBody;
+    if (!size || !body || size.w < 1 || size.h < 1) {
+      applyLightboxTransform();
+      return;
+    }
+    var bw = body.clientWidth;
+    var bh = body.clientHeight;
+    if (bw < 1 || bh < 1) {
+      applyLightboxTransform();
+      return;
+    }
+    var fit = Math.min(bw / size.w, bh / size.h) * 0.98;
+    lightboxView.scale = Math.max(lightboxView.min, Math.min(lightboxView.max, fit));
+    lightboxView.x = 0;
+    lightboxView.y = 0;
+    applyLightboxTransform();
+  }
+
+  function openLightboxUrl(url, title) {
+    els.lightboxTitle.textContent = title || "预览";
+    els.lightboxCanvas.hidden = true;
+    els.lightboxCanvas.width = 0;
+    els.lightboxCanvas.height = 0;
+    els.lightboxImg.hidden = false;
+    els.lightbox.hidden = false;
+    resetLightboxView(false);
+    els.lightboxImg.onload = function () {
+      fitLightboxToView();
+    };
+    els.lightboxImg.src = url;
+    if (els.lightboxImg.complete && els.lightboxImg.naturalWidth) {
+      fitLightboxToView();
+    }
+  }
+
+  function openLightboxCanvas(sourceCanvas, title) {
+    if (!sourceCanvas) return;
+    els.lightboxTitle.textContent = title || "拼接预览";
+    els.lightboxImg.hidden = true;
+    els.lightboxImg.removeAttribute("src");
+    var canvas = els.lightboxCanvas;
+    canvas.hidden = false;
+    canvas.width = sourceCanvas.width;
+    canvas.height = sourceCanvas.height;
+    canvas.getContext("2d").drawImage(sourceCanvas, 0, 0);
+    els.lightbox.hidden = false;
+    resetLightboxView(true);
+  }
+
+  function closeLightbox() {
+    els.lightbox.hidden = true;
+    els.lightboxImg.hidden = true;
+    els.lightboxImg.removeAttribute("src");
+    els.lightboxImg.onload = null;
+    els.lightboxCanvas.hidden = true;
+    els.lightboxCanvas.width = 0;
+    els.lightboxCanvas.height = 0;
+    lightboxView.dragging = false;
+    if (els.lightboxBody) els.lightboxBody.classList.remove("is-dragging");
+  }
+
+  function onLightboxWheel(event) {
+    if (els.lightbox.hidden) return;
+    event.preventDefault();
+    var body = els.lightboxBody;
+    var rect = body.getBoundingClientRect();
+    var cx = event.clientX - rect.left - rect.width / 2;
+    var cy = event.clientY - rect.top - rect.height / 2;
+    var factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+    var next = Math.min(lightboxView.max, Math.max(lightboxView.min, lightboxView.scale * factor));
+    if (next === lightboxView.scale) return;
+    var worldX = (cx - lightboxView.x) / lightboxView.scale;
+    var worldY = (cy - lightboxView.y) / lightboxView.scale;
+    lightboxView.scale = next;
+    lightboxView.x = cx - worldX * lightboxView.scale;
+    lightboxView.y = cy - worldY * lightboxView.scale;
+    applyLightboxTransform();
+  }
+
+  function onLightboxPointerDown(event) {
+    if (els.lightbox.hidden) return;
+    if (event.button != null && event.button !== 0) return;
+    if (event.target.closest && event.target.closest(".lightbox-bar")) return;
+    event.preventDefault();
+    lightboxView.dragging = true;
+    lightboxView.moved = false;
+    lightboxView.lastX = event.clientX;
+    lightboxView.lastY = event.clientY;
+    if (event.touches && event.touches[0]) {
+      lightboxView.lastX = event.touches[0].clientX;
+      lightboxView.lastY = event.touches[0].clientY;
+    }
+    els.lightboxBody.classList.add("is-dragging");
+  }
+
+  function onLightboxPointerMove(event) {
+    if (!lightboxView.dragging) return;
+    event.preventDefault();
+    var clientX = event.clientX;
+    var clientY = event.clientY;
+    if (event.touches && event.touches[0]) {
+      clientX = event.touches[0].clientX;
+      clientY = event.touches[0].clientY;
+    }
+    var dx = clientX - lightboxView.lastX;
+    var dy = clientY - lightboxView.lastY;
+    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) lightboxView.moved = true;
+    lightboxView.x += dx;
+    lightboxView.y += dy;
+    lightboxView.lastX = clientX;
+    lightboxView.lastY = clientY;
+    applyLightboxTransform();
+  }
+
+  function onLightboxPointerUp() {
+    if (!lightboxView.dragging) return;
+    lightboxView.dragging = false;
+    els.lightboxBody.classList.remove("is-dragging");
+  }
+
+  function previewStitchLarge() {
+    var out = stitchFullForExport();
+    if (!out) {
+      showToast("请先添加图片", true);
+      return;
+    }
+    openLightboxCanvas(out, "拼接结果（" + out.width + " × " + out.height + "）");
   }
 
   function escapeHtml(str) {
@@ -2032,6 +2403,33 @@
   els.btnDownloadStitch.addEventListener("click", downloadStitchPng);
   els.btnCopyStitchDock.addEventListener("click", copyStitchPng);
   els.btnDownloadStitchDock.addEventListener("click", downloadStitchPng);
+  els.previewCanvas.addEventListener("click", function () {
+    if (!images.length) return;
+    previewStitchLarge();
+  });
+  els.btnLightboxClose.addEventListener("click", closeLightbox);
+  els.btnLightboxReset.addEventListener("click", function () {
+    resetLightboxView(true);
+  });
+  els.lightboxBody.addEventListener("wheel", onLightboxWheel, { passive: false });
+  els.lightboxBody.addEventListener("mousedown", onLightboxPointerDown);
+  els.lightboxBody.addEventListener("touchstart", onLightboxPointerDown, { passive: false });
+  window.addEventListener("mousemove", onLightboxPointerMove);
+  window.addEventListener("touchmove", onLightboxPointerMove, { passive: false });
+  window.addEventListener("mouseup", onLightboxPointerUp);
+  window.addEventListener("touchend", onLightboxPointerUp);
+  els.lightboxBody.addEventListener("dblclick", function () {
+    resetLightboxView(true);
+  });
+  els.lightbox.addEventListener("click", function (event) {
+    // 拖拽平移后松开不关；点图片/顶栏不关；点半透明遮罩关闭
+    if (lightboxView.moved) return;
+    if (event.target.closest && (
+      event.target.closest(".lightbox-stage") ||
+      event.target.closest(".lightbox-bar")
+    )) return;
+    closeLightbox();
+  });
   document.getElementById("btnCancelEdit").addEventListener("click", leaveEdit);
   document.getElementById("btnDownload").addEventListener("click", downloadPng);
   document.getElementById("btnCopyEdit").addEventListener("click", copyPng);
@@ -2100,6 +2498,10 @@
   });
 
   window.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && els.lightbox && !els.lightbox.hidden) {
+      closeLightbox();
+      return;
+    }
     if (!document.body.classList.contains("is-edit")) return;
     var meta = event.ctrlKey || event.metaKey;
     if (meta && event.key.toLowerCase() === "z") {
