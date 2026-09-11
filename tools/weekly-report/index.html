@@ -2578,6 +2578,19 @@
     showToast(added ? "已带入 " + added + " 项" : "下周已包含这些项");
   }
 
+  function findThisWeekProgress(tag, title) {
+    var norm = normalizeTitle(title);
+    for (var i = 0; i < state.thisWeek.length; i++) {
+      var item = state.thisWeek[i];
+      if (item.tag !== tag) continue;
+      if (normalizeTitle(item.title) !== norm) continue;
+      // 有有效进度才带回，避免把空进度盖成默认最小值
+      if (isBadProgress(item)) return "";
+      return clampProgress(item.progress);
+    }
+    return "";
+  }
+
   function promoteNextToThis() {
     var plans = state.nextWeek.filter(function (item) { return !isBlankTitle(item); });
     if (plans.length === 0) {
@@ -2586,19 +2599,22 @@
     }
     var hasThis = state.thisWeek.some(function (item) { return !isBlankTitle(item); });
     var msg = hasThis
-      ? "把「下周计划」转成「本周工作」？当前本周内容会被替换，下周计划会清空。"
-      : "把「下周计划」转成「本周工作」？转入后进度先空着，请按实际填写。";
+      ? "把「下周计划」转成「本周工作」？当前本周内容会被替换；同事项会带上上周进度，下周计划会清空。"
+      : "把「下周计划」转成「本周工作」？转入后进度先空着（当前本周没有可对照的进度），下周计划会清空。";
     if (!window.confirm(msg)) return;
 
+    // 先按本周同项目同标题取进度，再替换本周列表
     state.thisWeek = plans.map(function (item) {
+      var tag = item.tag || defaultTag();
+      var title = String(item.title).trim();
       return {
         id: uid(),
-        tag: item.tag || defaultTag(),
-        title: String(item.title).trim(),
-        progress: ""
+        tag: tag,
+        title: title,
+        progress: findThisWeekProgress(tag, title)
       };
     });
-    // 同项目同事项去重，保留首次出现
+    // 同项目同事项去重，保留首次出现（及其已带回的进度）
     var seen = {};
     state.thisWeek = state.thisWeek.filter(function (item) {
       var key = String(item.tag || "") + "\0" + normalizeTitle(item.title);
@@ -2610,7 +2626,7 @@
     state.weekKey = currentWeekKey();
     saveState();
     renderAll();
-    showToast("已转入本周，请更新进度并补下周计划");
+    showToast("已转入本周，同事项已带上上周进度，请核对并补下周计划");
   }
 
   function clearAll() {

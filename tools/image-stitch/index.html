@@ -397,6 +397,7 @@
       padding: 0;
       background: rgba(15, 23, 42, 0.52);
       backdrop-filter: blur(2px);
+      touch-action: none;
     }
 
     .lightbox[hidden] {
@@ -1189,10 +1190,45 @@
     min: 0.08,
     max: 12,
     dragging: false,
+    pinching: false,
     lastX: 0,
     lastY: 0,
-    moved: false
+    moved: false,
+    tapOnMask: false,
+    pinchStartDist: 0,
+    pinchStartScale: 1,
+    pinchWorldX: 0,
+    pinchWorldY: 0
   };
+
+  function lightboxTouchDistance(touches) {
+    var dx = touches[0].clientX - touches[1].clientX;
+    var dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function lightboxTouchCenter(touches) {
+    var body = els.lightboxBody;
+    var rect = body.getBoundingClientRect();
+    var midX = (touches[0].clientX + touches[1].clientX) / 2;
+    var midY = (touches[0].clientY + touches[1].clientY) / 2;
+    return {
+      x: midX - rect.left - rect.width / 2,
+      y: midY - rect.top - rect.height / 2
+    };
+  }
+
+  function beginLightboxPinch(touches) {
+    lightboxView.dragging = false;
+    lightboxView.pinching = true;
+    lightboxView.moved = true;
+    lightboxView.tapOnMask = false;
+    lightboxView.pinchStartDist = lightboxTouchDistance(touches);
+    lightboxView.pinchStartScale = lightboxView.scale;
+    var center = lightboxTouchCenter(touches);
+    lightboxView.pinchWorldX = (center.x - lightboxView.x) / lightboxView.scale;
+    lightboxView.pinchWorldY = (center.y - lightboxView.y) / lightboxView.scale;
+  }
 
   function applyLightboxTransform() {
     if (!els.lightboxStage) return;
@@ -1208,7 +1244,9 @@
     lightboxView.x = 0;
     lightboxView.y = 0;
     lightboxView.dragging = false;
+    lightboxView.pinching = false;
     lightboxView.moved = false;
+    lightboxView.tapOnMask = false;
     if (els.lightboxBody) els.lightboxBody.classList.remove("is-dragging");
     applyLightboxTransform();
     if (fit) {
@@ -1279,6 +1317,19 @@
     resetLightboxView(true);
   }
 
+  function swallowNextClick() {
+    // 触摸关闭后浏览器可能向遮罩下方派发合成 click，吞掉一次避免误触列表
+    var swallow = function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      document.removeEventListener("click", swallow, true);
+    };
+    document.addEventListener("click", swallow, true);
+    setTimeout(function () {
+      document.removeEventListener("click", swallow, true);
+    }, 450);
+  }
+
   function closeLightbox() {
     els.lightbox.hidden = true;
     els.lightboxImg.hidden = true;
@@ -1288,6 +1339,8 @@
     els.lightboxCanvas.width = 0;
     els.lightboxCanvas.height = 0;
     lightboxView.dragging = false;
+    lightboxView.pinching = false;
+    lightboxView.tapOnMask = false;
     if (els.lightboxBody) els.lightboxBody.classList.remove("is-dragging");
   }
 
@@ -1311,11 +1364,22 @@
 
   function onLightboxPointerDown(event) {
     if (els.lightbox.hidden) return;
-    if (event.button != null && event.button !== 0) return;
     if (event.target.closest && event.target.closest(".lightbox-bar")) return;
+
+    // 双指：进入捏合缩放
+    if (event.touches && event.touches.length >= 2) {
+      event.preventDefault();
+      beginLightboxPinch(event.touches);
+      return;
+    }
+
+    if (event.button != null && event.button !== 0 && !(event.touches && event.touches.length)) return;
     event.preventDefault();
+    lightboxView.pinching = false;
     lightboxView.dragging = true;
     lightboxView.moved = false;
+    // 图片本体有 pointer-events:none，点图命中 stage；点空白命中 body
+    lightboxView.tapOnMask = !(event.target.closest && event.target.closest(".lightbox-stage"));
     lightboxView.lastX = event.clientX;
     lightboxView.lastY = event.clientY;
     if (event.touches && event.touches[0]) {
@@ -1326,6 +1390,23 @@
   }
 
   function onLightboxPointerMove(event) {
+    if (els.lightbox.hidden) return;
+
+    // 双指捏合缩放（相对起始指距）
+    if (event.touches && event.touches.length >= 2) {
+      event.preventDefault();
+      if (!lightboxView.pinching) beginLightboxPinch(event.touches);
+      if (lightboxView.pinchStartDist < 1) return;
+      var nextScale = lightboxView.pinchStartScale * (lightboxTouchDistance(event.touches) / lightboxView.pinchStartDist);
+      nextScale = Math.min(lightboxView.max, Math.max(lightboxView.min, nextScale));
+      var center = lightboxTouchCenter(event.touches);
+      lightboxView.scale = nextScale;
+      lightboxView.x = center.x - lightboxView.pinchWorldX * nextScale;
+      lightboxView.y = center.y - lightboxView.pinchWorldY * nextScale;
+      applyLightboxTransform();
+      return;
+    }
+
     if (!lightboxView.dragging) return;
     event.preventDefault();
     var clientX = event.clientX;
@@ -1336,7 +1417,8 @@
     }
     var dx = clientX - lightboxView.lastX;
     var dy = clientY - lightboxView.lastY;
-    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) lightboxView.moved = true;
+    // 手机触控抖动阈值，避免误判为拖动导致无法点遮罩关闭
+    if (Math.abs(dx) > 10 || Math.abs(dy) > 10) lightboxView.moved = true;
     lightboxView.x += dx;
     lightboxView.y += dy;
     lightboxView.lastX = clientX;
@@ -1344,10 +1426,37 @@
     applyLightboxTransform();
   }
 
-  function onLightboxPointerUp() {
-    if (!lightboxView.dragging) return;
+  function onLightboxPointerUp(event) {
+    if (els.lightbox.hidden) return;
+
+    // 双指变单指：结束捏合，继续单指拖动
+    if (event.touches && event.touches.length === 1 && lightboxView.pinching) {
+      lightboxView.pinching = false;
+      lightboxView.dragging = true;
+      lightboxView.lastX = event.touches[0].clientX;
+      lightboxView.lastY = event.touches[0].clientY;
+      els.lightboxBody.classList.add("is-dragging");
+      return;
+    }
+
+    if (event.touches && event.touches.length > 0) return;
+
+    var wasDragging = lightboxView.dragging;
+    var wasPinching = lightboxView.pinching;
+    var moved = lightboxView.moved;
+    var tapOnMask = lightboxView.tapOnMask;
     lightboxView.dragging = false;
+    lightboxView.pinching = false;
+    lightboxView.tapOnMask = false;
     els.lightboxBody.classList.remove("is-dragging");
+
+    // 触摸轻点遮罩关闭：preventDefault 后多数移动端不会再派发 click
+    if (event.type && event.type.indexOf("touch") === 0) {
+      if (wasDragging && tapOnMask && !moved && !wasPinching) {
+        closeLightbox();
+        swallowNextClick();
+      }
+    }
   }
 
   function previewStitchLarge() {
@@ -2418,11 +2527,12 @@
   window.addEventListener("touchmove", onLightboxPointerMove, { passive: false });
   window.addEventListener("mouseup", onLightboxPointerUp);
   window.addEventListener("touchend", onLightboxPointerUp);
+  window.addEventListener("touchcancel", onLightboxPointerUp);
   els.lightboxBody.addEventListener("dblclick", function () {
     resetLightboxView(true);
   });
+  // 桌面：点半透明遮罩关闭（移动端走 touchend，因 preventDefault 常无 click）
   els.lightbox.addEventListener("click", function (event) {
-    // 拖拽平移后松开不关；点图片/顶栏不关；点半透明遮罩关闭
     if (lightboxView.moved) return;
     if (event.target.closest && (
       event.target.closest(".lightbox-stage") ||
