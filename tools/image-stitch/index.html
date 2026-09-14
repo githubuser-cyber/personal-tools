@@ -395,8 +395,7 @@
       align-items: stretch;
       justify-content: stretch;
       padding: 0;
-      background: rgba(15, 23, 42, 0.52);
-      backdrop-filter: blur(2px);
+      background: rgba(15, 23, 42, 0.55);
       touch-action: none;
     }
 
@@ -474,10 +473,11 @@
       position: absolute;
       left: 50%;
       top: 50%;
-      transform: translate(-50%, -50%) translate(0px, 0px) scale(1);
+      transform: translate3d(-50%, -50%, 0) scale(1);
       transform-origin: center center;
       will-change: transform;
       line-height: 0;
+      backface-visibility: hidden;
     }
 
     .lightbox-stage img,
@@ -491,6 +491,13 @@
       background: transparent;
       pointer-events: none;
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+      /* 减轻超大图合成开销 */
+      image-rendering: auto;
+    }
+
+    .lightbox-body.is-dragging .lightbox-stage img,
+    .lightbox-body.is-dragging .lightbox-stage canvas {
+      box-shadow: none;
     }
 
     /* 避免 display:block 盖过 hidden，露出空白 canvas 白块 */
@@ -827,7 +834,7 @@
         </div>
         <div class="field">
           <label for="bgColor">底色 / 间距色</label>
-          <input type="color" id="bgColor" value="#ffffff" />
+          <input type="color" id="bgColor" value="#000000" />
         </div>
       </div>
 
@@ -1117,7 +1124,9 @@
       img.title = "点击预览大图";
       img.addEventListener("click", function (event) {
         event.stopPropagation();
-        openLightboxUrl(item.url, item.name + "（" + item.width + " × " + item.height + "）");
+        var title = item.name + "（" + item.width + " × " + item.height + "）";
+        if (item.bitmap) openLightboxBitmap(item.bitmap, item.width, item.height, title);
+        else openLightboxUrl(item.url, title);
       });
 
       var meta = document.createElement("div");
@@ -1198,7 +1207,10 @@
     pinchStartDist: 0,
     pinchStartScale: 1,
     pinchWorldX: 0,
-    pinchWorldY: 0
+    pinchWorldY: 0,
+    rafId: 0,
+    zoomDirty: false,
+    objectUrl: ""
   };
 
   function lightboxTouchDistance(touches) {
@@ -1230,13 +1242,37 @@
     lightboxView.pinchWorldY = (center.y - lightboxView.y) / lightboxView.scale;
   }
 
-  function applyLightboxTransform() {
-    if (!els.lightboxStage) return;
-    els.lightboxStage.style.transform =
-      "translate(-50%, -50%) translate(" + lightboxView.x + "px," + lightboxView.y + "px) scale(" + lightboxView.scale + ")";
-    if (els.lightboxZoomVal) {
-      els.lightboxZoomVal.textContent = Math.round(lightboxView.scale * 100) + "%";
+  /** 灯箱显示用最长边上限：约 2×屏宽×dpr，封顶 2560，避免拖拽全分辨率大图 */
+  function getLightboxDisplayMaxEdge() {
+    var dpr = window.devicePixelRatio || 1;
+    var edge = Math.max(window.innerWidth || 0, window.innerHeight || 0) * dpr * 2;
+    if (!edge || edge < 1280) edge = 1600;
+    return Math.min(Math.round(edge), 2560);
+  }
+
+  function revokeLightboxObjectUrl() {
+    if (lightboxView.objectUrl) {
+      URL.revokeObjectURL(lightboxView.objectUrl);
+      lightboxView.objectUrl = "";
     }
+  }
+
+  function flushLightboxTransform() {
+    lightboxView.rafId = 0;
+    if (!els.lightboxStage) return;
+    // translate3d 便于走 GPU 合成层
+    els.lightboxStage.style.transform =
+      "translate3d(-50%, -50%, 0) translate3d(" + lightboxView.x + "px," + lightboxView.y + "px,0) scale(" + lightboxView.scale + ")";
+    if (lightboxView.zoomDirty && els.lightboxZoomVal) {
+      els.lightboxZoomVal.textContent = Math.round(lightboxView.scale * 100) + "%";
+      lightboxView.zoomDirty = false;
+    }
+  }
+
+  function applyLightboxTransform(updateZoom) {
+    if (updateZoom) lightboxView.zoomDirty = true;
+    if (lightboxView.rafId) return;
+    lightboxView.rafId = requestAnimationFrame(flushLightboxTransform);
   }
 
   function resetLightboxView(fit) {
@@ -1248,7 +1284,7 @@
     lightboxView.moved = false;
     lightboxView.tapOnMask = false;
     if (els.lightboxBody) els.lightboxBody.classList.remove("is-dragging");
-    applyLightboxTransform();
+    applyLightboxTransform(true);
     if (fit) {
       requestAnimationFrame(function () {
         fitLightboxToView();
@@ -1270,20 +1306,20 @@
     var size = getLightboxMediaSize();
     var body = els.lightboxBody;
     if (!size || !body || size.w < 1 || size.h < 1) {
-      applyLightboxTransform();
+      applyLightboxTransform(true);
       return;
     }
     var bw = body.clientWidth;
     var bh = body.clientHeight;
     if (bw < 1 || bh < 1) {
-      applyLightboxTransform();
+      applyLightboxTransform(true);
       return;
     }
     var fit = Math.min(bw / size.w, bh / size.h) * 0.98;
     lightboxView.scale = Math.max(lightboxView.min, Math.min(lightboxView.max, fit));
     lightboxView.x = 0;
     lightboxView.y = 0;
-    applyLightboxTransform();
+    applyLightboxTransform(true);
   }
 
   function openLightboxUrl(url, title) {
@@ -1303,8 +1339,51 @@
     }
   }
 
-  function openLightboxCanvas(sourceCanvas, title) {
+  function openLightboxOwnedUrl(url, title) {
+    revokeLightboxObjectUrl();
+    if (url && String(url).indexOf("blob:") === 0) lightboxView.objectUrl = url;
+    openLightboxUrl(url, title);
+  }
+
+  /** 超大图先缩到显示上限再预览，拖拽/捏合更顺 */
+  function openLightboxBitmap(bitmap, width, height, title) {
+    if (!bitmap) return;
+    var maxEdge = getLightboxDisplayMaxEdge();
+    var scale = Math.min(1, maxEdge / Math.max(width, height));
+    var dw = Math.max(1, Math.round(width * scale));
+    var dh = Math.max(1, Math.round(height * scale));
+    var canvas = document.createElement("canvas");
+    canvas.width = dw;
+    canvas.height = dh;
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, dw, dh);
+    openLightboxFromDisplayCanvas(canvas, title);
+  }
+
+  function openLightboxFromDisplayCanvas(sourceCanvas, title) {
     if (!sourceCanvas) return;
+    // 用 JPEG blob + img：合成层比巨大 canvas 拖拽更轻
+    var finishWithUrl = function (url) {
+      openLightboxOwnedUrl(url, title);
+    };
+    if (sourceCanvas.toBlob) {
+      sourceCanvas.toBlob(function (blob) {
+        if (!blob) {
+          openLightboxCanvasFallback(sourceCanvas, title);
+          return;
+        }
+        finishWithUrl(URL.createObjectURL(blob));
+      }, "image/jpeg", 0.92);
+      return;
+    }
+    try {
+      finishWithUrl(sourceCanvas.toDataURL("image/jpeg", 0.92));
+    } catch (ex) {
+      openLightboxCanvasFallback(sourceCanvas, title);
+    }
+  }
+
+  function openLightboxCanvasFallback(sourceCanvas, title) {
+    revokeLightboxObjectUrl();
     els.lightboxTitle.textContent = title || "拼接预览";
     els.lightboxImg.hidden = true;
     els.lightboxImg.removeAttribute("src");
@@ -1315,6 +1394,21 @@
     canvas.getContext("2d").drawImage(sourceCanvas, 0, 0);
     els.lightbox.hidden = false;
     resetLightboxView(true);
+  }
+
+  function openLightboxCanvas(sourceCanvas, title) {
+    if (!sourceCanvas) return;
+    var maxEdge = getLightboxDisplayMaxEdge();
+    var scale = Math.min(1, maxEdge / Math.max(sourceCanvas.width, sourceCanvas.height));
+    if (scale >= 0.98) {
+      openLightboxFromDisplayCanvas(sourceCanvas, title);
+      return;
+    }
+    var canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(sourceCanvas.width * scale));
+    canvas.height = Math.max(1, Math.round(sourceCanvas.height * scale));
+    canvas.getContext("2d").drawImage(sourceCanvas, 0, 0, canvas.width, canvas.height);
+    openLightboxFromDisplayCanvas(canvas, title);
   }
 
   function swallowNextClick() {
@@ -1331,6 +1425,10 @@
   }
 
   function closeLightbox() {
+    if (lightboxView.rafId) {
+      cancelAnimationFrame(lightboxView.rafId);
+      lightboxView.rafId = 0;
+    }
     els.lightbox.hidden = true;
     els.lightboxImg.hidden = true;
     els.lightboxImg.removeAttribute("src");
@@ -1338,6 +1436,7 @@
     els.lightboxCanvas.hidden = true;
     els.lightboxCanvas.width = 0;
     els.lightboxCanvas.height = 0;
+    revokeLightboxObjectUrl();
     lightboxView.dragging = false;
     lightboxView.pinching = false;
     lightboxView.tapOnMask = false;
@@ -1359,7 +1458,7 @@
     lightboxView.scale = next;
     lightboxView.x = cx - worldX * lightboxView.scale;
     lightboxView.y = cy - worldY * lightboxView.scale;
-    applyLightboxTransform();
+    applyLightboxTransform(true);
   }
 
   function onLightboxPointerDown(event) {
@@ -1403,7 +1502,7 @@
       lightboxView.scale = nextScale;
       lightboxView.x = center.x - lightboxView.pinchWorldX * nextScale;
       lightboxView.y = center.y - lightboxView.pinchWorldY * nextScale;
-      applyLightboxTransform();
+      applyLightboxTransform(true);
       return;
     }
 
@@ -1423,7 +1522,7 @@
     lightboxView.y += dy;
     lightboxView.lastX = clientX;
     lightboxView.lastY = clientY;
-    applyLightboxTransform();
+    applyLightboxTransform(false);
   }
 
   function onLightboxPointerUp(event) {
@@ -1460,7 +1559,8 @@
   }
 
   function previewStitchLarge() {
-    var out = stitchFullForExport();
+    // 灯箱只用显示分辨率拼接，导出/下载仍走全分辨率
+    var out = stitchToCanvas(getSettings(), getLightboxDisplayMaxEdge());
     if (!out) {
       showToast("请先添加图片", true);
       return;
@@ -1511,7 +1611,7 @@
       direction: els.direction.value,
       scaleMode: els.scaleMode.value,
       gap: Math.max(0, parseInt(els.gap.value, 10) || 0),
-      bgColor: els.bgColor.value || "#ffffff"
+      bgColor: els.bgColor.value || "#000000"
     };
   }
 
