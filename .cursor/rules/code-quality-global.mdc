@@ -1,0 +1,44 @@
+---
+description: 跨语言代码质量原则（提炼自高星 Clean Code / Style Guide），每次对话生效
+alwaysApply: true
+---
+
+# 代码质量全局原则
+
+来源（按 Star 取可落地原则，非全文照搬）：
+- [ryanmcdermott/clean-code-javascript](https://github.com/ryanmcdermott/clean-code-javascript)（~95k）
+- [google/styleguide](https://github.com/google/styleguide)（~40k）
+- [airbnb/javascript](https://github.com/airbnb/javascript)（~148k）
+
+**冲突优先级**：本仓库已有规则（如 `git-commit-chinese`）> 本文件 > 外部指南原文。
+
+## 项目形态
+
+- 本仓库是离线静态小工具（HTML/CSS/原生 JS，GitHub Pages），默认**不引入**构建链、框架、npm 依赖
+- 优先单页可运行；改动保持小而完整，一次把已知体验问题做完
+
+## 可读与命名
+
+- 命名表达意图：变量/函数看名字知用途；禁止无意义短名（`a`/`tmp`/`data`/`obj`）
+- 布尔用肯定语义（`enabled`/`valid`），避免双重否定
+- 魔法数字/魔法字符串提成有语义常量（阈值、键名、默认间距等）
+
+## 函数与结构
+
+- 一个函数尽量只做一件事；参数过多时用对象承载
+- 早返回、减少嵌套：优先卫语句
+- 不要过度抽象：只在有复用或明显降低复杂度时抽函数
+- 删除死代码与大段注释掉的旧逻辑；用 Git 回溯
+
+## 错误与边界
+
+- 不要吞异常：`catch` 须提示用户或打日志，禁止空 `catch`
+- 区分「无数据」与「出错」；用 toast / 明确文案反馈
+- 用户输入与文件/剪贴板数据默认不可信：校验类型、大小、空值后再用
+
+## 变更纪律
+
+- 改动保持最小必要面：不顺手大重构、不改无关格式
+- 移动端与桌面都要可用时，触摸与点击路径一并考虑
+- 新增代码按本规范写；存量只对齐本次改动触及的部分
+- 文本文件统一 **CRLF**；新建/改写后若出现孤立 `\n`，立刻转成 `\r\n`

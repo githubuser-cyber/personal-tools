@@ -1,0 +1,44 @@
+---
+description: HTML/JS 静态工具编码规范（提炼自 Airbnb JS / Clean Code / Google HTML&CSS）
+globs: "**/*.{html,js,css}"
+alwaysApply: false
+---
+
+# HTML / JS / CSS 质量规范
+
+来源：
+- [airbnb/javascript](https://github.com/airbnb/javascript)（~148k）
+- [ryanmcdermott/clean-code-javascript](https://github.com/ryanmcdermott/clean-code-javascript)（~95k）
+- [Google HTML/CSS Style Guide](https://google.github.io/styleguide/htmlcssguide.html)（google/styleguide ~40k）
+
+**冲突优先级**：`code-quality-global` 与仓库既有约定 > 本文件。
+
+## JavaScript
+
+- 优先 `const`/`let`，禁止 `var`（存量逐步改，本次触及处对齐）
+- 用 `===` / `!==`，避免隐式类型转换比较
+- 函数与变量语义化；事件处理、状态字段名能看出业务含义
+- 副作用集中：DOM 查询缓存到局部变量，避免同一路径反复 `querySelector`
+- 异步失败必须有用户可见反馈（toast/文案），禁止静默失败
+- 不要污染全局：逻辑放 IIFE / 模块作用域；确需挂 `window` 时名字唯一且注释原因
+- 列表/文件批处理：单条失败不阻断整批时，仍要记录或汇总失败原因
+
+## HTML
+
+- 语义化标签；交互控件用 `button`/`a`，不要用无障碍的裸 `div` 冒充按钮（除非已有完整键盘与 ARIA）
+- 表单控件有关联 `label` 或 `aria-label`
+- 图片/canvas 预览等提供必要的 `alt` 或可访问名称
+- 结构保持扁平清晰；样式与脚本以本页可离线运行为准
+
+## CSS
+
+- 类名有语义，避免无意义缩写堆叠；与现有 BEM/工具页风格保持一致
+- 优先复用已有变量（如 `--accent`、`--border`），新增色值先看是否已有 token
+- 移动端：触控目标足够大；`touch-action` / 安全区（`env(safe-area-inset-*)`）按需处理
+- 禁止用 `display` 规则盖掉 `[hidden]` 却不补 ` [hidden]{display:none!important}`（易出现「隐藏节点仍占位」）
+
+## 交互与数据
+
+- `localStorage` 读写要 try/catch，并兼容坏数据/旧版本结构迁移
+- 破坏性操作（清空、覆盖导入、替换本周等）先 `confirm`
+- 预览/弹层：桌面与移动关闭路径都要有（按钮、遮罩、Esc 等按场景）
