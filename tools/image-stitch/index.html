@@ -518,22 +518,43 @@
       position: fixed;
       inset: 0;
       z-index: 20;
-      overflow: auto;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior: contain;
-      padding: 72px 12px 110px;
-      padding-top: max(72px, calc(12px + env(safe-area-inset-top)));
-      padding-bottom: max(110px, calc(88px + env(safe-area-inset-bottom)));
+      overflow: hidden;
+      overscroll-behavior: none;
       background: #64748b;
       margin: 0;
+      touch-action: none;
+    }
+
+    .edit-viewport {
+      position: absolute;
+      top: max(56px, calc(44px + env(safe-area-inset-top)));
+      left: 0;
+      right: 0;
+      bottom: max(88px, calc(72px + env(safe-area-inset-bottom)));
+      overflow: hidden;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    .edit-viewport.is-panning { cursor: grabbing; }
+
+    .edit-world {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate3d(-50%, -50%, 0) scale(1);
+      transform-origin: center center;
+      will-change: transform;
+      line-height: 0;
+      backface-visibility: hidden;
     }
 
     .edit-frame {
       position: relative;
       display: block;
       width: fit-content;
-      max-width: min(96vw, 1100px);
-      margin: 0 auto;
+      max-width: none;
+      margin: 0;
       line-height: 0;
       border: 2px solid #38bdf8;
       box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
@@ -542,7 +563,8 @@
 
     .edit-frame canvas {
       display: block;
-      max-width: 100%;
+      max-width: none;
+      width: auto;
       height: auto;
       cursor: crosshair;
       touch-action: none;
@@ -550,9 +572,9 @@
 
     .edit-frame[data-tool="pan"] canvas {
       cursor: grab;
-      touch-action: pan-x pan-y;
     }
 
+    .edit-viewport.is-panning .edit-frame[data-tool="pan"] canvas,
     .edit-frame[data-tool="pan"] canvas:active { cursor: grabbing; }
 
     .edit-frame[data-tool="select"] canvas {
@@ -563,9 +585,10 @@
     .edit-frame[data-tool="text"] canvas { cursor: text; }
 
     .size-badge {
-      position: absolute;
-      left: 0;
-      top: -26px;
+      position: fixed;
+      left: 12px;
+      top: max(12px, env(safe-area-inset-top));
+      z-index: 41;
       background: rgba(15, 23, 42, 0.75);
       color: #fff;
       font-size: 12px;
@@ -576,9 +599,11 @@
     }
 
     .beautify-bar {
-      position: absolute;
-      left: 0;
-      top: -58px;
+      position: fixed;
+      left: 50%;
+      top: max(10px, env(safe-area-inset-top));
+      transform: translateX(-50%);
+      z-index: 41;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -601,8 +626,8 @@
     .beautify-bar input[type="range"] { width: 90px; vertical-align: middle; }
 
     .text-input-pop {
-      position: absolute;
-      z-index: 5;
+      position: fixed;
+      z-index: 45;
       min-width: 160px;
       border: 2px solid var(--accent);
       border-radius: 6px;
@@ -755,14 +780,6 @@
     @media (max-width: 640px) {
       header.top { padding: 14px 14px; }
       header.top h1 { font-size: 1.22rem; }
-      .beautify-bar {
-        position: fixed;
-        left: 50%;
-        top: max(10px, env(safe-area-inset-top));
-        transform: translateX(-50%);
-        z-index: 41;
-      }
-      .size-badge { top: 8px; left: 8px; }
       .thumb {
         grid-template-columns: 120px 1fr auto;
       }
@@ -869,15 +886,19 @@
 
     <!-- 编辑态 -->
     <div class="edit-stage edit-only" id="editStage">
-      <div class="edit-frame" id="editFrame" data-tool="pan">
-        <div class="beautify-bar">
-          <label>圆角 <input type="range" id="cornerRadius" min="0" max="48" value="0" /> <span id="cornerVal">0</span></label>
-          <label><input type="checkbox" id="dropShadow" /> 阴影</label>
-        </div>
-        <span class="size-badge" id="sizeBadge">0 × 0</span>
-        <canvas id="editCanvas"></canvas>
-        <input class="text-input-pop" id="textPop" hidden />
+      <div class="beautify-bar">
+        <label>圆角 <input type="range" id="cornerRadius" min="0" max="48" value="0" /> <span id="cornerVal">0</span></label>
+        <label><input type="checkbox" id="dropShadow" /> 阴影</label>
       </div>
+      <span class="size-badge" id="sizeBadge">0 × 0</span>
+      <div class="edit-viewport" id="editViewport">
+        <div class="edit-world" id="editWorld">
+          <div class="edit-frame" id="editFrame" data-tool="pan">
+            <canvas id="editCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+      <input class="text-input-pop" id="textPop" hidden />
     </div>
   </div>
 
@@ -892,8 +913,14 @@
       </select>
     </div>
     <span class="sep"></span>
-    <button type="button" class="tb is-active" data-tool="pan" title="滑动浏览">
+    <button type="button" class="tb is-active" data-tool="pan" title="拖动画面">
       <svg viewBox="0 0 24 24"><path d="M8 13 V7 a1.5 1.5 0 0 1 3 0 v4"/><path d="M11 11 V6 a1.5 1.5 0 0 1 3 0 v5"/><path d="M14 11 V7.5 a1.5 1.5 0 0 1 3 0 V14"/><path d="M8 13 c0 4 2.5 7 5.5 7 s4-1 4-3 V11"/><path d="M8 13 H6.5 A1.5 1.5 0 0 0 5 14.5 V15"/></svg>
+    </button>
+    <button type="button" class="tb" id="btnEditZoomOut" title="缩小">
+      <svg viewBox="0 0 24 24"><path d="M5 12 H19"/></svg>
+    </button>
+    <button type="button" class="tb" id="btnEditZoomIn" title="放大">
+      <svg viewBox="0 0 24 24"><path d="M12 5 V19"/><path d="M5 12 H19"/></svg>
     </button>
     <button type="button" class="tb" data-tool="select" title="选择/修改">
       <svg viewBox="0 0 24 24"><path d="M5 4 L5 18 L9 14 L12 21 L14 20 L11 13 L17 13 Z" fill="currentColor" stroke="none"/></svg>
@@ -982,6 +1009,23 @@
   var historyIndex = -1;
   var baseBitmap = null; // ImageBitmap of stitched (current base, after crop/mosaic bake)
   var editScale = 1; // CSS display scale vs canvas pixels
+  var editView = {
+    scale: 1,
+    x: 0,
+    y: 0,
+    min: 0.05,
+    max: 8,
+    dragging: false,
+    pinching: false,
+    lastX: 0,
+    lastY: 0,
+    rafId: 0,
+    spaceDown: false,
+    pinchStartDist: 0,
+    pinchStartScale: 1,
+    pinchWorldX: 0,
+    pinchWorldY: 0
+  };
   var textPopPending = null;
   var selectedIndex = -1;
   var movingSelection = false;
@@ -1016,6 +1060,8 @@
     btnLightboxReset: document.getElementById("btnLightboxReset"),
     editCanvas: document.getElementById("editCanvas"),
     editFrame: document.getElementById("editFrame"),
+    editViewport: document.getElementById("editViewport"),
+    editWorld: document.getElementById("editWorld"),
     sizeBadge: document.getElementById("sizeBadge"),
     cornerRadius: document.getElementById("cornerRadius"),
     cornerVal: document.getElementById("cornerVal"),
@@ -1835,16 +1881,125 @@
 
   function syncEditCanvasSize() {
     var canvas = els.editCanvas;
+    var prevW = canvas.width;
+    var prevH = canvas.height;
     canvas.width = baseBitmap.width;
     canvas.height = baseBitmap.height;
-    els.sizeBadge.textContent = baseBitmap.width + " × " + baseBitmap.height;
-    updateEditScale();
+    if (prevW !== canvas.width || prevH !== canvas.height) {
+      fitEditToView();
+    } else {
+      updateEditScale();
+      updateSizeBadge();
+    }
   }
 
   function updateEditScale() {
     var canvas = els.editCanvas;
     var rect = canvas.getBoundingClientRect();
-    editScale = rect.width / canvas.width || 1;
+    editScale = (rect.width / canvas.width) || editView.scale || 1;
+  }
+
+  function updateSizeBadge() {
+    if (!els.sizeBadge || !baseBitmap) return;
+    els.sizeBadge.textContent =
+      baseBitmap.width + " × " + baseBitmap.height + " · " + Math.round(editView.scale * 100) + "%";
+  }
+
+  function flushEditTransform() {
+    editView.rafId = 0;
+    if (!els.editWorld) return;
+    els.editWorld.style.transform =
+      "translate3d(-50%, -50%, 0) translate3d(" + editView.x + "px," + editView.y + "px,0) scale(" + editView.scale + ")";
+    updateSizeBadge();
+  }
+
+  function applyEditTransform() {
+    if (editView.rafId) return;
+    editView.rafId = requestAnimationFrame(flushEditTransform);
+  }
+
+  function fitEditToView() {
+    var canvas = els.editCanvas;
+    var viewport = els.editViewport;
+    if (!canvas || !viewport || canvas.width < 1 || canvas.height < 1) return;
+    var pad = 16;
+    var viewW = Math.max(1, viewport.clientWidth - pad);
+    var viewH = Math.max(1, viewport.clientHeight - pad);
+    var fit = Math.min(viewW / canvas.width, viewH / canvas.height);
+    editView.scale = Math.max(editView.min, Math.min(editView.max, fit));
+    editView.x = 0;
+    editView.y = 0;
+    applyEditTransform();
+    updateEditScale();
+    updateSizeBadge();
+  }
+
+  function zoomEditBy(factor, clientX, clientY) {
+    var viewport = els.editViewport;
+    if (!viewport) return;
+    var rect = viewport.getBoundingClientRect();
+    var cx;
+    var cy;
+    if (clientX == null || clientY == null) {
+      cx = 0;
+      cy = 0;
+    } else {
+      cx = clientX - rect.left - rect.width / 2;
+      cy = clientY - rect.top - rect.height / 2;
+    }
+    var next = Math.min(editView.max, Math.max(editView.min, editView.scale * factor));
+    if (next === editView.scale) return;
+    var worldX = (cx - editView.x) / editView.scale;
+    var worldY = (cy - editView.y) / editView.scale;
+    editView.scale = next;
+    editView.x = cx - worldX * next;
+    editView.y = cy - worldY * next;
+    applyEditTransform();
+    updateEditScale();
+  }
+
+  function editTouchDistance(touches) {
+    var dx = touches[0].clientX - touches[1].clientX;
+    var dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function editTouchCenter(touches) {
+    var rect = els.editViewport.getBoundingClientRect();
+    var midX = (touches[0].clientX + touches[1].clientX) / 2;
+    var midY = (touches[0].clientY + touches[1].clientY) / 2;
+    return {
+      x: midX - rect.left - rect.width / 2,
+      y: midY - rect.top - rect.height / 2
+    };
+  }
+
+  function beginEditPinch(touches) {
+    drawing = false;
+    startPt = null;
+    currentPath = null;
+    movingSelection = false;
+    editView.dragging = false;
+    editView.pinching = true;
+    editView.pinchStartDist = editTouchDistance(touches);
+    editView.pinchStartScale = editView.scale;
+    var center = editTouchCenter(touches);
+    editView.pinchWorldX = (center.x - editView.x) / editView.scale;
+    editView.pinchWorldY = (center.y - editView.y) / editView.scale;
+  }
+
+  function isEditChrome(event) {
+    return !!(event.target.closest && (
+      event.target.closest(".beautify-bar") ||
+      event.target.closest(".edit-toolbar") ||
+      event.target.closest(".text-input-pop")
+    ));
+  }
+
+  function isEditPanGesture(event) {
+    if (editView.spaceDown) return true;
+    if (tool === "pan") return true;
+    return event.target !== els.editCanvas;
   }
 
   function enterEdit() {
@@ -1868,7 +2023,7 @@
     historyIndex = -1;
     pushHistory();
     document.body.classList.add("is-edit");
-    // 触屏默认「滑动」，避免长图一划就变成标注
+    // 触屏默认「拖动」，避免长图一划就变成标注
     var preferPan =
       (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
       window.innerWidth < 900;
@@ -1876,18 +2031,24 @@
     syncEditCanvasSize();
     redrawEdit();
     requestAnimationFrame(function () {
-      updateEditScale();
-      var stage = document.getElementById("editStage");
-      if (stage) stage.scrollTop = 0;
+      fitEditToView();
     });
-    if (preferPan) {
-      showToast("已开启滑动浏览长图，选下方工具后再标注");
-    }
+    showToast(preferPan
+      ? "双指或按钮缩放，拖动可看细节；选下方工具后再标注"
+      : "滚轮缩放、拖动可看细节；空格拖动画布");
   }
 
   function leaveEdit() {
     commitTextPop(true);
     document.body.classList.remove("is-edit");
+    if (editView.rafId) {
+      cancelAnimationFrame(editView.rafId);
+      editView.rafId = 0;
+    }
+    editView.dragging = false;
+    editView.pinching = false;
+    editView.spaceDown = false;
+    if (els.editViewport) els.editViewport.classList.remove("is-panning");
     drawing = false;
     startPt = null;
     currentPath = null;
@@ -2205,11 +2366,33 @@
   function onPointerDown(event) {
     if (!document.body.classList.contains("is-edit")) return;
     if (event.target === els.textPop) return;
+    if (isEditChrome(event)) return;
     // 点画布其它位置先确认文字
     if (!els.textPop.hidden) {
       commitTextPop(true);
     }
-    if (tool === "pan") return;
+
+    if (event.touches && event.touches.length >= 2) {
+      event.preventDefault();
+      beginEditPinch(event.touches);
+      return;
+    }
+
+    if (isEditPanGesture(event)) {
+      if (event.button != null && event.button !== 0 && !(event.touches && event.touches.length)) return;
+      event.preventDefault();
+      editView.pinching = false;
+      editView.dragging = true;
+      editView.lastX = event.clientX;
+      editView.lastY = event.clientY;
+      if (event.touches && event.touches[0]) {
+        editView.lastX = event.touches[0].clientX;
+        editView.lastY = event.touches[0].clientY;
+      }
+      if (els.editViewport) els.editViewport.classList.add("is-panning");
+      return;
+    }
+
     if (event.touches && event.touches.length > 1) return;
     if (event.button != null && event.button !== 0) return;
     event.preventDefault();
@@ -2270,6 +2453,38 @@
   }
 
   function onPointerMove(event) {
+    if (document.body.classList.contains("is-edit")) {
+      if (event.touches && event.touches.length >= 2) {
+        event.preventDefault();
+        if (!editView.pinching) beginEditPinch(event.touches);
+        if (editView.pinchStartDist < 1) return;
+        var nextScale = editView.pinchStartScale * (editTouchDistance(event.touches) / editView.pinchStartDist);
+        nextScale = Math.min(editView.max, Math.max(editView.min, nextScale));
+        var center = editTouchCenter(event.touches);
+        editView.scale = nextScale;
+        editView.x = center.x - editView.pinchWorldX * nextScale;
+        editView.y = center.y - editView.pinchWorldY * nextScale;
+        applyEditTransform();
+        updateEditScale();
+        return;
+      }
+      if (editView.dragging) {
+        event.preventDefault();
+        var panX = event.clientX;
+        var panY = event.clientY;
+        if (event.touches && event.touches[0]) {
+          panX = event.touches[0].clientX;
+          panY = event.touches[0].clientY;
+        }
+        editView.x += panX - editView.lastX;
+        editView.y += panY - editView.lastY;
+        editView.lastX = panX;
+        editView.lastY = panY;
+        applyEditTransform();
+        return;
+      }
+    }
+
     if (tool === "select" && movingSelection && moveLastPt && selectedIndex >= 0) {
       if (event.touches && event.touches.length > 1) return;
       event.preventDefault();
@@ -2326,6 +2541,23 @@
   }
 
   function onPointerUp(event) {
+    if (document.body.classList.contains("is-edit")) {
+      if (event.touches && event.touches.length === 1 && editView.pinching) {
+        editView.pinching = false;
+        editView.dragging = true;
+        editView.lastX = event.touches[0].clientX;
+        editView.lastY = event.touches[0].clientY;
+        return;
+      }
+      if (event.touches && event.touches.length > 0) return;
+      if (editView.dragging || editView.pinching) {
+        editView.dragging = false;
+        editView.pinching = false;
+        if (els.editViewport) els.editViewport.classList.remove("is-panning");
+        return;
+      }
+    }
+
     if (tool === "select") {
       if (movingSelection && selectedIndex >= 0) {
         var shape = shapes[selectedIndex];
@@ -2347,11 +2579,6 @@
     }
 
     if (!drawing || !startPt) return;
-    if (tool === "pan") {
-      drawing = false;
-      startPt = null;
-      return;
-    }
     event.preventDefault();
     var pt = pointerToCanvas(event);
     var style = strokeStyle();
@@ -2421,13 +2648,12 @@
     var pop = els.textPop;
     var canvas = els.editCanvas;
     var rect = canvas.getBoundingClientRect();
-    var frameRect = els.editFrame.getBoundingClientRect();
     var x = existingShape ? existingShape.x : pt.x;
     var y = existingShape ? existingShape.y : pt.y;
     pop.hidden = false;
     pop.value = existingShape ? String(existingShape.text || "") : "";
-    pop.style.left = (rect.left - frameRect.left + x * (rect.width / canvas.width)) + "px";
-    pop.style.top = (rect.top - frameRect.top + y * (rect.height / canvas.height)) + "px";
+    pop.style.left = (rect.left + x * (rect.width / canvas.width)) + "px";
+    pop.style.top = (rect.top + y * (rect.height / canvas.height)) + "px";
     pop.style.color = existingShape && existingShape.color ? existingShape.color : strokeStyle().color;
     textPopPending = {
       x: x,
@@ -2696,15 +2922,39 @@
   }, true);
 
   var canvas = els.editCanvas;
-  canvas.addEventListener("mousedown", onPointerDown);
+  els.editViewport.addEventListener("mousedown", onPointerDown);
+  els.editViewport.addEventListener("touchstart", onPointerDown, { passive: false });
+  els.editViewport.addEventListener("wheel", function (event) {
+    if (!document.body.classList.contains("is-edit")) return;
+    event.preventDefault();
+    var factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+    zoomEditBy(factor, event.clientX, event.clientY);
+  }, { passive: false });
+  els.editViewport.addEventListener("dblclick", function (event) {
+    if (!document.body.classList.contains("is-edit")) return;
+    if (isEditChrome(event)) return;
+    if (event.target === canvas && tool !== "pan") return;
+    fitEditToView();
+  });
   window.addEventListener("mousemove", onPointerMove);
   window.addEventListener("mouseup", onPointerUp);
-  canvas.addEventListener("touchstart", onPointerDown, { passive: false });
   window.addEventListener("touchmove", onPointerMove, { passive: false });
   window.addEventListener("touchend", onPointerUp, { passive: false });
+  window.addEventListener("touchcancel", onPointerUp, { passive: false });
+
+  document.getElementById("btnEditZoomIn").addEventListener("click", function () {
+    zoomEditBy(1.25);
+  });
+  document.getElementById("btnEditZoomOut").addEventListener("click", function () {
+    zoomEditBy(1 / 1.25);
+  });
 
   window.addEventListener("resize", function () {
-    if (document.body.classList.contains("is-edit")) updateEditScale();
+    if (document.body.classList.contains("is-edit")) fitEditToView();
+  });
+
+  window.addEventListener("keyup", function (event) {
+    if (event.code === "Space") editView.spaceDown = false;
   });
 
   window.addEventListener("keydown", function (event) {
@@ -2713,7 +2963,13 @@
       return;
     }
     if (!document.body.classList.contains("is-edit")) return;
+    if (document.activeElement === els.textPop) return;
     var meta = event.ctrlKey || event.metaKey;
+    if (event.code === "Space") {
+      event.preventDefault();
+      editView.spaceDown = true;
+      return;
+    }
     if (meta && event.key.toLowerCase() === "z") {
       event.preventDefault();
       if (event.shiftKey) {
