@@ -241,7 +241,7 @@
   <div class="app">
     <a class="home-link" href="../../index.html">← 工具箱</a>
     <h1>共享剪贴板</h1>
-    <p class="lead">本机复制后，在本页粘贴即可发到同一口令的设备。口令写进书签后打开即连，无需每次填写。</p>
+    <p class="lead">本机复制后，在本页粘贴即可发到同一口令的设备。口令写进书签后打开即连。三台可同时打开，会自动协商主机；公司网打洞失败时走 TURN 中转。</p>
 
     <section class="card">
       <div class="status-row">
@@ -334,6 +334,9 @@
     history: [],
     incomingFiles: new Map(),
     reconnectTimer: 0,
+    connectTimer: 0,
+    netGen: 0,
+    claimPeer: null,
     joined: false
   };
 
@@ -412,11 +415,23 @@
   }
 
   function iceConfig() {
+    const turnAuth = { username: "free", credential: "free" };
+    // STUN 直连；TURN/TURNS（含 TCP/TLS）给公司网打洞失败时中转
+    // 凭证来自公开测试服务 freeTURN.net，非私密密钥
     return {
       iceServers: [
         { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun.cloudflare.com:3478" }
-      ]
+        { urls: "stun:stun.cloudflare.com:3478" },
+        { urls: "stun:freeturn.net:3478" },
+        { urls: "stun:freeturn.net:5349" },
+        Object.assign({ urls: "turn:freeturn.net:3478" }, turnAuth),
+        Object.assign({ urls: "turn:freeturn.net:3478?transport=tcp" }, turnAuth),
+        Object.assign({ urls: "turns:freeturn.net:5349" }, turnAuth),
+        Object.assign({ urls: "turns:freeturn.net:5349?transport=tcp" }, turnAuth),
+        Object.assign({ urls: "turns:freeturn.tel:5349" }, turnAuth),
+        Object.assign({ urls: "turns:freeturn.tel:5349?transport=tcp" }, turnAuth)
+      ],
+      iceTransportPolicy: "all"
     };
   }
 
@@ -440,6 +455,10 @@
     session.connections.clear();
     session.peerLabels.clear();
     session.incomingFiles.clear();
+    if (session.claimPeer && session.claimPeer !== session.peer) {
+      try { session.claimPeer.destroy(); } catch (error) { console.error("销毁抢主 Peer 失败", error); }
+    }
+    session.claimPeer = null;
     if (session.peer) {
       try { session.peer.destroy(); } catch (error) { console.error("销毁 Peer 失败", error); }
       session.peer = null;
@@ -447,13 +466,19 @@
     session.isHost = false;
   }
 
+  function isCurrentGen(gen) {
+    return session.joined && session.netGen === gen;
+  }
+
   function scheduleReconnect() {
     if (!session.joined) return;
     clearTimeout(session.reconnectTimer);
+    clearTimeout(session.connectTimer);
     setStatus("busy", "重连中…");
+    // 错开各设备重试，避免再次同时抢同一个主机 ID
     session.reconnectTimer = setTimeout(function () {
       startNetwork();
-    }, 900 + Math.random() * 700);
+    }, 400 + Math.random() * 1400);
   }
 
   function attachConnection(conn, remoteLabel) {
@@ -820,51 +845,110 @@
     });
   }
 
-  function listenAsHost(peer) {
+  function listenAsHost(peer, gen) {
     session.isHost = true;
     session.peer = peer;
+    session.claimPeer = null;
     peer.on("connection", function (conn) {
       conn.on("open", function () {
+        if (!isCurrentGen(gen)) return;
         attachConnection(conn);
       });
     });
     peer.on("disconnected", function () {
-      if (session.joined) {
-        try { peer.reconnect(); } catch (error) {
-          console.error("主机重连失败", error);
-          scheduleReconnect();
-        }
+      if (!isCurrentGen(gen)) return;
+      try {
+        peer.reconnect();
+      } catch (error) {
+        console.error("主机重连失败", error);
+        scheduleReconnect();
       }
     });
     peer.on("error", function (error) {
       console.error("主机错误", error);
+      if (!isCurrentGen(gen)) return;
       if (error && error.type === "network") scheduleReconnect();
     });
     setStatus("on", "房间在线（主机）");
   }
 
-  function connectAsClient() {
+  function joinAsClient(gen) {
     const peer = createPeer();
     session.peer = peer;
     session.isHost = false;
+    setStatus("busy", "正在加入房间…");
     peer.on("open", function () {
+      if (!isCurrentGen(gen)) return;
       const conn = peer.connect(session.hostId, { reliable: true });
+      clearTimeout(session.connectTimer);
+      // 主机可能还没就绪，短超时后改去抢主机，避免一直卡在连接中
+      session.connectTimer = setTimeout(function () {
+        if (!isCurrentGen(gen) || session.connections.size > 0) return;
+        console.error("加入房间超时，改抢主机");
+        scheduleReconnect();
+      }, 7000);
       conn.on("open", function () {
+        if (!isCurrentGen(gen)) return;
+        clearTimeout(session.connectTimer);
         attachConnection(conn);
       });
       conn.on("error", function (error) {
         console.error("连接主机失败", error);
-        scheduleReconnect();
+        if (isCurrentGen(gen)) scheduleReconnect();
       });
     });
     peer.on("error", function (error) {
       console.error("客户错误", error);
-      if (error && error.type === "peer-unavailable") {
-        scheduleReconnect();
-      }
+      if (isCurrentGen(gen)) scheduleReconnect();
     });
     peer.on("disconnected", function () {
-      if (session.joined) scheduleReconnect();
+      if (isCurrentGen(gen)) scheduleReconnect();
+    });
+  }
+
+  function claimHost(gen) {
+    if (!isCurrentGen(gen)) return;
+    const hostPeer = createPeer(session.hostId);
+    session.claimPeer = hostPeer;
+    let settled = false;
+
+    function becomeClient() {
+      if (settled || !isCurrentGen(gen)) return;
+      settled = true;
+      clearTimeout(session.connectTimer);
+      session.claimPeer = null;
+      try { hostPeer.destroy(); } catch (destroyError) {
+        console.error("释放占用的主机 Peer 失败", destroyError);
+      }
+      joinAsClient(gen);
+    }
+
+    clearTimeout(session.connectTimer);
+    session.connectTimer = setTimeout(function () {
+      if (settled || !isCurrentGen(gen)) return;
+      settled = true;
+      console.error("抢主机超时，重试");
+      scheduleReconnect();
+    }, 8000);
+
+    hostPeer.on("open", function () {
+      if (settled || !isCurrentGen(gen)) {
+        try { hostPeer.destroy(); } catch (error) { console.error("丢弃过期主机 Peer 失败", error); }
+        return;
+      }
+      settled = true;
+      clearTimeout(session.connectTimer);
+      listenAsHost(hostPeer, gen);
+    });
+    hostPeer.on("error", function (error) {
+      if (error && error.type === "unavailable-id") {
+        becomeClient();
+        return;
+      }
+      if (settled || !isCurrentGen(gen)) return;
+      settled = true;
+      console.error("建房失败", error);
+      scheduleReconnect();
     });
   }
 
@@ -874,30 +958,19 @@
       showToast("无法加载 PeerJS，请检查网络", true);
       return;
     }
+    session.netGen += 1;
+    const gen = session.netGen;
+    clearTimeout(session.reconnectTimer);
+    clearTimeout(session.connectTimer);
     destroyPeer();
     session.hostId = roomToHostId(session.room);
     setStatus("busy", "连接中…");
-
-    const hostPeer = createPeer(session.hostId);
-    let becameClient = false;
-    hostPeer.on("open", function () {
-      if (becameClient) return;
-      listenAsHost(hostPeer);
-    });
-    hostPeer.on("error", function (error) {
-      if (error && error.type === "unavailable-id") {
-        becameClient = true;
-        try { hostPeer.destroy(); } catch (destroyError) {
-          console.error("释放占用的主机 Peer 失败", destroyError);
-        }
-        connectAsClient();
-        return;
-      }
-      console.error("建房失败", error);
-      setStatus("err", "连接失败");
-      showToast("连接失败，稍后自动重试", true);
-      scheduleReconnect();
-    });
+    // 同时打开时错开抢主，减少撞 ID
+    const delay = Math.floor(Math.random() * 800);
+    session.reconnectTimer = setTimeout(function () {
+      if (!isCurrentGen(gen)) return;
+      claimHost(gen);
+    }, delay);
   }
 
   function enterRoom(room, name) {
@@ -920,7 +993,9 @@
 
   function leaveRoom() {
     session.joined = false;
+    session.netGen += 1;
     clearTimeout(session.reconnectTimer);
+    clearTimeout(session.connectTimer);
     destroyPeer();
     els.joinCard.hidden = false;
     els.sendCard.hidden = true;
