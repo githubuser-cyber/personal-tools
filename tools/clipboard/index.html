@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="共享剪贴板" />
+  <title>共享剪贴板</title>
+  <style>
+    :root {
+      --bg0: #e8eef5;
+      --bg1: #f5f7fb;
+      --surface: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: rgba(148, 163, 184, 0.38);
+      --accent: #0f766e;
+      --accent-hover: #0d9488;
+      --accent-soft: #ccfbf1;
+      --danger: #b91c1c;
+      --ok: #047857;
+      --radius: 18px;
+      --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 14px 36px rgba(15, 23, 42, 0.07);
+      --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(1000px 480px at 0% -10%, rgba(13, 148, 136, 0.14), transparent 50%),
+        linear-gradient(180deg, var(--bg1), var(--bg0));
+    }
+
+    [hidden] { display: none !important; }
+
+    .app {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+      padding-left: max(18px, env(safe-area-inset-left));
+      padding-right: max(18px, env(safe-area-inset-right));
+    }
+
+    .home-link {
+      display: inline-block;
+      margin-bottom: 10px;
+      color: var(--accent);
+      font-weight: 650;
+      text-decoration: none;
+    }
+
+    .home-link:hover { text-decoration: underline; }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.45rem;
+      letter-spacing: -0.03em;
+    }
+
+    .lead {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px 18px;
+      margin-bottom: 14px;
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      font-size: 0.9rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+
+    .dot.is-on { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2); }
+    .dot.is-busy { background: #f59e0b; }
+    .dot.is-err { background: #ef4444; }
+
+    .peers { color: var(--muted); font-size: 0.86rem; }
+
+    label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font: inherit;
+      background: #fff;
+    }
+
+    textarea { min-height: 88px; resize: vertical; }
+
+    .row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      border-radius: 12px;
+      min-height: 42px;
+      padding: 8px 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      color: #334155;
+    }
+
+    .btn:hover:not(:disabled) { background: #fff; border-color: #94a3b8; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-danger { color: var(--danger); border-color: #fecaca; background: #fff5f5; }
+
+    .hint {
+      margin: 10px 0 0;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .dropzone {
+      border: 1.5px dashed rgba(13, 148, 136, 0.45);
+      border-radius: 14px;
+      padding: 22px 14px;
+      text-align: center;
+      color: var(--muted);
+      background: rgba(204, 251, 241, 0.35);
+      cursor: pointer;
+    }
+
+    .dropzone.is-drag {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--text);
+    }
+
+    .clip-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .clip {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .clip-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .clip-body {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.95rem;
+      max-height: 180px;
+      overflow: auto;
+    }
+
+    .clip-file {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .clip-thumb {
+      max-width: 100%;
+      max-height: 160px;
+      border-radius: 8px;
+      display: block;
+      margin-top: 8px;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px 8px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: max(20px, env(safe-area-inset-bottom));
+      transform: translateX(-50%) translateY(12px);
+      background: #0f172a;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 20;
+      max-width: min(90vw, 360px);
+      text-align: center;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <a class="home-link" href="../../index.html">← 工具箱</a>
+    <h1>共享剪贴板</h1>
+    <p class="lead">本机复制后，在本页粘贴即可发到同一口令的设备。口令写进书签后打开即连，无需每次填写。</p>
+
+    <section class="card">
+      <div class="status-row">
+        <span class="dot" id="statusDot"></span>
+        <strong id="statusText">未连接</strong>
+        <span class="peers" id="peerNames"></span>
+      </div>
+    </section>
+
+    <section class="card" id="joinCard">
+      <label for="roomInput">房间口令（三台设备设成一样）</label>
+      <input id="roomInput" type="text" maxlength="48" placeholder="例如 wt-home" autocomplete="off" />
+      <label for="nameInput" style="margin-top:12px;">本机显示名</label>
+      <input id="nameInput" type="text" maxlength="24" placeholder="例如 公司 / 家里 / 虚拟机" />
+      <div class="row-actions">
+        <button type="button" class="btn btn-primary" id="btnJoin">进入房间</button>
+        <button type="button" class="btn" id="btnCopyLink">复制本页链接</button>
+      </div>
+      <p class="hint">口令相当于密码。页面公开时请用不易猜的口令，不要在房间里粘贴账号密码。</p>
+    </section>
+
+    <section class="card" id="sendCard" hidden>
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="粘贴或点击选择文件">
+        在本页 <strong>Ctrl + V</strong> 粘贴文字 / 截图 / 文件，或点这里选文件
+      </div>
+      <input id="fileInput" type="file" multiple hidden />
+      <label for="composeInput" style="margin-top:14px;">或手动发送</label>
+      <textarea id="composeInput" placeholder="输入文字后点发送，或直接在页面空白处粘贴"></textarea>
+      <div class="row-actions">
+        <button type="button" class="btn btn-primary" id="btnSendText">发送文字</button>
+        <button type="button" class="btn" id="btnPickFile">选择文件</button>
+        <button type="button" class="btn btn-danger" id="btnClear">清空本机列表</button>
+        <button type="button" class="btn" id="btnLeave">离开房间</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="clip-list" id="clipList">
+        <div class="empty" id="clipEmpty">还没有内容。连接后在本页粘贴即可。</div>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script>
+(function () {
+  "use strict";
+
+  const MAX_FILE_BYTES = 20 * 1024 * 1024;
+  const CHUNK_BYTES = 16 * 1024;
+  const MAX_TEXT_CHARS = 100000;
+  const MAX_HISTORY = 40;
+  const STORAGE_ROOM = "pt-clip-room";
+  const STORAGE_NAME = "pt-clip-name";
+  const STORAGE_DEVICE = "pt-clip-device-id";
+
+  const els = {
+    statusDot: document.getElementById("statusDot"),
+    statusText: document.getElementById("statusText"),
+    peerNames: document.getElementById("peerNames"),
+    joinCard: document.getElementById("joinCard"),
+    sendCard: document.getElementById("sendCard"),
+    roomInput: document.getElementById("roomInput"),
+    nameInput: document.getElementById("nameInput"),
+    btnJoin: document.getElementById("btnJoin"),
+    btnCopyLink: document.getElementById("btnCopyLink"),
+    dropzone: document.getElementById("dropzone"),
+    fileInput: document.getElementById("fileInput"),
+    composeInput: document.getElementById("composeInput"),
+    btnSendText: document.getElementById("btnSendText"),
+    btnPickFile: document.getElementById("btnPickFile"),
+    btnClear: document.getElementById("btnClear"),
+    btnLeave: document.getElementById("btnLeave"),
+    clipList: document.getElementById("clipList"),
+    clipEmpty: document.getElementById("clipEmpty"),
+    toast: document.getElementById("toast")
+  };
+
+  const session = {
+    room: "",
+    deviceId: readOrCreateDeviceId(),
+    deviceName: "",
+    isHost: false,
+    peer: null,
+    hostId: "",
+    connections: new Map(),
+    peerLabels: new Map(),
+    history: [],
+    incomingFiles: new Map(),
+    reconnectTimer: 0,
+    joined: false
+  };
+
+  function showToast(message, isError) {
+    els.toast.textContent = message;
+    els.toast.style.background = isError ? "#7f1d1d" : "#0f172a";
+    els.toast.classList.add("show");
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(function () {
+      els.toast.classList.remove("show");
+    }, 2200);
+  }
+
+  function readStorage(key) {
+    try {
+      return localStorage.getItem(key) || "";
+    } catch (error) {
+      console.error("读取本地存储失败", error);
+      return "";
+    }
+  }
+
+  function writeStorage(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (error) {
+      console.error("写入本地存储失败", error);
+    }
+  }
+
+  function readOrCreateDeviceId() {
+    let id = readStorage(STORAGE_DEVICE);
+    if (!id) {
+      id = "d" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+      writeStorage(STORAGE_DEVICE, id);
+    }
+    return id;
+  }
+
+  function roomFromLocation() {
+    const raw = String(location.hash || "").replace(/^#/, "");
+    if (!raw) return "";
+    if (raw.indexOf("r=") === 0) {
+      try {
+        return decodeURIComponent(raw.slice(2)).trim();
+      } catch (error) {
+        return raw.slice(2).trim();
+      }
+    }
+    try {
+      return decodeURIComponent(raw).trim();
+    } catch (error) {
+      return raw.trim();
+    }
+  }
+
+  function writeLocationHash(room) {
+    const next = "#r=" + encodeURIComponent(room);
+    if (location.hash !== next) {
+      history.replaceState(null, "", next);
+    }
+  }
+
+  function sanitizeRoom(room) {
+    return String(room || "").trim().slice(0, 48);
+  }
+
+  function roomToHostId(room) {
+    let hash = 5381;
+    for (let index = 0; index < room.length; index += 1) {
+      hash = ((hash << 5) + hash) + room.charCodeAt(index);
+    }
+    const token = (hash >>> 0).toString(36);
+    const readable = room.replace(/[^a-zA-Z0-9]/g, "").slice(0, 16);
+    return ("ptc" + token + readable).slice(0, 52);
+  }
+
+  function iceConfig() {
+    return {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun.cloudflare.com:3478" }
+      ]
+    };
+  }
+
+  function setStatus(kind, text) {
+    els.statusDot.className = "dot" + (kind === "on" ? " is-on" : kind === "busy" ? " is-busy" : kind === "err" ? " is-err" : "");
+    els.statusText.textContent = text;
+    const names = [session.deviceName || "本机"];
+    session.peerLabels.forEach(function (label) {
+      if (names.indexOf(label) < 0) names.push(label);
+    });
+    const extra = Math.max(0, session.connections.size);
+    els.peerNames.textContent = session.joined
+      ? ("在线 " + (extra + 1) + " 台 · " + names.join(" / "))
+      : "";
+  }
+
+  function destroyPeer() {
+    session.connections.forEach(function (conn) {
+      try { conn.close(); } catch (error) { console.error("关闭连接失败", error); }
+    });
+    session.connections.clear();
+    session.peerLabels.clear();
+    session.incomingFiles.clear();
+    if (session.peer) {
+      try { session.peer.destroy(); } catch (error) { console.error("销毁 Peer 失败", error); }
+      session.peer = null;
+    }
+    session.isHost = false;
+  }
+
+  function scheduleReconnect() {
+    if (!session.joined) return;
+    clearTimeout(session.reconnectTimer);
+    setStatus("busy", "重连中…");
+    session.reconnectTimer = setTimeout(function () {
+      startNetwork();
+    }, 900 + Math.random() * 700);
+  }
+
+  function attachConnection(conn, remoteLabel) {
+    if (!conn) return;
+    session.connections.set(conn.peer, conn);
+    if (remoteLabel) session.peerLabels.set(conn.peer, remoteLabel);
+
+    conn.on("data", function (payload) {
+      handlePayload(payload, conn);
+    });
+    conn.on("close", function () {
+      session.connections.delete(conn.peer);
+      session.peerLabels.delete(conn.peer);
+      setStatus(session.joined ? "on" : "", session.joined ? (session.isHost ? "房间在线（主机）" : "房间在线") : "未连接");
+      if (!session.isHost && session.joined && session.connections.size === 0) {
+        scheduleReconnect();
+      }
+    });
+    conn.on("error", function (error) {
+      console.error("数据通道错误", error);
+    });
+
+    try {
+      conn.send({
+        type: "hello",
+        deviceId: session.deviceId,
+        deviceName: session.deviceName
+      });
+    } catch (error) {
+      console.error("发送握手失败", error);
+    }
+
+    if (session.isHost) {
+      sendHistory(conn);
+    }
+    setStatus("on", session.isHost ? "房间在线（主机）" : "房间在线");
+  }
+
+  function sendHistory(conn) {
+    session.history.slice(0, 12).reverse().forEach(function (item) {
+      if (item.kind === "text") {
+        conn.send({
+          type: "clip-text",
+          id: item.id,
+          from: item.from,
+          at: item.at,
+          text: item.text
+        });
+      }
+    });
+  }
+
+  function broadcast(payload, exceptPeerId) {
+    session.connections.forEach(function (conn, peerId) {
+      if (peerId === exceptPeerId || !conn.open) return;
+      try {
+        conn.send(payload);
+      } catch (error) {
+        console.error("转发失败", error);
+      }
+    });
+  }
+
+  function sendToHostOrBroadcast(payload) {
+    if (session.isHost) {
+      broadcast(payload);
+      return;
+    }
+    let sent = false;
+    session.connections.forEach(function (conn) {
+      if (!conn.open || sent) return;
+      try {
+        conn.send(payload);
+        sent = true;
+      } catch (error) {
+        console.error("发给主机失败", error);
+      }
+    });
+    if (!sent) showToast("还没连上其他设备", true);
+  }
+
+  function handlePayload(payload, fromConn) {
+    if (!payload || typeof payload !== "object") return;
+    const type = payload.type;
+    const fromPeer = fromConn ? fromConn.peer : "";
+
+    if (type === "hello") {
+      session.peerLabels.set(fromPeer, String(payload.deviceName || "设备"));
+      setStatus("on", session.isHost ? "房间在线（主机）" : "房间在线");
+      return;
+    }
+
+    if (type === "clip-text") {
+      addHistory({
+        id: payload.id,
+        kind: "text",
+        from: payload.from,
+        at: payload.at,
+        text: String(payload.text || "")
+      }, false);
+      if (session.isHost) broadcast(payload, fromPeer);
+      return;
+    }
+
+    if (type === "file-start") {
+      session.incomingFiles.set(payload.id, {
+        id: payload.id,
+        from: payload.from,
+        at: payload.at,
+        fileName: payload.fileName,
+        mime: payload.mime,
+        size: payload.size,
+        chunks: [],
+        received: 0
+      });
+      if (session.isHost) broadcast(payload, fromPeer);
+      return;
+    }
+
+    if (type === "file-chunk") {
+      const incoming = session.incomingFiles.get(payload.id);
+      if (incoming && payload.data) {
+        incoming.chunks.push(base64ToUint8(payload.data));
+        incoming.received += incoming.chunks[incoming.chunks.length - 1].length;
+      }
+      if (session.isHost) broadcast(payload, fromPeer);
+      return;
+    }
+
+    if (type === "file-end") {
+      const incoming = session.incomingFiles.get(payload.id);
+      if (incoming) {
+        const blob = new Blob(incoming.chunks, { type: incoming.mime || "application/octet-stream" });
+        addHistory({
+          id: incoming.id,
+          kind: "file",
+          from: incoming.from,
+          at: incoming.at,
+          fileName: incoming.fileName,
+          mime: incoming.mime,
+          size: incoming.size,
+          blob: blob
+        }, false);
+        session.incomingFiles.delete(payload.id);
+      }
+      if (session.isHost) broadcast(payload, fromPeer);
+    }
+  }
+
+  function addHistory(item, isLocal) {
+    if (session.history.some(function (existing) { return existing.id === item.id; })) {
+      return;
+    }
+    session.history.unshift(item);
+    if (session.history.length > MAX_HISTORY) {
+      const removed = session.history.pop();
+      if (removed && removed.objectUrl) URL.revokeObjectURL(removed.objectUrl);
+    }
+    renderHistory();
+    if (isLocal) showToast("已发送");
+  }
+
+  function formatTime(at) {
+    const date = new Date(at);
+    const pad = function (n) { return n < 10 ? "0" + n : String(n); };
+    return pad(date.getHours()) + ":" + pad(date.getMinutes()) + ":" + pad(date.getSeconds());
+  }
+
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  function renderHistory() {
+    const items = session.history;
+    if (!items.length) {
+      els.clipList.innerHTML = '<div class="empty" id="clipEmpty">还没有内容。连接后在本页粘贴即可。</div>';
+      return;
+    }
+    els.clipList.innerHTML = items.map(function (item) {
+      const who = escapeHtml(item.from || "未知");
+      const meta = '<div class="clip-meta"><span>' + who + "</span><span>" + formatTime(item.at) + "</span></div>";
+      if (item.kind === "text") {
+        return (
+          '<article class="clip">' + meta +
+            '<div class="clip-body">' + escapeHtml(item.text) + "</div>" +
+            '<div class="row-actions">' +
+              '<button type="button" class="btn btn-primary" data-copy="' + item.id + '">复制</button>' +
+            "</div></article>"
+        );
+      }
+      const safeName = escapeHtml(item.fileName || "文件");
+      let preview = "";
+      if (item.blob && String(item.mime || "").indexOf("image/") === 0) {
+        if (!item.objectUrl) item.objectUrl = URL.createObjectURL(item.blob);
+        preview = '<img class="clip-thumb" alt="' + safeName + '" src="' + item.objectUrl + '" />';
+      }
+      return (
+        '<article class="clip">' + meta +
+          '<div class="clip-file"><span>' + safeName + " · " + formatSize(item.size || 0) + "</span></div>" +
+          preview +
+          '<div class="row-actions">' +
+            '<button type="button" class="btn btn-primary" data-save="' + item.id + '">下载</button>' +
+          "</div></article>"
+      );
+    }).join("");
+  }
+
+  function findClip(id) {
+    return session.history.filter(function (item) { return item.id === id; })[0];
+  }
+
+  function copyTextClip(item) {
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      showToast("当前浏览器不支持写入剪贴板", true);
+      return;
+    }
+    navigator.clipboard.writeText(item.text).then(function () {
+      showToast("已复制");
+    }).catch(function (error) {
+      console.error("复制失败", error);
+      showToast("复制失败", true);
+    });
+  }
+
+  function saveFileClip(item) {
+    if (!item.blob) {
+      showToast("文件还没传完", true);
+      return;
+    }
+    const url = item.objectUrl || URL.createObjectURL(item.blob);
+    item.objectUrl = url;
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = item.fileName || "file";
+    link.click();
+  }
+
+  function newClipId() {
+    return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function publishText(text) {
+    const content = String(text || "").trim();
+    if (!content) {
+      showToast("没有可发送的文字", true);
+      return;
+    }
+    if (content.length > MAX_TEXT_CHARS) {
+      showToast("文字过长", true);
+      return;
+    }
+    if (!session.joined) {
+      showToast("请先进入房间", true);
+      return;
+    }
+    const payload = {
+      type: "clip-text",
+      id: newClipId(),
+      from: session.deviceName,
+      at: Date.now(),
+      text: content
+    };
+    addHistory({
+      id: payload.id,
+      kind: "text",
+      from: payload.from,
+      at: payload.at,
+      text: payload.text
+    }, true);
+    sendToHostOrBroadcast(payload);
+  }
+
+  function publishFile(file) {
+    if (!file) return;
+    if (file.size > MAX_FILE_BYTES) {
+      showToast(file.name + " 超过 20MB", true);
+      return;
+    }
+    if (!session.joined) {
+      showToast("请先进入房间", true);
+      return;
+    }
+    const clipId = newClipId();
+    const blob = file.slice(0, file.size, file.type || "application/octet-stream");
+    const item = {
+      id: clipId,
+      kind: "file",
+      from: session.deviceName,
+      at: Date.now(),
+      fileName: file.name || "file",
+      mime: file.type || "application/octet-stream",
+      size: file.size,
+      blob: blob
+    };
+    addHistory(item, true);
+
+    const start = {
+      type: "file-start",
+      id: clipId,
+      from: item.from,
+      at: item.at,
+      fileName: item.fileName,
+      mime: item.mime,
+      size: item.size
+    };
+    sendToHostOrBroadcast(start);
+
+    const reader = new FileReader();
+    reader.onload = function () {
+      const buffer = reader.result;
+      const bytes = new Uint8Array(buffer);
+      for (let offset = 0; offset < bytes.length; offset += CHUNK_BYTES) {
+        const slice = bytes.subarray(offset, Math.min(offset + CHUNK_BYTES, bytes.length));
+        sendToHostOrBroadcast({ type: "file-chunk", id: clipId, data: uint8ToBase64(slice) });
+      }
+      sendToHostOrBroadcast({ type: "file-end", id: clipId });
+    };
+    reader.onerror = function () {
+      console.error("读取文件失败", reader.error);
+      showToast("读取文件失败", true);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function publishFiles(fileList) {
+    const files = Array.prototype.slice.call(fileList || []);
+    files.forEach(function (file) {
+      publishFile(file);
+    });
+  }
+
+  function uint8ToBase64(bytes) {
+    let binary = "";
+    const step = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += step) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(offset, offset + step));
+    }
+    return btoa(binary);
+  }
+
+  function base64ToUint8(text) {
+    const binary = atob(text);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
+  }
+
+  function createPeer(peerId) {
+    return new Peer(peerId || undefined, {
+      debug: 0,
+      config: iceConfig()
+    });
+  }
+
+  function listenAsHost(peer) {
+    session.isHost = true;
+    session.peer = peer;
+    peer.on("connection", function (conn) {
+      conn.on("open", function () {
+        attachConnection(conn);
+      });
+    });
+    peer.on("disconnected", function () {
+      if (session.joined) {
+        try { peer.reconnect(); } catch (error) {
+          console.error("主机重连失败", error);
+          scheduleReconnect();
+        }
+      }
+    });
+    peer.on("error", function (error) {
+      console.error("主机错误", error);
+      if (error && error.type === "network") scheduleReconnect();
+    });
+    setStatus("on", "房间在线（主机）");
+  }
+
+  function connectAsClient() {
+    const peer = createPeer();
+    session.peer = peer;
+    session.isHost = false;
+    peer.on("open", function () {
+      const conn = peer.connect(session.hostId, { reliable: true });
+      conn.on("open", function () {
+        attachConnection(conn);
+      });
+      conn.on("error", function (error) {
+        console.error("连接主机失败", error);
+        scheduleReconnect();
+      });
+    });
+    peer.on("error", function (error) {
+      console.error("客户错误", error);
+      if (error && error.type === "peer-unavailable") {
+        scheduleReconnect();
+      }
+    });
+    peer.on("disconnected", function () {
+      if (session.joined) scheduleReconnect();
+    });
+  }
+
+  function startNetwork() {
+    if (typeof Peer !== "function") {
+      setStatus("err", "连接库加载失败");
+      showToast("无法加载 PeerJS，请检查网络", true);
+      return;
+    }
+    destroyPeer();
+    session.hostId = roomToHostId(session.room);
+    setStatus("busy", "连接中…");
+
+    const hostPeer = createPeer(session.hostId);
+    let becameClient = false;
+    hostPeer.on("open", function () {
+      if (becameClient) return;
+      listenAsHost(hostPeer);
+    });
+    hostPeer.on("error", function (error) {
+      if (error && error.type === "unavailable-id") {
+        becameClient = true;
+        try { hostPeer.destroy(); } catch (destroyError) {
+          console.error("释放占用的主机 Peer 失败", destroyError);
+        }
+        connectAsClient();
+        return;
+      }
+      console.error("建房失败", error);
+      setStatus("err", "连接失败");
+      showToast("连接失败，稍后自动重试", true);
+      scheduleReconnect();
+    });
+  }
+
+  function enterRoom(room, name) {
+    const nextRoom = sanitizeRoom(room);
+    const nextName = String(name || "").trim().slice(0, 24) || "未命名";
+    if (!nextRoom) {
+      showToast("请填写房间口令", true);
+      return;
+    }
+    session.room = nextRoom;
+    session.deviceName = nextName;
+    session.joined = true;
+    writeStorage(STORAGE_ROOM, nextRoom);
+    writeStorage(STORAGE_NAME, nextName);
+    writeLocationHash(nextRoom);
+    els.joinCard.hidden = true;
+    els.sendCard.hidden = false;
+    startNetwork();
+  }
+
+  function leaveRoom() {
+    session.joined = false;
+    clearTimeout(session.reconnectTimer);
+    destroyPeer();
+    els.joinCard.hidden = false;
+    els.sendCard.hidden = true;
+    setStatus("", "未连接");
+  }
+
+  function onPaste(event) {
+    if (!session.joined) return;
+    const target = event.target;
+    if (target && (target.id === "roomInput" || target.id === "nameInput")) return;
+    const clipboard = event.clipboardData;
+    if (!clipboard) return;
+    const files = clipboard.files;
+    if (files && files.length) {
+      event.preventDefault();
+      publishFiles(files);
+      return;
+    }
+    const text = clipboard.getData("text/plain");
+    if (text && String(text).trim()) {
+      event.preventDefault();
+      publishText(text);
+      if (target && target.id === "composeInput") els.composeInput.value = "";
+    }
+  }
+
+  els.btnJoin.addEventListener("click", function () {
+    enterRoom(els.roomInput.value, els.nameInput.value);
+  });
+  els.roomInput.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") enterRoom(els.roomInput.value, els.nameInput.value);
+  });
+  els.btnCopyLink.addEventListener("click", function () {
+    const room = sanitizeRoom(els.roomInput.value || session.room);
+    if (!room) {
+      showToast("请先填写口令", true);
+      return;
+    }
+    const url = location.origin + location.pathname + "#r=" + encodeURIComponent(room);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function () {
+        showToast("链接已复制，其他设备打开即可进房");
+      }).catch(function (error) {
+        console.error("复制链接失败", error);
+        showToast(url, true);
+      });
+    } else {
+      showToast(url);
+    }
+  });
+  els.btnSendText.addEventListener("click", function () {
+    publishText(els.composeInput.value);
+    els.composeInput.value = "";
+  });
+  els.btnPickFile.addEventListener("click", function () { els.fileInput.click(); });
+  els.dropzone.addEventListener("click", function () { els.fileInput.click(); });
+  els.dropzone.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      els.fileInput.click();
+    }
+  });
+  els.fileInput.addEventListener("change", function () {
+    publishFiles(els.fileInput.files);
+    els.fileInput.value = "";
+  });
+  ["dragenter", "dragover"].forEach(function (name) {
+    els.dropzone.addEventListener(name, function (event) {
+      event.preventDefault();
+      els.dropzone.classList.add("is-drag");
+    });
+  });
+  ["dragleave", "drop"].forEach(function (name) {
+    els.dropzone.addEventListener(name, function (event) {
+      event.preventDefault();
+      if (name === "drop") publishFiles(event.dataTransfer.files);
+      els.dropzone.classList.remove("is-drag");
+    });
+  });
+  els.btnClear.addEventListener("click", function () {
+    if (!window.confirm("清空本机看到的列表？不会删掉其他设备上的记录。")) return;
+    session.history.forEach(function (item) {
+      if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
+    });
+    session.history = [];
+    renderHistory();
+  });
+  els.btnLeave.addEventListener("click", leaveRoom);
+  els.clipList.addEventListener("click", function (event) {
+    const copyBtn = event.target.closest("[data-copy]");
+    if (copyBtn) {
+      const item = findClip(copyBtn.getAttribute("data-copy"));
+      if (item) copyTextClip(item);
+      return;
+    }
+    const saveBtn = event.target.closest("[data-save]");
+    if (saveBtn) {
+      const item = findClip(saveBtn.getAttribute("data-save"));
+      if (item) saveFileClip(item);
+    }
+  });
+  document.addEventListener("paste", onPaste);
+
+  window.addEventListener("hashchange", function () {
+    const room = roomFromLocation();
+    if (room && room !== session.room && session.joined) {
+      enterRoom(room, session.deviceName);
+    }
+  });
+
+  const savedRoom = roomFromLocation() || readStorage(STORAGE_ROOM);
+  const savedName = readStorage(STORAGE_NAME);
+  els.roomInput.value = savedRoom;
+  els.nameInput.value = savedName;
+  if (savedRoom) {
+    enterRoom(savedRoom, savedName);
+  }
+})();
+  </script>
+</body>
+</html>
