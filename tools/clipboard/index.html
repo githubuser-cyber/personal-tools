@@ -411,9 +411,15 @@
       var MAX_HISTORY = 40;
       var MAX_FILE_BYTES = 15 * 1024 * 1024;
       var MAX_INLINE_CHARS = 3500;
-      var HEARTBEAT_MS = 15000;
+      var HEARTBEAT_MS = 20000;
       var PEER_TTL_MS = 45000;
       var SEEN_TTL_MS = 10 * 60 * 1000;
+      var FETCH_TIMEOUT_MS = 12000;
+      var ATTACH_TIMEOUT_MS = 120000;
+      var SSE_STALE_MS = 90000;
+      var SSE_CONNECT_TIMEOUT_MS = 15000;
+      var RECONNECT_BASE_MS = 1500;
+      var RECONNECT_MAX_MS = 20000;
 
       var statusDot = document.getElementById("statusDot");
       var statusText = document.getElementById("statusText");
@@ -457,6 +463,11 @@
       var seenIds = Object.create(null);
       var toastTimer = null;
       var lastPasteAt = 0;
+      var lastSseAt = 0;
+      var heartbeatFailCount = 0;
+      var reconnectAttempt = 0;
+      var sseWatchTimer = null;
+      var connectWatchTimer = null;
       var lightboxView = {
         scale: 1,
         x: 0,
@@ -971,10 +982,7 @@
 
       function stopChannel() {
         connected = false;
-        if (eventSource) {
-          try { eventSource.close(); } catch (e) {}
-          eventSource = null;
-        }
+        closeEventSourceQuiet();
         if (heartbeatTimer) {
           clearInterval(heartbeatTimer);
           heartbeatTimer = null;
@@ -987,8 +995,63 @@
           clearTimeout(reconnectTimer);
           reconnectTimer = null;
         }
+        if (connectWatchTimer) {
+          clearTimeout(connectWatchTimer);
+          connectWatchTimer = null;
+        }
+        heartbeatFailCount = 0;
+        reconnectAttempt = 0;
+        lastSseAt = 0;
         peers = Object.create(null);
         updatePeerUi();
+      }
+
+      function closeEventSourceQuiet() {
+        if (!eventSource) return;
+        // 先卸掉 onerror，避免主动 close 时再触发一次重连风暴
+        eventSource.onerror = null;
+        eventSource.onopen = null;
+        eventSource.onmessage = null;
+        try { eventSource.close(); } catch (e) {}
+        eventSource = null;
+      }
+
+      function bumpSseAlive() {
+        lastSseAt = Date.now();
+      }
+
+      function fetchWithTimeout(url, options, timeoutMs) {
+        var controller = new AbortController();
+        var ms = timeoutMs || FETCH_TIMEOUT_MS;
+        var timer = setTimeout(function () {
+          controller.abort();
+        }, ms);
+        var opts = Object.assign({}, options || {}, { signal: controller.signal });
+        return fetch(url, opts).then(function (resp) {
+          clearTimeout(timer);
+          return resp;
+        }, function (err) {
+          clearTimeout(timer);
+          throw err;
+        });
+      }
+
+      // 空闲断线 / 心跳失败 / 切回前台：强制重连 SSE，不退出房间
+      function forceReconnect(reason) {
+        if (!topic) return;
+        connected = false;
+        heartbeatFailCount = 0;
+        setStatus("busy", "通道中断，正在重连…");
+        closeEventSourceQuiet();
+        if (connectWatchTimer) {
+          clearTimeout(connectWatchTimer);
+          connectWatchTimer = null;
+        }
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+        scheduleReconnect(reason === "visible" || reason === "online" || reason === "heartbeat" || reason === "send-fail");
       }
 
       function leaveRoom() {
@@ -1032,23 +1095,37 @@
 
       function openSse() {
         if (!topic) return;
-        if (eventSource) {
-          try { eventSource.close(); } catch (e) {}
-          eventSource = null;
-        }
-        // since=0 会回放缓存消息；用时间戳避免进房刷出旧剪贴板
+        closeEventSourceQuiet();
+        // since=当前秒，避免进房刷出旧剪贴板
         var url = NTFY_BASE + "/" + encodeURIComponent(topic) + "/sse?since=" + Math.floor(Date.now() / 1000);
         setStatus("busy", "正在订阅房间…");
+        bumpSseAlive();
         try {
           eventSource = new EventSource(url);
         } catch (err) {
           setStatus("err", "订阅失败，将重试");
-          scheduleReconnect();
+          scheduleReconnect(false);
           return;
         }
 
+        if (connectWatchTimer) clearTimeout(connectWatchTimer);
+        connectWatchTimer = setTimeout(function () {
+          connectWatchTimer = null;
+          if (!topic) return;
+          if (!eventSource || eventSource.readyState !== EventSource.OPEN) {
+            forceReconnect("connect-timeout");
+          }
+        }, SSE_CONNECT_TIMEOUT_MS);
+
         eventSource.onopen = function () {
+          if (connectWatchTimer) {
+            clearTimeout(connectWatchTimer);
+            connectWatchTimer = null;
+          }
           connected = true;
+          reconnectAttempt = 0;
+          heartbeatFailCount = 0;
+          bumpSseAlive();
           setStatus("on", "已连接 · 房间就绪");
           updatePeerUi();
           publishHello();
@@ -1060,25 +1137,38 @@
           }
         };
 
+        // ntfy 命名事件：保活 / 开流也算通道仍活着
+        eventSource.addEventListener("keepalive", function () {
+          bumpSseAlive();
+        });
+        eventSource.addEventListener("open", function () {
+          bumpSseAlive();
+        });
+
         eventSource.onerror = function () {
           connected = false;
           setStatus("busy", "通道中断，正在重连…");
-          try { eventSource.close(); } catch (e) {}
-          eventSource = null;
-          scheduleReconnect();
+          closeEventSourceQuiet();
+          scheduleReconnect(false);
         };
 
         eventSource.onmessage = function (ev) {
+          bumpSseAlive();
           handleNtfyRaw(ev.data);
         };
       }
 
-      function scheduleReconnect() {
-        if (reconnectTimer || !topic) return;
+      function scheduleReconnect(immediate) {
+        if (!topic) return;
+        if (reconnectTimer) return;
+        var delay = immediate
+          ? 400
+          : Math.min(RECONNECT_MAX_MS, Math.round(RECONNECT_BASE_MS * Math.pow(1.7, reconnectAttempt)));
+        reconnectAttempt += 1;
         reconnectTimer = setTimeout(function () {
           reconnectTimer = null;
           openSse();
-        }, 2500);
+        }, delay);
       }
 
       function handleNtfyRaw(raw) {
@@ -1138,7 +1228,7 @@
       async function publishJson(obj) {
         if (!topic) throw new Error("未进房");
         var body = JSON.stringify(obj);
-        var resp = await fetch(NTFY_BASE + "/" + encodeURIComponent(topic), {
+        var resp = await fetchWithTimeout(NTFY_BASE + "/" + encodeURIComponent(topic), {
           method: "POST",
           headers: {
             "Content-Type": "text/plain; charset=utf-8"
@@ -1161,8 +1251,14 @@
             from: displayName,
             at: Date.now()
           });
+          heartbeatFailCount = 0;
         } catch (err) {
+          heartbeatFailCount += 1;
           console.warn("心跳失败", err);
+          // 连续失败说明 POST 通道或网络已死，主动拆掉僵死 SSE 再连
+          if (heartbeatFailCount >= 2) {
+            forceReconnect("heartbeat");
+          }
         }
       }
 
@@ -1238,8 +1334,9 @@
           toast("已发送");
         } catch (err) {
           console.error("发送文字失败", err);
-          setStatus("err", "发送失败，请重试");
-          toast("发送失败");
+          setStatus("err", "发送失败，正在重连…");
+          toast("发送失败，正在重连");
+          forceReconnect("send-fail");
         }
       }
 
@@ -1275,7 +1372,7 @@
       }
 
       async function publishAttachment(blob, fileName, meta) {
-        var resp = await fetch(NTFY_BASE + "/" + encodeURIComponent(topic), {
+        var resp = await fetchWithTimeout(NTFY_BASE + "/" + encodeURIComponent(topic), {
           method: "PUT",
           headers: {
             "Filename": sanitizeFileName(fileName),
@@ -1283,7 +1380,7 @@
             "Content-Type": blob.type || "application/octet-stream"
           },
           body: blob
-        });
+        }, ATTACH_TIMEOUT_MS);
         if (!resp.ok) {
           throw new Error("附件发布失败 HTTP " + resp.status);
         }
@@ -1355,6 +1452,7 @@
           } catch (err) {
             console.error("发送文件失败", err);
             toast("发送失败：" + file.name);
+            forceReconnect("send-fail");
           }
         }
         setStatus(connected ? "on" : "busy", connected ? "已连接 · 房间就绪" : "通道中断，正在重连…");
@@ -1472,6 +1570,33 @@
       window.addEventListener("beforeunload", function () {
         stopChannel();
       });
+
+      // 切回标签页 / 网络恢复：立刻探测并重连，避免久挂假在线
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState !== "visible" || !topic) return;
+        if (!eventSource || eventSource.readyState !== EventSource.OPEN || !connected) {
+          forceReconnect("visible");
+        } else {
+          publishHello();
+        }
+      });
+      window.addEventListener("online", function () {
+        if (topic) forceReconnect("online");
+      });
+
+      // SSE 僵死检测：长时间无 keepalive / 消息则强制重连
+      if (!sseWatchTimer) {
+        sseWatchTimer = setInterval(function () {
+          if (!topic) return;
+          if (eventSource && eventSource.readyState === EventSource.CLOSED) {
+            forceReconnect("sse-closed");
+            return;
+          }
+          if (lastSseAt && Date.now() - lastSseAt > SSE_STALE_MS) {
+            forceReconnect("sse-stale");
+          }
+        }, 10000);
+      }
 
       renderHistory();
       // 上次已进房且口令仍在：打开页面自动重连，免得点「进入房间」
