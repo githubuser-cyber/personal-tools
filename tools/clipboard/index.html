@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="共享剪贴板" />
   <title>共享剪贴板</title>
@@ -239,966 +240,752 @@
 </head>
 <body>
   <div class="app">
-    <a class="home-link" href="../../index.html">← 工具箱</a>
+    <a class="home-link" href="../../">← 返回工具箱</a>
     <h1>共享剪贴板</h1>
-    <p class="lead">本机复制后，在本页粘贴即可发到同一口令的设备。口令写进书签后打开即连。连接库已本地化。进房时请稍等打洞/中转完成，中途不要反复刷新。</p>
+    <p class="lead">同一口令即可跨设备同步文字 / 图片 / 文件。走 HTTPS 消息通道（ntfy），不依赖 WebRTC，公司网也能用。口令请自管，勿发敏感内容。</p>
 
-    <section class="card">
+    <div class="card">
       <div class="status-row">
         <span class="dot" id="statusDot"></span>
-        <strong id="statusText">未连接</strong>
-        <span class="peers" id="peerNames"></span>
+        <span id="statusText">未连接</span>
+        <span class="peers" id="peerText"></span>
       </div>
-    </section>
+    </div>
 
-    <section class="card" id="joinCard">
-      <label for="roomInput">房间口令（三台设备设成一样）</label>
-      <input id="roomInput" type="text" maxlength="48" placeholder="例如 wt-home" autocomplete="off" />
-      <label for="nameInput" style="margin-top:12px;">本机显示名</label>
-      <input id="nameInput" type="text" maxlength="24" placeholder="例如 公司 / 家里 / 虚拟机" />
+    <div class="card" id="joinCard">
+      <label for="roomInput">房间口令</label>
+      <input id="roomInput" type="text" maxlength="64" placeholder="例如：家里办公室" autocomplete="off" />
+      <label for="nameInput" style="margin-top:12px">本机显示名</label>
+      <input id="nameInput" type="text" maxlength="24" placeholder="例如：手机 / 公司电脑" autocomplete="off" />
       <div class="row-actions">
-        <button type="button" class="btn btn-primary" id="btnJoin">进入房间</button>
-        <button type="button" class="btn" id="btnCopyLink">复制本页链接</button>
+        <button type="button" class="btn btn-primary" id="joinBtn">进入房间</button>
+        <button type="button" class="btn" id="leaveBtn" hidden>离开房间</button>
       </div>
-      <p class="hint">口令相当于密码。页面公开时请用不易猜的口令，不要在房间里粘贴账号密码。</p>
-    </section>
+      <p class="hint">口令完全一致才在同一房间。连接走 ntfy 公共实例，消息可能短暂经第三方中转，勿传机密。</p>
+    </div>
 
-    <section class="card" id="sendCard" hidden>
-      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="粘贴或点击选择文件">
-        在本页 <strong>Ctrl + V</strong> 粘贴文字 / 截图 / 文件，或点这里选文件
-      </div>
-      <input id="fileInput" type="file" multiple hidden />
-      <label for="composeInput" style="margin-top:14px;">或手动发送</label>
-      <textarea id="composeInput" placeholder="输入文字后点发送，或直接在页面空白处粘贴"></textarea>
+    <div class="card" id="shareCard" hidden>
+      <label for="textInput">粘贴或输入文字（Ctrl / ⌘ + V 也可）</label>
+      <textarea id="textInput" placeholder="粘贴后点发送，或直接 Ctrl+V 到本页任意处"></textarea>
       <div class="row-actions">
-        <button type="button" class="btn btn-primary" id="btnSendText">发送文字</button>
-        <button type="button" class="btn" id="btnPickFile">选择文件</button>
-        <button type="button" class="btn btn-danger" id="btnClear">清空本机列表</button>
-        <button type="button" class="btn" id="btnLeave">离开房间</button>
+        <button type="button" class="btn btn-primary" id="sendTextBtn">发送文字</button>
+        <button type="button" class="btn" id="pickFileBtn">选择文件</button>
+        <input id="fileInput" type="file" hidden multiple />
       </div>
-    </section>
+      <div class="dropzone" id="dropzone" style="margin-top:12px">拖拽文件到这里，或点「选择文件」</div>
+      <p class="hint">单文件建议 ≤15MB（通道附件上限）。大文件请改用网盘。</p>
+    </div>
 
-    <section class="card">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px">
+        <strong>最近同步</strong>
+        <button type="button" class="btn btn-danger" id="clearBtn">清空本机列表</button>
+      </div>
       <div class="clip-list" id="clipList">
-        <div class="empty" id="clipEmpty">还没有内容。连接后在本页粘贴即可。</div>
+        <div class="empty" id="emptyHint">还没有内容。进入房间后粘贴即可。</div>
       </div>
-    </section>
+    </div>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status"></div>
 
-  <!-- PeerJS 本地化，避免公司网拦 CDN（jsDelivr QUIC 超时） -->
-  <script src="./vendor/peerjs.min.js"></script>
   <script>
-(function () {
-  "use strict";
+    (function () {
+      var ROOM_KEY = "pt-clipboard-room";
+      var NAME_KEY = "pt-clipboard-name";
+      var DEVICE_KEY = "pt-clipboard-device";
+      var NTFY_BASE = "https://ntfy.sh";
+      var MAX_HISTORY = 40;
+      var MAX_FILE_BYTES = 15 * 1024 * 1024;
+      var MAX_INLINE_CHARS = 3500;
+      var HEARTBEAT_MS = 15000;
+      var PEER_TTL_MS = 45000;
+      var SEEN_TTL_MS = 10 * 60 * 1000;
 
-  const MAX_FILE_BYTES = 20 * 1024 * 1024;
-  const CHUNK_BYTES = 16 * 1024;
-  const MAX_TEXT_CHARS = 100000;
-  const MAX_HISTORY = 40;
-  const STORAGE_ROOM = "pt-clip-room";
-  const STORAGE_NAME = "pt-clip-name";
-  const STORAGE_DEVICE = "pt-clip-device-id";
-  const STORAGE_HOST_HINT = "pt-clip-host-hint";
+      var statusDot = document.getElementById("statusDot");
+      var statusText = document.getElementById("statusText");
+      var peerText = document.getElementById("peerText");
+      var roomInput = document.getElementById("roomInput");
+      var nameInput = document.getElementById("nameInput");
+      var joinBtn = document.getElementById("joinBtn");
+      var leaveBtn = document.getElementById("leaveBtn");
+      var shareCard = document.getElementById("shareCard");
+      var textInput = document.getElementById("textInput");
+      var sendTextBtn = document.getElementById("sendTextBtn");
+      var pickFileBtn = document.getElementById("pickFileBtn");
+      var fileInput = document.getElementById("fileInput");
+      var dropzone = document.getElementById("dropzone");
+      var clipList = document.getElementById("clipList");
+      var emptyHint = document.getElementById("emptyHint");
+      var clearBtn = document.getElementById("clearBtn");
+      var toastEl = document.getElementById("toast");
 
-  const els = {
-    statusDot: document.getElementById("statusDot"),
-    statusText: document.getElementById("statusText"),
-    peerNames: document.getElementById("peerNames"),
-    joinCard: document.getElementById("joinCard"),
-    sendCard: document.getElementById("sendCard"),
-    roomInput: document.getElementById("roomInput"),
-    nameInput: document.getElementById("nameInput"),
-    btnJoin: document.getElementById("btnJoin"),
-    btnCopyLink: document.getElementById("btnCopyLink"),
-    dropzone: document.getElementById("dropzone"),
-    fileInput: document.getElementById("fileInput"),
-    composeInput: document.getElementById("composeInput"),
-    btnSendText: document.getElementById("btnSendText"),
-    btnPickFile: document.getElementById("btnPickFile"),
-    btnClear: document.getElementById("btnClear"),
-    btnLeave: document.getElementById("btnLeave"),
-    clipList: document.getElementById("clipList"),
-    clipEmpty: document.getElementById("clipEmpty"),
-    toast: document.getElementById("toast")
-  };
+      var deviceId = loadOrCreateDeviceId();
+      var room = "";
+      var topic = "";
+      var displayName = "";
+      var connected = false;
+      var eventSource = null;
+      var heartbeatTimer = null;
+      var pruneTimer = null;
+      var reconnectTimer = null;
+      var history = [];
+      var peers = Object.create(null);
+      var seenIds = Object.create(null);
+      var toastTimer = null;
+      var lastPasteAt = 0;
 
-  const session = {
-    room: "",
-    deviceId: readOrCreateDeviceId(),
-    deviceName: "",
-    isHost: false,
-    peer: null,
-    hostId: "",
-    connections: new Map(),
-    peerLabels: new Map(),
-    history: [],
-    incomingFiles: new Map(),
-    reconnectTimer: 0,
-    connectTimer: 0,
-    netGen: 0,
-    claimPeer: null,
-    hostExists: false,
-    joinFails: 0,
-    joined: false
-  };
+      roomInput.value = localStorage.getItem(ROOM_KEY) || "";
+      nameInput.value = localStorage.getItem(NAME_KEY) || guessDeviceName();
 
-  function showToast(message, isError) {
-    els.toast.textContent = message;
-    els.toast.style.background = isError ? "#7f1d1d" : "#0f172a";
-    els.toast.classList.add("show");
-    clearTimeout(showToast.timer);
-    showToast.timer = setTimeout(function () {
-      els.toast.classList.remove("show");
-    }, 2200);
-  }
-
-  function readStorage(key) {
-    try {
-      return localStorage.getItem(key) || "";
-    } catch (error) {
-      console.error("读取本地存储失败", error);
-      return "";
-    }
-  }
-
-  function writeStorage(key, value) {
-    try {
-      localStorage.setItem(key, value);
-    } catch (error) {
-      console.error("写入本地存储失败", error);
-    }
-  }
-
-  function readOrCreateDeviceId() {
-    let id = readStorage(STORAGE_DEVICE);
-    if (!id) {
-      id = "d" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-      writeStorage(STORAGE_DEVICE, id);
-    }
-    return id;
-  }
-
-  function roomFromLocation() {
-    const raw = String(location.hash || "").replace(/^#/, "");
-    if (!raw) return "";
-    if (raw.indexOf("r=") === 0) {
-      try {
-        return decodeURIComponent(raw.slice(2)).trim();
-      } catch (error) {
-        return raw.slice(2).trim();
+      function guessDeviceName() {
+        var ua = navigator.userAgent || "";
+        if (/iPhone|iPad|Android/i.test(ua)) return "手机";
+        if (/Macintosh/i.test(ua)) return "Mac";
+        return "电脑";
       }
-    }
-    try {
-      return decodeURIComponent(raw).trim();
-    } catch (error) {
-      return raw.trim();
-    }
-  }
 
-  function writeLocationHash(room) {
-    const next = "#r=" + encodeURIComponent(room);
-    if (location.hash !== next) {
-      history.replaceState(null, "", next);
-    }
-  }
-
-  function sanitizeRoom(room) {
-    return String(room || "").trim().slice(0, 48);
-  }
-
-  function roomToHostId(room) {
-    let hash = 5381;
-    for (let index = 0; index < room.length; index += 1) {
-      hash = ((hash << 5) + hash) + room.charCodeAt(index);
-    }
-    const token = (hash >>> 0).toString(36);
-    const readable = room.replace(/[^a-zA-Z0-9]/g, "").slice(0, 16);
-    return ("ptc" + token + readable).slice(0, 52);
-  }
-
-  function iceConfig(preferRelay) {
-    const turnAuth = { username: "free", credential: "free" };
-    // STUN 直连；TURN/TURNS（含 TCP/TLS）给公司网打洞失败时中转
-    const iceServers = [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:stun.cloudflare.com:3478" },
-      { urls: "stun:freeturn.net:3478" },
-      { urls: "stun:freeturn.net:5349" },
-      Object.assign({ urls: "turn:freeturn.net:3478" }, turnAuth),
-      Object.assign({ urls: "turn:freeturn.net:3478?transport=tcp" }, turnAuth),
-      Object.assign({ urls: "turns:freeturn.net:5349" }, turnAuth),
-      Object.assign({ urls: "turns:freeturn.net:5349?transport=tcp" }, turnAuth),
-      Object.assign({ urls: "turns:freeturn.tel:5349" }, turnAuth),
-      Object.assign({ urls: "turns:freeturn.tel:5349?transport=tcp" }, turnAuth)
-    ];
-    return {
-      iceServers: iceServers,
-      // preferRelay：强制走中转，适合公司网反复直连失败
-      iceTransportPolicy: preferRelay ? "relay" : "all",
-      iceCandidatePoolSize: 8
-    };
-  }
-
-  function setStatus(kind, text) {
-    els.statusDot.className = "dot" + (kind === "on" ? " is-on" : kind === "busy" ? " is-busy" : kind === "err" ? " is-err" : "");
-    els.statusText.textContent = text;
-    const names = [session.deviceName || "本机"];
-    session.peerLabels.forEach(function (label) {
-      if (names.indexOf(label) < 0) names.push(label);
-    });
-    const extra = Math.max(0, session.connections.size);
-    els.peerNames.textContent = session.joined
-      ? ("在线 " + (extra + 1) + " 台 · " + names.join(" / "))
-      : "";
-  }
-
-  function destroyPeer() {
-    session.connections.forEach(function (conn) {
-      try { conn.close(); } catch (error) { console.error("关闭连接失败", error); }
-    });
-    session.connections.clear();
-    session.peerLabels.clear();
-    session.incomingFiles.clear();
-    if (session.claimPeer && session.claimPeer !== session.peer) {
-      try { session.claimPeer.destroy(); } catch (error) { console.error("销毁抢主 Peer 失败", error); }
-    }
-    session.claimPeer = null;
-    if (session.peer) {
-      try { session.peer.destroy(); } catch (error) { console.error("销毁 Peer 失败", error); }
-      session.peer = null;
-    }
-    session.isHost = false;
-  }
-
-  function isCurrentGen(gen) {
-    return session.joined && session.netGen === gen;
-  }
-
-  function scheduleReconnect(forceClearHostHint) {
-    if (!session.joined) return;
-    clearTimeout(session.reconnectTimer);
-    clearTimeout(session.connectTimer);
-    if (forceClearHostHint) {
-      session.hostExists = false;
-      writeStorage(STORAGE_HOST_HINT, "");
-    }
-    setStatus("busy", "重连中…");
-    session.reconnectTimer = setTimeout(function () {
-      startNetwork();
-    }, 150 + Math.random() * 350);
-  }
-
-  function attachConnection(conn, remoteLabel) {
-    if (!conn) return;
-    session.connections.set(conn.peer, conn);
-    if (remoteLabel) session.peerLabels.set(conn.peer, remoteLabel);
-
-    conn.on("data", function (payload) {
-      handlePayload(payload, conn);
-    });
-    conn.on("close", function () {
-      session.connections.delete(conn.peer);
-      session.peerLabels.delete(conn.peer);
-      setStatus(session.joined ? "on" : "", session.joined ? (session.isHost ? "房间在线（主机）" : "房间在线") : "未连接");
-      if (!session.isHost && session.joined && session.connections.size === 0) {
-        scheduleReconnect();
+      function loadOrCreateDeviceId() {
+        var id = localStorage.getItem(DEVICE_KEY);
+        if (id) return id;
+        id = "d" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+        localStorage.setItem(DEVICE_KEY, id);
+        return id;
       }
-    });
-    conn.on("error", function (error) {
-      console.error("数据通道错误", error);
-    });
 
-    try {
-      conn.send({
-        type: "hello",
-        deviceId: session.deviceId,
-        deviceName: session.deviceName
-      });
-    } catch (error) {
-      console.error("发送握手失败", error);
-    }
+      function toast(msg) {
+        toastEl.textContent = msg;
+        toastEl.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+          toastEl.classList.remove("show");
+        }, 2200);
+      }
 
-    if (session.isHost) {
-      sendHistory(conn);
-    }
-    setStatus("on", session.isHost ? "房间在线（主机）" : "房间在线");
-  }
+      function setStatus(kind, text) {
+        statusDot.className = "dot" + (kind ? " is-" + kind : "");
+        statusText.textContent = text;
+      }
 
-  function sendHistory(conn) {
-    session.history.slice(0, 12).reverse().forEach(function (item) {
-      if (item.kind === "text") {
-        conn.send({
-          type: "clip-text",
-          id: item.id,
-          from: item.from,
-          at: item.at,
-          text: item.text
+      function formatBytes(n) {
+        if (n < 1024) return n + " B";
+        if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+        return (n / (1024 * 1024)).toFixed(1) + " MB";
+      }
+
+      function formatTime(ts) {
+        var d = new Date(ts);
+        var hh = String(d.getHours()).padStart(2, "0");
+        var mm = String(d.getMinutes()).padStart(2, "0");
+        var ss = String(d.getSeconds()).padStart(2, "0");
+        return hh + ":" + mm + ":" + ss;
+      }
+
+      function roomToTopic(roomName) {
+        var hash = 5381;
+        var i;
+        for (i = 0; i < roomName.length; i++) {
+          hash = ((hash << 5) + hash) + roomName.charCodeAt(i);
+          hash = hash | 0;
+        }
+        var hex = (hash >>> 0).toString(36);
+        var safe = String(roomName).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 28);
+        return ("ptclip" + hex + (safe || "r")).slice(0, 64);
+      }
+
+      function uid() {
+        return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      }
+
+      function pruneSeen() {
+        var now = Date.now();
+        Object.keys(seenIds).forEach(function (id) {
+          if (now - seenIds[id] > SEEN_TTL_MS) delete seenIds[id];
         });
       }
-    });
-  }
 
-  function broadcast(payload, exceptPeerId) {
-    session.connections.forEach(function (conn, peerId) {
-      if (peerId === exceptPeerId || !conn.open) return;
-      try {
-        conn.send(payload);
-      } catch (error) {
-        console.error("转发失败", error);
-      }
-    });
-  }
-
-  function sendToHostOrBroadcast(payload) {
-    if (session.isHost) {
-      broadcast(payload);
-      return;
-    }
-    let sent = false;
-    session.connections.forEach(function (conn) {
-      if (!conn.open || sent) return;
-      try {
-        conn.send(payload);
-        sent = true;
-      } catch (error) {
-        console.error("发给主机失败", error);
-      }
-    });
-    if (!sent) showToast("还没连上其他设备", true);
-  }
-
-  function handlePayload(payload, fromConn) {
-    if (!payload || typeof payload !== "object") return;
-    const type = payload.type;
-    const fromPeer = fromConn ? fromConn.peer : "";
-
-    if (type === "hello") {
-      session.peerLabels.set(fromPeer, String(payload.deviceName || "设备"));
-      setStatus("on", session.isHost ? "房间在线（主机）" : "房间在线");
-      return;
-    }
-
-    if (type === "clip-text") {
-      addHistory({
-        id: payload.id,
-        kind: "text",
-        from: payload.from,
-        at: payload.at,
-        text: String(payload.text || "")
-      }, false);
-      if (session.isHost) broadcast(payload, fromPeer);
-      return;
-    }
-
-    if (type === "file-start") {
-      session.incomingFiles.set(payload.id, {
-        id: payload.id,
-        from: payload.from,
-        at: payload.at,
-        fileName: payload.fileName,
-        mime: payload.mime,
-        size: payload.size,
-        chunks: [],
-        received: 0
-      });
-      if (session.isHost) broadcast(payload, fromPeer);
-      return;
-    }
-
-    if (type === "file-chunk") {
-      const incoming = session.incomingFiles.get(payload.id);
-      if (incoming && payload.data) {
-        incoming.chunks.push(base64ToUint8(payload.data));
-        incoming.received += incoming.chunks[incoming.chunks.length - 1].length;
-      }
-      if (session.isHost) broadcast(payload, fromPeer);
-      return;
-    }
-
-    if (type === "file-end") {
-      const incoming = session.incomingFiles.get(payload.id);
-      if (incoming) {
-        const blob = new Blob(incoming.chunks, { type: incoming.mime || "application/octet-stream" });
-        addHistory({
-          id: incoming.id,
-          kind: "file",
-          from: incoming.from,
-          at: incoming.at,
-          fileName: incoming.fileName,
-          mime: incoming.mime,
-          size: incoming.size,
-          blob: blob
-        }, false);
-        session.incomingFiles.delete(payload.id);
-      }
-      if (session.isHost) broadcast(payload, fromPeer);
-    }
-  }
-
-  function addHistory(item, isLocal) {
-    if (session.history.some(function (existing) { return existing.id === item.id; })) {
-      return;
-    }
-    session.history.unshift(item);
-    if (session.history.length > MAX_HISTORY) {
-      const removed = session.history.pop();
-      if (removed && removed.objectUrl) URL.revokeObjectURL(removed.objectUrl);
-    }
-    renderHistory();
-    if (isLocal) showToast("已发送");
-  }
-
-  function formatTime(at) {
-    const date = new Date(at);
-    const pad = function (n) { return n < 10 ? "0" + n : String(n); };
-    return pad(date.getHours()) + ":" + pad(date.getMinutes()) + ":" + pad(date.getSeconds());
-  }
-
-  function escapeHtml(text) {
-    return String(text)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  function formatSize(bytes) {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-  }
-
-  function renderHistory() {
-    const items = session.history;
-    if (!items.length) {
-      els.clipList.innerHTML = '<div class="empty" id="clipEmpty">还没有内容。连接后在本页粘贴即可。</div>';
-      return;
-    }
-    els.clipList.innerHTML = items.map(function (item) {
-      const who = escapeHtml(item.from || "未知");
-      const meta = '<div class="clip-meta"><span>' + who + "</span><span>" + formatTime(item.at) + "</span></div>";
-      if (item.kind === "text") {
-        return (
-          '<article class="clip">' + meta +
-            '<div class="clip-body">' + escapeHtml(item.text) + "</div>" +
-            '<div class="row-actions">' +
-              '<button type="button" class="btn btn-primary" data-copy="' + item.id + '">复制</button>' +
-            "</div></article>"
-        );
-      }
-      const safeName = escapeHtml(item.fileName || "文件");
-      let preview = "";
-      if (item.blob && String(item.mime || "").indexOf("image/") === 0) {
-        if (!item.objectUrl) item.objectUrl = URL.createObjectURL(item.blob);
-        preview = '<img class="clip-thumb" alt="' + safeName + '" src="' + item.objectUrl + '" />';
-      }
-      return (
-        '<article class="clip">' + meta +
-          '<div class="clip-file"><span>' + safeName + " · " + formatSize(item.size || 0) + "</span></div>" +
-          preview +
-          '<div class="row-actions">' +
-            '<button type="button" class="btn btn-primary" data-save="' + item.id + '">下载</button>' +
-          "</div></article>"
-      );
-    }).join("");
-  }
-
-  function findClip(id) {
-    return session.history.filter(function (item) { return item.id === id; })[0];
-  }
-
-  function copyTextClip(item) {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      showToast("当前浏览器不支持写入剪贴板", true);
-      return;
-    }
-    navigator.clipboard.writeText(item.text).then(function () {
-      showToast("已复制");
-    }).catch(function (error) {
-      console.error("复制失败", error);
-      showToast("复制失败", true);
-    });
-  }
-
-  function saveFileClip(item) {
-    if (!item.blob) {
-      showToast("文件还没传完", true);
-      return;
-    }
-    const url = item.objectUrl || URL.createObjectURL(item.blob);
-    item.objectUrl = url;
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = item.fileName || "file";
-    link.click();
-  }
-
-  function newClipId() {
-    return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  }
-
-  function publishText(text) {
-    const content = String(text || "").trim();
-    if (!content) {
-      showToast("没有可发送的文字", true);
-      return;
-    }
-    if (content.length > MAX_TEXT_CHARS) {
-      showToast("文字过长", true);
-      return;
-    }
-    if (!session.joined) {
-      showToast("请先进入房间", true);
-      return;
-    }
-    const payload = {
-      type: "clip-text",
-      id: newClipId(),
-      from: session.deviceName,
-      at: Date.now(),
-      text: content
-    };
-    addHistory({
-      id: payload.id,
-      kind: "text",
-      from: payload.from,
-      at: payload.at,
-      text: payload.text
-    }, true);
-    sendToHostOrBroadcast(payload);
-  }
-
-  function publishFile(file) {
-    if (!file) return;
-    if (file.size > MAX_FILE_BYTES) {
-      showToast(file.name + " 超过 20MB", true);
-      return;
-    }
-    if (!session.joined) {
-      showToast("请先进入房间", true);
-      return;
-    }
-    const clipId = newClipId();
-    const blob = file.slice(0, file.size, file.type || "application/octet-stream");
-    const item = {
-      id: clipId,
-      kind: "file",
-      from: session.deviceName,
-      at: Date.now(),
-      fileName: file.name || "file",
-      mime: file.type || "application/octet-stream",
-      size: file.size,
-      blob: blob
-    };
-    addHistory(item, true);
-
-    const start = {
-      type: "file-start",
-      id: clipId,
-      from: item.from,
-      at: item.at,
-      fileName: item.fileName,
-      mime: item.mime,
-      size: item.size
-    };
-    sendToHostOrBroadcast(start);
-
-    const reader = new FileReader();
-    reader.onload = function () {
-      const buffer = reader.result;
-      const bytes = new Uint8Array(buffer);
-      for (let offset = 0; offset < bytes.length; offset += CHUNK_BYTES) {
-        const slice = bytes.subarray(offset, Math.min(offset + CHUNK_BYTES, bytes.length));
-        sendToHostOrBroadcast({ type: "file-chunk", id: clipId, data: uint8ToBase64(slice) });
-      }
-      sendToHostOrBroadcast({ type: "file-end", id: clipId });
-    };
-    reader.onerror = function () {
-      console.error("读取文件失败", reader.error);
-      showToast("读取文件失败", true);
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function publishFiles(fileList) {
-    const files = Array.prototype.slice.call(fileList || []);
-    files.forEach(function (file) {
-      publishFile(file);
-    });
-  }
-
-  function uint8ToBase64(bytes) {
-    let binary = "";
-    const step = 0x8000;
-    for (let offset = 0; offset < bytes.length; offset += step) {
-      binary += String.fromCharCode.apply(null, bytes.subarray(offset, offset + step));
-    }
-    return btoa(binary);
-  }
-
-  function base64ToUint8(text) {
-    const binary = atob(text);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-    return bytes;
-  }
-
-  function createPeer(peerId, preferRelay) {
-    return new Peer(peerId || undefined, {
-      debug: 0,
-      config: iceConfig(!!preferRelay)
-    });
-  }
-
-  function listenAsHost(peer, gen) {
-    session.isHost = true;
-    session.hostExists = false;
-    session.joinFails = 0;
-    session.peer = peer;
-    session.claimPeer = null;
-    peer.on("connection", function (conn) {
-      conn.on("open", function () {
-        if (!isCurrentGen(gen)) return;
-        attachConnection(conn);
-      });
-    });
-    peer.on("disconnected", function () {
-      if (!isCurrentGen(gen)) return;
-      try {
-        peer.reconnect();
-      } catch (error) {
-        console.error("主机重连失败", error);
-        scheduleReconnect(false);
-      }
-    });
-    peer.on("error", function (error) {
-      console.error("主机错误", error);
-      if (!isCurrentGen(gen)) return;
-      if (error && error.type === "network") scheduleReconnect(false);
-    });
-    setStatus("on", "房间在线（主机）");
-  }
-
-  function joinAsClient(gen, preferRelay) {
-    const peer = createPeer(undefined, preferRelay);
-    session.peer = peer;
-    session.isHost = false;
-    let connectRound = 0;
-
-    function failSoftOrHard() {
-      if (!isCurrentGen(gen) || session.connections.size > 0) return;
-      session.joinFails += 1;
-      // 已知主机却连不上：清掉过期提示，下次允许重新抢主，避免死循环当客户
-      if (session.joinFails >= 2) {
-        console.warn("多次加入失败，清除主机提示后重试");
-        scheduleReconnect(true);
-        return;
-      }
-      console.warn("加入未完成，换策略重试" + (preferRelay ? "（已强制中转）" : "（下次强制中转）"));
-      // 下一轮强制 TURN，并保留 hostExists（仍优先当客户）
-      session.reconnectTimer = setTimeout(function () {
-        if (!isCurrentGen(gen)) return;
-        session.netGen += 1;
-        const nextGen = session.netGen;
-        destroyPeer();
-        joinAsClient(nextGen, true);
-      }, 200);
-    }
-
-    function tryConnectOnce() {
-      if (!isCurrentGen(gen) || !peer || peer.destroyed) return;
-      connectRound += 1;
-      if (connectRound === 1) {
-        setStatus("busy", preferRelay ? "强制中转加入中…" : "正在加入房间…");
-      } else {
-        setStatus("busy", "仍在打洞/中转，请稍候…");
+      function markSeen(id) {
+        if (!id) return false;
+        if (seenIds[id]) return true;
+        seenIds[id] = Date.now();
+        pruneSeen();
+        return false;
       }
 
-      let settled = false;
-      const conn = peer.connect(session.hostId, { reliable: true });
-
-      // 软提示：不拆连接，避免打断正在进行的 ICE
-      clearTimeout(session.connectTimer);
-      session.connectTimer = setTimeout(function () {
-        if (settled || !isCurrentGen(gen) || session.connections.size > 0) return;
-        setStatus("busy", "公司网较慢，继续等待连接…");
-      }, 4000);
-
-      // 硬超时：同一 Peer 上再连一次；仍失败再换策略
-      const hardTimer = setTimeout(function () {
-        if (settled || !isCurrentGen(gen) || session.connections.size > 0) return;
-        try { conn.close(); } catch (error) { console.error("关闭未就绪连接失败", error); }
-        if (connectRound < 2) {
-          tryConnectOnce();
+      function updatePeerUi() {
+        var now = Date.now();
+        var names = [];
+        Object.keys(peers).forEach(function (id) {
+          if (id === deviceId) return;
+          if (now - peers[id].at > PEER_TTL_MS) {
+            delete peers[id];
+            return;
+          }
+          names.push(peers[id].name || "设备");
+        });
+        if (!connected) {
+          peerText.textContent = "";
           return;
         }
-        failSoftOrHard();
-      }, 16000);
+        if (!names.length) {
+          peerText.textContent = "在线 1 台 · 仅本机";
+          return;
+        }
+        peerText.textContent = "在线 " + (names.length + 1) + " 台 · " + names.join("、");
+      }
 
-      conn.on("open", function () {
-        if (settled || !isCurrentGen(gen)) return;
-        settled = true;
-        clearTimeout(session.connectTimer);
-        clearTimeout(hardTimer);
-        session.hostExists = true;
-        session.joinFails = 0;
-        writeStorage(STORAGE_HOST_HINT, session.room);
-        attachConnection(conn);
-      });
-      conn.on("error", function (error) {
-        console.error("连接主机失败", error);
-        if (settled || !isCurrentGen(gen)) return;
-        settled = true;
-        clearTimeout(hardTimer);
-        failSoftOrHard();
-      });
-    }
+      function notePeer(msg) {
+        if (!msg || !msg.deviceId || msg.deviceId === deviceId) return;
+        peers[msg.deviceId] = {
+          name: msg.from || "设备",
+          at: Date.now()
+        };
+        updatePeerUi();
+      }
 
-    peer.on("open", function () {
-      if (!isCurrentGen(gen)) return;
-      tryConnectOnce();
-    });
-    peer.on("error", function (error) {
-      console.error("客户错误", error);
-      if (isCurrentGen(gen)) failSoftOrHard();
-    });
-    peer.on("disconnected", function () {
-      if (!isCurrentGen(gen)) return;
-      if (session.connections.size === 0) {
-        try { peer.reconnect(); } catch (error) {
-          console.error("客户重连信令失败", error);
-          failSoftOrHard();
+      function renderHistory() {
+        clipList.querySelectorAll(".clip").forEach(function (node) {
+          node.remove();
+        });
+        emptyHint.hidden = history.length > 0;
+        history.forEach(function (item) {
+          var el = document.createElement("div");
+          el.className = "clip";
+          var meta = document.createElement("div");
+          meta.className = "clip-meta";
+          meta.innerHTML = "<span>" + escapeHtml(item.from || "未知") + (item.self ? "（本机）" : "") + "</span><span>" + formatTime(item.at) + "</span>";
+          el.appendChild(meta);
+
+          if (item.kind === "text") {
+            var body = document.createElement("div");
+            body.className = "clip-body";
+            body.textContent = item.text || "";
+            el.appendChild(body);
+            var actions = document.createElement("div");
+            actions.className = "row-actions";
+            var copyBtn = document.createElement("button");
+            copyBtn.type = "button";
+            copyBtn.className = "btn";
+            copyBtn.textContent = "复制";
+            copyBtn.addEventListener("click", function () {
+              copyText(item.text || "");
+            });
+            actions.appendChild(copyBtn);
+            el.appendChild(actions);
+          } else {
+            var fileRow = document.createElement("div");
+            fileRow.className = "clip-file";
+            var info = document.createElement("div");
+            info.textContent = (item.fileName || "文件") + " · " + formatBytes(item.size || 0);
+            fileRow.appendChild(info);
+            if (item.url) {
+              var openBtn = document.createElement("a");
+              openBtn.className = "btn";
+              openBtn.href = item.url;
+              openBtn.target = "_blank";
+              openBtn.rel = "noopener";
+              openBtn.textContent = "打开 / 下载";
+              fileRow.appendChild(openBtn);
+            }
+            el.appendChild(fileRow);
+            if (item.mime && item.mime.indexOf("image/") === 0 && item.url) {
+              var img = document.createElement("img");
+              img.className = "clip-thumb";
+              img.alt = item.fileName || "图片";
+              img.src = item.url;
+              el.appendChild(img);
+            }
+          }
+          clipList.appendChild(el);
+        });
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function pushLocal(item) {
+        history.unshift(item);
+        if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
+        renderHistory();
+      }
+
+      function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            toast("已复制");
+          }).catch(function () {
+            fallbackCopy(text);
+          });
+          return;
+        }
+        fallbackCopy(text);
+      }
+
+      function fallbackCopy(text) {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand("copy");
+          toast("已复制");
+        } catch (err) {
+          toast("复制失败");
+        }
+        document.body.removeChild(ta);
+      }
+
+      function stopChannel() {
+        connected = false;
+        if (eventSource) {
+          try { eventSource.close(); } catch (e) {}
+          eventSource = null;
+        }
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer);
+          heartbeatTimer = null;
+        }
+        if (pruneTimer) {
+          clearInterval(pruneTimer);
+          pruneTimer = null;
+        }
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+        peers = Object.create(null);
+        updatePeerUi();
+      }
+
+      function leaveRoom() {
+        stopChannel();
+        room = "";
+        topic = "";
+        shareCard.hidden = true;
+        leaveBtn.hidden = true;
+        joinBtn.disabled = false;
+        roomInput.disabled = false;
+        nameInput.disabled = false;
+        setStatus("", "未连接");
+        toast("已离开房间");
+      }
+
+      async function joinRoom() {
+        var nextRoom = (roomInput.value || "").trim();
+        var nextName = (nameInput.value || "").trim() || guessDeviceName();
+        if (!nextRoom) {
+          toast("请填写房间口令");
+          roomInput.focus();
+          return;
+        }
+        stopChannel();
+        room = nextRoom;
+        displayName = nextName;
+        topic = roomToTopic(room);
+        localStorage.setItem(ROOM_KEY, room);
+        localStorage.setItem(NAME_KEY, displayName);
+        roomInput.disabled = true;
+        nameInput.disabled = true;
+        joinBtn.disabled = true;
+        leaveBtn.hidden = false;
+        shareCard.hidden = false;
+        setStatus("busy", "正在连接通道…");
+        openSse();
+      }
+
+      function openSse() {
+        if (!topic) return;
+        if (eventSource) {
+          try { eventSource.close(); } catch (e) {}
+          eventSource = null;
+        }
+        // since=0 会回放缓存消息；用时间戳避免进房刷出旧剪贴板
+        var url = NTFY_BASE + "/" + encodeURIComponent(topic) + "/sse?since=" + Math.floor(Date.now() / 1000);
+        setStatus("busy", "正在订阅房间…");
+        try {
+          eventSource = new EventSource(url);
+        } catch (err) {
+          setStatus("err", "订阅失败，将重试");
+          scheduleReconnect();
+          return;
+        }
+
+        eventSource.onopen = function () {
+          connected = true;
+          setStatus("on", "已连接 · 房间就绪");
+          updatePeerUi();
+          publishHello();
+          if (!heartbeatTimer) {
+            heartbeatTimer = setInterval(publishHello, HEARTBEAT_MS);
+          }
+          if (!pruneTimer) {
+            pruneTimer = setInterval(updatePeerUi, 5000);
+          }
+        };
+
+        eventSource.onerror = function () {
+          connected = false;
+          setStatus("busy", "通道中断，正在重连…");
+          try { eventSource.close(); } catch (e) {}
+          eventSource = null;
+          scheduleReconnect();
+        };
+
+        eventSource.onmessage = function (ev) {
+          handleNtfyRaw(ev.data);
+        };
+      }
+
+      function scheduleReconnect() {
+        if (reconnectTimer || !topic) return;
+        reconnectTimer = setTimeout(function () {
+          reconnectTimer = null;
+          openSse();
+        }, 2500);
+      }
+
+      function handleNtfyRaw(raw) {
+        if (!raw) return;
+        var envelope;
+        try {
+          envelope = JSON.parse(raw);
+        } catch (err) {
+          return;
+        }
+        // ntfy 保活 / 开流事件无 message
+        if (!envelope.message && !envelope.attachment) return;
+
+        var payload = null;
+        if (envelope.message) {
+          try {
+            payload = JSON.parse(envelope.message);
+          } catch (err) {
+            // 非本工具消息忽略
+            return;
+          }
+        }
+
+        if (!payload || payload.v !== 1) return;
+        notePeer(payload);
+
+        if (payload.type === "hello") return;
+
+        if (payload.deviceId === deviceId) return;
+        if (markSeen(payload.id)) return;
+
+        if (payload.type === "text") {
+          pushLocal({
+            kind: "text",
+            id: payload.id,
+            from: payload.from || "对端",
+            at: payload.at || Date.now(),
+            text: payload.text || "",
+            self: false
+          });
+          toast("收到文字");
+          return;
+        }
+
+        if (payload.type === "file") {
+          var fileUrl = payload.url;
+          if (!fileUrl && envelope.attachment && envelope.attachment.url) {
+            fileUrl = envelope.attachment.url;
+          }
+          pushLocal({
+            kind: "file",
+            id: payload.id,
+            from: payload.from || "对端",
+            at: payload.at || Date.now(),
+            fileName: payload.fileName || (envelope.attachment && envelope.attachment.name) || "文件",
+            mime: payload.mime || (envelope.attachment && envelope.attachment.type) || "",
+            size: payload.size || (envelope.attachment && envelope.attachment.size) || 0,
+            url: fileUrl || "",
+            self: false
+          });
+          toast("收到文件");
         }
       }
-    });
-  }
 
-  function claimHost(gen) {
-    if (!isCurrentGen(gen)) return;
-    const hostPeer = createPeer(session.hostId, false);
-    session.claimPeer = hostPeer;
-    let settled = false;
-
-    function becomeClient() {
-      if (settled || !isCurrentGen(gen)) return;
-      settled = true;
-      session.hostExists = true;
-      writeStorage(STORAGE_HOST_HINT, session.room);
-      clearTimeout(session.connectTimer);
-      session.claimPeer = null;
-      try { hostPeer.destroy(); } catch (destroyError) {
-        console.error("释放占用的主机 Peer 失败", destroyError);
+      async function publishJson(obj) {
+        if (!topic) throw new Error("未进房");
+        var body = JSON.stringify(obj);
+        var resp = await fetch(NTFY_BASE + "/" + encodeURIComponent(topic), {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain; charset=utf-8"
+          },
+          body: body
+        });
+        if (!resp.ok) {
+          throw new Error("发布失败 HTTP " + resp.status);
+        }
       }
-      joinAsClient(gen, false);
-    }
 
-    clearTimeout(session.connectTimer);
-    session.connectTimer = setTimeout(function () {
-      if (settled || !isCurrentGen(gen)) return;
-      settled = true;
-      console.warn("抢主机超时，重试");
-      scheduleReconnect(false);
-    }, 3500);
-
-    hostPeer.on("open", function () {
-      if (settled || !isCurrentGen(gen)) {
-        try { hostPeer.destroy(); } catch (error) { console.error("丢弃过期主机 Peer 失败", error); }
-        return;
+      async function publishHello() {
+        if (!topic) return;
+        try {
+          await publishJson({
+            v: 1,
+            type: "hello",
+            id: uid(),
+            deviceId: deviceId,
+            from: displayName,
+            at: Date.now()
+          });
+        } catch (err) {
+          console.warn("心跳失败", err);
+        }
       }
-      settled = true;
-      clearTimeout(session.connectTimer);
-      listenAsHost(hostPeer, gen);
-    });
-    hostPeer.on("error", function (error) {
-      if (error && error.type === "unavailable-id") {
-        becomeClient();
-        return;
+
+      async function sendText(text) {
+        var content = String(text || "");
+        if (!content.trim()) {
+          toast("内容为空");
+          return;
+        }
+        if (!topic) {
+          toast("请先进入房间");
+          return;
+        }
+
+        var id = uid();
+        var at = Date.now();
+        var meta = {
+          v: 1,
+          type: "text",
+          id: id,
+          deviceId: deviceId,
+          from: displayName,
+          at: at,
+          text: content
+        };
+
+        setStatus("busy", "正在发送…");
+        try {
+          if (content.length <= MAX_INLINE_CHARS) {
+            await publishJson(meta);
+          } else {
+            // 超长文字走附件，避免 4KB 消息上限
+            var blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+            var fileMeta = {
+              v: 1,
+              type: "file",
+              id: id,
+              deviceId: deviceId,
+              from: displayName,
+              at: at,
+              fileName: "clipboard.txt",
+              mime: "text/plain",
+              size: blob.size
+            };
+            await publishAttachment(blob, "clipboard.txt", fileMeta);
+            pushLocal({
+              kind: "file",
+              id: id,
+              from: displayName,
+              at: at,
+              fileName: "clipboard.txt",
+              mime: "text/plain",
+              size: blob.size,
+              url: "",
+              self: true
+            });
+            textInput.value = "";
+            setStatus("on", "已连接 · 房间就绪");
+            toast("已发送（长文附件）");
+            return;
+          }
+          markSeen(id);
+          pushLocal({
+            kind: "text",
+            id: id,
+            from: displayName,
+            at: at,
+            text: content,
+            self: true
+          });
+          textInput.value = "";
+          setStatus("on", "已连接 · 房间就绪");
+          toast("已发送");
+        } catch (err) {
+          console.error("发送文字失败", err);
+          setStatus("err", "发送失败，请重试");
+          toast("发送失败");
+        }
       }
-      if (settled || !isCurrentGen(gen)) return;
-      settled = true;
-      console.error("建房失败", error);
-      scheduleReconnect(false);
-    });
-  }
 
-  function startNetwork() {
-    if (typeof Peer !== "function") {
-      setStatus("err", "连接库加载失败");
-      showToast("连接库未加载，请强制刷新页面", true);
-      return;
-    }
-    session.netGen += 1;
-    const gen = session.netGen;
-    clearTimeout(session.reconnectTimer);
-    clearTimeout(session.connectTimer);
-    destroyPeer();
-    session.hostId = roomToHostId(session.room);
-    setStatus("busy", "连接中…");
+      async function publishAttachment(blob, fileName, meta) {
+        var resp = await fetch(NTFY_BASE + "/" + encodeURIComponent(topic), {
+          method: "PUT",
+          headers: {
+            "Filename": sanitizeFileName(fileName),
+            "Message": JSON.stringify(meta),
+            "Content-Type": blob.type || "application/octet-stream"
+          },
+          body: blob
+        });
+        if (!resp.ok) {
+          throw new Error("附件发布失败 HTTP " + resp.status);
+        }
+        var published = null;
+        try {
+          published = await resp.json();
+        } catch (e) {}
+        return published;
+      }
 
-    // 已知房间已有主机：直接当客户，并允许强制中转（由 joinFails 推进）
-    if (session.hostExists) {
-      joinAsClient(gen, session.joinFails > 0);
-      return;
-    }
+      function sanitizeFileName(name) {
+        return String(name || "file").replace(/[^\w.\-()\u4e00-\u9fff]+/g, "_").slice(0, 120);
+      }
 
-    const delay = Math.floor(Math.random() * 120);
-    session.reconnectTimer = setTimeout(function () {
-      if (!isCurrentGen(gen)) return;
-      claimHost(gen);
-    }, delay);
-  }
+      async function sendFiles(fileList) {
+        var files = Array.prototype.slice.call(fileList || []);
+        if (!files.length) return;
+        if (!topic) {
+          toast("请先进入房间");
+          return;
+        }
 
-  function enterRoom(room, name) {
-    const nextRoom = sanitizeRoom(room);
-    const nextName = String(name || "").trim().slice(0, 24) || "未命名";
-    if (!nextRoom) {
-      showToast("请填写房间口令", true);
-      return;
-    }
-    session.room = nextRoom;
-    session.deviceName = nextName;
-    session.joined = true;
-    session.joinFails = 0;
-    // 本机曾连过该房间且对方是主机时，刷新后直接当客户，少一轮抢主
-    session.hostExists = readStorage(STORAGE_HOST_HINT) === nextRoom;
-    writeStorage(STORAGE_ROOM, nextRoom);
-    writeStorage(STORAGE_NAME, nextName);
-    writeLocationHash(nextRoom);
-    els.joinCard.hidden = true;
-    els.sendCard.hidden = false;
-    startNetwork();
-  }
+        var i;
+        for (i = 0; i < files.length; i++) {
+          var file = files[i];
+          if (file.size > MAX_FILE_BYTES) {
+            toast(file.name + " 超过 15MB，已跳过");
+            continue;
+          }
+          var id = uid();
+          var at = Date.now();
+          var meta = {
+            v: 1,
+            type: "file",
+            id: id,
+            deviceId: deviceId,
+            from: displayName,
+            at: at,
+            fileName: file.name,
+            mime: file.type || "application/octet-stream",
+            size: file.size
+          };
+          setStatus("busy", "正在发送 " + file.name + "…");
+          try {
+            var published = await publishAttachment(file, file.name, meta);
+            var url = "";
+            if (published && published.attachment && published.attachment.url) {
+              url = published.attachment.url;
+            }
+            markSeen(id);
+            pushLocal({
+              kind: "file",
+              id: id,
+              from: displayName,
+              at: at,
+              fileName: file.name,
+              mime: file.type || "",
+              size: file.size,
+              url: url,
+              self: true
+            });
+            toast("已发送 " + file.name);
+          } catch (err) {
+            console.error("发送文件失败", err);
+            toast("发送失败：" + file.name);
+          }
+        }
+        setStatus(connected ? "on" : "busy", connected ? "已连接 · 房间就绪" : "通道中断，正在重连…");
+      }
 
-  function leaveRoom() {
-    session.joined = false;
-    session.hostExists = false;
-    session.joinFails = 0;
-    session.netGen += 1;
-    writeStorage(STORAGE_HOST_HINT, "");
-    clearTimeout(session.reconnectTimer);
-    clearTimeout(session.connectTimer);
-    destroyPeer();
-    els.joinCard.hidden = false;
-    els.sendCard.hidden = true;
-    setStatus("", "未连接");
-  }
-
-  function onPaste(event) {
-    if (!session.joined) return;
-    const target = event.target;
-    if (target && (target.id === "roomInput" || target.id === "nameInput")) return;
-    const clipboard = event.clipboardData;
-    if (!clipboard) return;
-    const files = clipboard.files;
-    if (files && files.length) {
-      event.preventDefault();
-      publishFiles(files);
-      return;
-    }
-    const text = clipboard.getData("text/plain");
-    if (text && String(text).trim()) {
-      event.preventDefault();
-      publishText(text);
-      if (target && target.id === "composeInput") els.composeInput.value = "";
-    }
-  }
-
-  els.btnJoin.addEventListener("click", function () {
-    enterRoom(els.roomInput.value, els.nameInput.value);
-  });
-  els.roomInput.addEventListener("keydown", function (event) {
-    if (event.key === "Enter") enterRoom(els.roomInput.value, els.nameInput.value);
-  });
-  els.btnCopyLink.addEventListener("click", function () {
-    const room = sanitizeRoom(els.roomInput.value || session.room);
-    if (!room) {
-      showToast("请先填写口令", true);
-      return;
-    }
-    const url = location.origin + location.pathname + "#r=" + encodeURIComponent(room);
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url).then(function () {
-        showToast("链接已复制，其他设备打开即可进房");
-      }).catch(function (error) {
-        console.error("复制链接失败", error);
-        showToast(url, true);
+      joinBtn.addEventListener("click", function () {
+        joinRoom();
       });
-    } else {
-      showToast(url);
-    }
-  });
-  els.btnSendText.addEventListener("click", function () {
-    publishText(els.composeInput.value);
-    els.composeInput.value = "";
-  });
-  els.btnPickFile.addEventListener("click", function () { els.fileInput.click(); });
-  els.dropzone.addEventListener("click", function () { els.fileInput.click(); });
-  els.dropzone.addEventListener("keydown", function (event) {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      els.fileInput.click();
-    }
-  });
-  els.fileInput.addEventListener("change", function () {
-    publishFiles(els.fileInput.files);
-    els.fileInput.value = "";
-  });
-  ["dragenter", "dragover"].forEach(function (name) {
-    els.dropzone.addEventListener(name, function (event) {
-      event.preventDefault();
-      els.dropzone.classList.add("is-drag");
-    });
-  });
-  ["dragleave", "drop"].forEach(function (name) {
-    els.dropzone.addEventListener(name, function (event) {
-      event.preventDefault();
-      if (name === "drop") publishFiles(event.dataTransfer.files);
-      els.dropzone.classList.remove("is-drag");
-    });
-  });
-  els.btnClear.addEventListener("click", function () {
-    if (!window.confirm("清空本机看到的列表？不会删掉其他设备上的记录。")) return;
-    session.history.forEach(function (item) {
-      if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
-    });
-    session.history = [];
-    renderHistory();
-  });
-  els.btnLeave.addEventListener("click", leaveRoom);
-  els.clipList.addEventListener("click", function (event) {
-    const copyBtn = event.target.closest("[data-copy]");
-    if (copyBtn) {
-      const item = findClip(copyBtn.getAttribute("data-copy"));
-      if (item) copyTextClip(item);
-      return;
-    }
-    const saveBtn = event.target.closest("[data-save]");
-    if (saveBtn) {
-      const item = findClip(saveBtn.getAttribute("data-save"));
-      if (item) saveFileClip(item);
-    }
-  });
-  document.addEventListener("paste", onPaste);
+      leaveBtn.addEventListener("click", leaveRoom);
+      sendTextBtn.addEventListener("click", function () {
+        sendText(textInput.value);
+      });
+      pickFileBtn.addEventListener("click", function () {
+        fileInput.click();
+      });
+      fileInput.addEventListener("change", function () {
+        sendFiles(fileInput.files);
+        fileInput.value = "";
+      });
+      clearBtn.addEventListener("click", function () {
+        history = [];
+        renderHistory();
+        toast("已清空");
+      });
 
-  window.addEventListener("hashchange", function () {
-    const room = roomFromLocation();
-    if (room && room !== session.room && session.joined) {
-      enterRoom(room, session.deviceName);
-    }
-  });
+      roomInput.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") joinRoom();
+      });
+      nameInput.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") joinRoom();
+      });
 
-  const savedRoom = roomFromLocation() || readStorage(STORAGE_ROOM);
-  const savedName = readStorage(STORAGE_NAME);
-  els.roomInput.value = savedRoom;
-  els.nameInput.value = savedName;
-  if (savedRoom) {
-    enterRoom(savedRoom, savedName);
-  }
-})();
+      ;["dragenter", "dragover"].forEach(function (type) {
+        dropzone.addEventListener(type, function (ev) {
+          ev.preventDefault();
+          dropzone.classList.add("is-drag");
+        });
+      });
+      ;["dragleave", "drop"].forEach(function (type) {
+        dropzone.addEventListener(type, function (ev) {
+          ev.preventDefault();
+          dropzone.classList.remove("is-drag");
+        });
+      });
+      dropzone.addEventListener("drop", function (ev) {
+        if (ev.dataTransfer && ev.dataTransfer.files) {
+          sendFiles(ev.dataTransfer.files);
+        }
+      });
+
+      document.addEventListener("paste", function (ev) {
+        if (!topic) return;
+        var now = Date.now();
+        if (now - lastPasteAt < 400) return;
+        lastPasteAt = now;
+
+        var items = ev.clipboardData && ev.clipboardData.items;
+        var files = [];
+        if (items) {
+          var i;
+          for (i = 0; i < items.length; i++) {
+            if (items[i].kind === "file") {
+              var f = items[i].getAsFile();
+              if (f) files.push(f);
+            }
+          }
+        }
+        if (files.length) {
+          ev.preventDefault();
+          sendFiles(files);
+          return;
+        }
+        // 输入框内粘贴留给用户编辑；页面其它区域粘贴直接发送
+        if (document.activeElement === textInput || document.activeElement === roomInput || document.activeElement === nameInput) {
+          return;
+        }
+        var text = ev.clipboardData && ev.clipboardData.getData("text/plain");
+        if (text) {
+          ev.preventDefault();
+          sendText(text);
+        }
+      });
+
+      window.addEventListener("beforeunload", function () {
+        stopChannel();
+      });
+
+      renderHistory();
+      setStatus("", "未连接");
+    })();
   </script>
 </body>
 </html>
