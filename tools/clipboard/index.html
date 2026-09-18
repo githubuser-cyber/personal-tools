@@ -206,6 +206,98 @@
       border-radius: 8px;
       display: block;
       margin-top: 8px;
+      cursor: zoom-in;
+    }
+
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(4px);
+    }
+
+    .lightbox[hidden] { display: none !important; }
+
+    .lightbox-panel {
+      width: min(96vw, 1100px);
+      height: min(92vh, 900px);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .lightbox-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: #fff;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .lightbox-bar .title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: min(42vw, 420px);
+    }
+
+    .lightbox-bar .bar-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .lightbox-bar .zoom-val {
+      min-width: 3.2em;
+      text-align: right;
+      opacity: 0.9;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .lightbox-bar .btn {
+      min-height: 36px;
+      padding: 6px 10px;
+      background: rgba(248, 250, 252, 0.92);
+    }
+
+    .lightbox-body {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+      border-radius: 12px;
+      background: rgba(2, 6, 23, 0.55);
+      touch-action: none;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .lightbox-body.is-dragging { cursor: grabbing; }
+
+    .lightbox-stage {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate3d(-50%, -50%, 0);
+      transform-origin: center center;
+      will-change: transform;
+    }
+
+    .lightbox-stage img {
+      display: block;
+      max-width: none;
+      pointer-events: none;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      background: #0f172a;
     }
 
     .empty {
@@ -273,7 +365,7 @@
         <input id="fileInput" type="file" hidden multiple />
       </div>
       <div class="dropzone" id="dropzone" style="margin-top:12px">拖拽文件到这里，或点「选择文件」</div>
-      <p class="hint">单文件建议 ≤15MB（通道附件上限）。大文件请改用网盘。</p>
+      <p class="hint">单文件 ≤15MB（通道附件上限）。大文件请改用网盘。</p>
     </div>
 
     <div class="card">
@@ -289,11 +381,32 @@
 
   <div class="toast" id="toast" role="status"></div>
 
+  <div class="lightbox" id="lightbox" hidden>
+    <div class="lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="lightboxTitle">
+      <div class="lightbox-bar">
+        <span class="title" id="lightboxTitle">预览</span>
+        <div class="bar-actions">
+          <span class="zoom-val" id="lightboxZoomVal">100%</span>
+          <button type="button" class="btn" id="lightboxZoomOut" title="缩小">−</button>
+          <button type="button" class="btn" id="lightboxZoomIn" title="放大">+</button>
+          <button type="button" class="btn" id="lightboxZoomReset" title="适应窗口">适应</button>
+          <button type="button" class="btn" id="lightboxClose">关闭</button>
+        </div>
+      </div>
+      <div class="lightbox-body" id="lightboxBody">
+        <div class="lightbox-stage" id="lightboxStage">
+          <img id="lightboxImg" alt="预览图" />
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
       var ROOM_KEY = "pt-clipboard-room";
       var NAME_KEY = "pt-clipboard-name";
       var DEVICE_KEY = "pt-clipboard-device";
+      var JOINED_KEY = "pt-clipboard-joined";
       var NTFY_BASE = "https://ntfy.sh";
       var MAX_HISTORY = 40;
       var MAX_FILE_BYTES = 15 * 1024 * 1024;
@@ -319,6 +432,16 @@
       var emptyHint = document.getElementById("emptyHint");
       var clearBtn = document.getElementById("clearBtn");
       var toastEl = document.getElementById("toast");
+      var lightbox = document.getElementById("lightbox");
+      var lightboxTitle = document.getElementById("lightboxTitle");
+      var lightboxBody = document.getElementById("lightboxBody");
+      var lightboxStage = document.getElementById("lightboxStage");
+      var lightboxImg = document.getElementById("lightboxImg");
+      var lightboxClose = document.getElementById("lightboxClose");
+      var lightboxZoomVal = document.getElementById("lightboxZoomVal");
+      var lightboxZoomIn = document.getElementById("lightboxZoomIn");
+      var lightboxZoomOut = document.getElementById("lightboxZoomOut");
+      var lightboxZoomReset = document.getElementById("lightboxZoomReset");
 
       var deviceId = loadOrCreateDeviceId();
       var room = "";
@@ -334,6 +457,25 @@
       var seenIds = Object.create(null);
       var toastTimer = null;
       var lastPasteAt = 0;
+      var lightboxView = {
+        scale: 1,
+        x: 0,
+        y: 0,
+        min: 0.08,
+        max: 12,
+        dragging: false,
+        pinching: false,
+        lastX: 0,
+        lastY: 0,
+        moved: false,
+        tapOnMask: false,
+        pinchStartDist: 0,
+        pinchStartScale: 1,
+        pinchWorldX: 0,
+        pinchWorldY: 0,
+        rafId: 0,
+        zoomDirty: false
+      };
 
       roomInput.value = localStorage.getItem(ROOM_KEY) || "";
       nameInput.value = localStorage.getItem(NAME_KEY) || guessDeviceName();
@@ -360,6 +502,215 @@
         toastTimer = setTimeout(function () {
           toastEl.classList.remove("show");
         }, 2200);
+      }
+
+      function lightboxTouchDistance(touches) {
+        var dx = touches[0].clientX - touches[1].clientX;
+        var dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+
+      function lightboxTouchCenter(touches) {
+        var rect = lightboxBody.getBoundingClientRect();
+        var midX = (touches[0].clientX + touches[1].clientX) / 2;
+        var midY = (touches[0].clientY + touches[1].clientY) / 2;
+        return {
+          x: midX - rect.left - rect.width / 2,
+          y: midY - rect.top - rect.height / 2
+        };
+      }
+
+      function beginLightboxPinch(touches) {
+        lightboxView.dragging = false;
+        lightboxView.pinching = true;
+        lightboxView.moved = true;
+        lightboxView.tapOnMask = false;
+        lightboxView.pinchStartDist = lightboxTouchDistance(touches);
+        lightboxView.pinchStartScale = lightboxView.scale;
+        var center = lightboxTouchCenter(touches);
+        lightboxView.pinchWorldX = (center.x - lightboxView.x) / lightboxView.scale;
+        lightboxView.pinchWorldY = (center.y - lightboxView.y) / lightboxView.scale;
+      }
+
+      function flushLightboxTransform() {
+        lightboxView.rafId = 0;
+        lightboxStage.style.transform =
+          "translate3d(-50%, -50%, 0) translate3d(" + lightboxView.x + "px," + lightboxView.y + "px,0) scale(" + lightboxView.scale + ")";
+        if (lightboxView.zoomDirty) {
+          lightboxZoomVal.textContent = Math.round(lightboxView.scale * 100) + "%";
+          lightboxView.zoomDirty = false;
+        }
+      }
+
+      function applyLightboxTransform(updateZoom) {
+        if (updateZoom) lightboxView.zoomDirty = true;
+        if (lightboxView.rafId) return;
+        lightboxView.rafId = requestAnimationFrame(flushLightboxTransform);
+      }
+
+      function fitLightboxToView() {
+        var w = lightboxImg.naturalWidth;
+        var h = lightboxImg.naturalHeight;
+        var bw = lightboxBody.clientWidth;
+        var bh = lightboxBody.clientHeight;
+        if (!w || !h || !bw || !bh) {
+          applyLightboxTransform(true);
+          return;
+        }
+        var fit = Math.min(bw / w, bh / h) * 0.98;
+        lightboxView.scale = Math.max(lightboxView.min, Math.min(lightboxView.max, fit));
+        lightboxView.x = 0;
+        lightboxView.y = 0;
+        applyLightboxTransform(true);
+      }
+
+      function resetLightboxView(fit) {
+        lightboxView.scale = 1;
+        lightboxView.x = 0;
+        lightboxView.y = 0;
+        lightboxView.dragging = false;
+        lightboxView.pinching = false;
+        lightboxView.moved = false;
+        lightboxView.tapOnMask = false;
+        lightboxBody.classList.remove("is-dragging");
+        applyLightboxTransform(true);
+        if (fit) {
+          requestAnimationFrame(function () {
+            fitLightboxToView();
+          });
+        }
+      }
+
+      function zoomLightboxBy(factor, clientX, clientY) {
+        var rect = lightboxBody.getBoundingClientRect();
+        var cx = (clientX != null ? clientX : rect.left + rect.width / 2) - rect.left - rect.width / 2;
+        var cy = (clientY != null ? clientY : rect.top + rect.height / 2) - rect.top - rect.height / 2;
+        var next = Math.min(lightboxView.max, Math.max(lightboxView.min, lightboxView.scale * factor));
+        if (next === lightboxView.scale) return;
+        var worldX = (cx - lightboxView.x) / lightboxView.scale;
+        var worldY = (cy - lightboxView.y) / lightboxView.scale;
+        lightboxView.scale = next;
+        lightboxView.x = cx - worldX * lightboxView.scale;
+        lightboxView.y = cy - worldY * lightboxView.scale;
+        applyLightboxTransform(true);
+      }
+
+      function openLightbox(url, title) {
+        if (!url) return;
+        lightboxTitle.textContent = title || "预览";
+        lightboxImg.alt = title || "预览图";
+        lightbox.hidden = false;
+        document.body.style.overflow = "hidden";
+        resetLightboxView(false);
+        lightboxImg.onload = function () {
+          fitLightboxToView();
+        };
+        lightboxImg.src = url;
+        if (lightboxImg.complete && lightboxImg.naturalWidth) {
+          fitLightboxToView();
+        }
+      }
+
+      function closeLightbox() {
+        lightbox.hidden = true;
+        lightboxImg.onload = null;
+        lightboxImg.removeAttribute("src");
+        lightboxBody.classList.remove("is-dragging");
+        lightboxView.dragging = false;
+        lightboxView.pinching = false;
+        document.body.style.overflow = "";
+      }
+
+      function onLightboxWheel(event) {
+        if (lightbox.hidden) return;
+        event.preventDefault();
+        zoomLightboxBy(event.deltaY < 0 ? 1.12 : 1 / 1.12, event.clientX, event.clientY);
+      }
+
+      function onLightboxPointerDown(event) {
+        if (lightbox.hidden) return;
+        if (event.target.closest && event.target.closest(".lightbox-bar")) return;
+
+        if (event.touches && event.touches.length >= 2) {
+          event.preventDefault();
+          beginLightboxPinch(event.touches);
+          return;
+        }
+
+        if (event.button != null && event.button !== 0 && !(event.touches && event.touches.length)) return;
+        event.preventDefault();
+        lightboxView.pinching = false;
+        lightboxView.dragging = true;
+        lightboxView.moved = false;
+        lightboxView.tapOnMask = !(event.target.closest && event.target.closest(".lightbox-stage"));
+        lightboxView.lastX = event.clientX;
+        lightboxView.lastY = event.clientY;
+        if (event.touches && event.touches[0]) {
+          lightboxView.lastX = event.touches[0].clientX;
+          lightboxView.lastY = event.touches[0].clientY;
+        }
+        lightboxBody.classList.add("is-dragging");
+      }
+
+      function onLightboxPointerMove(event) {
+        if (lightbox.hidden) return;
+
+        if (event.touches && event.touches.length >= 2) {
+          event.preventDefault();
+          if (!lightboxView.pinching) beginLightboxPinch(event.touches);
+          if (lightboxView.pinchStartDist < 1) return;
+          var nextScale = lightboxView.pinchStartScale * (lightboxTouchDistance(event.touches) / lightboxView.pinchStartDist);
+          nextScale = Math.min(lightboxView.max, Math.max(lightboxView.min, nextScale));
+          var center = lightboxTouchCenter(event.touches);
+          lightboxView.scale = nextScale;
+          lightboxView.x = center.x - lightboxView.pinchWorldX * nextScale;
+          lightboxView.y = center.y - lightboxView.pinchWorldY * nextScale;
+          applyLightboxTransform(true);
+          return;
+        }
+
+        if (!lightboxView.dragging) return;
+        event.preventDefault();
+        var clientX = event.clientX;
+        var clientY = event.clientY;
+        if (event.touches && event.touches[0]) {
+          clientX = event.touches[0].clientX;
+          clientY = event.touches[0].clientY;
+        }
+        var dx = clientX - lightboxView.lastX;
+        var dy = clientY - lightboxView.lastY;
+        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) lightboxView.moved = true;
+        lightboxView.x += dx;
+        lightboxView.y += dy;
+        lightboxView.lastX = clientX;
+        lightboxView.lastY = clientY;
+        applyLightboxTransform(false);
+      }
+
+      function onLightboxPointerUp(event) {
+        if (lightbox.hidden) return;
+
+        if (event.touches && event.touches.length === 1 && lightboxView.pinching) {
+          lightboxView.pinching = false;
+          lightboxView.dragging = true;
+          lightboxView.lastX = event.touches[0].clientX;
+          lightboxView.lastY = event.touches[0].clientY;
+          lightboxBody.classList.add("is-dragging");
+          return;
+        }
+
+        if (event.touches && event.touches.length > 0) return;
+
+        var moved = lightboxView.moved;
+        var tapOnMask = lightboxView.tapOnMask;
+        lightboxView.dragging = false;
+        lightboxView.pinching = false;
+        lightboxView.tapOnMask = false;
+        lightboxBody.classList.remove("is-dragging");
+
+        if (!moved && tapOnMask) {
+          closeLightbox();
+        }
       }
 
       function setStatus(kind, text) {
@@ -478,6 +829,8 @@
             var info = document.createElement("div");
             info.textContent = (item.fileName || "文件") + " · " + formatBytes(item.size || 0);
             fileRow.appendChild(info);
+            var fileActions = document.createElement("div");
+            fileActions.className = "row-actions";
             if (item.url) {
               var openBtn = document.createElement("a");
               openBtn.className = "btn";
@@ -485,14 +838,30 @@
               openBtn.target = "_blank";
               openBtn.rel = "noopener";
               openBtn.textContent = "打开 / 下载";
-              fileRow.appendChild(openBtn);
+              fileActions.appendChild(openBtn);
             }
+            var isImage = item.mime && item.mime.indexOf("image/") === 0 && item.url;
+            if (isImage) {
+              var copyImgBtn = document.createElement("button");
+              copyImgBtn.type = "button";
+              copyImgBtn.className = "btn";
+              copyImgBtn.textContent = "复制";
+              copyImgBtn.addEventListener("click", function () {
+                copyImage(item.url, item.mime);
+              });
+              fileActions.appendChild(copyImgBtn);
+            }
+            fileRow.appendChild(fileActions);
             el.appendChild(fileRow);
-            if (item.mime && item.mime.indexOf("image/") === 0 && item.url) {
+            if (isImage) {
               var img = document.createElement("img");
               img.className = "clip-thumb";
               img.alt = item.fileName || "图片";
               img.src = item.url;
+              img.title = "点击预览";
+              img.addEventListener("click", function () {
+                openLightbox(item.url, item.fileName || "图片");
+              });
               el.appendChild(img);
             }
           }
@@ -524,6 +893,64 @@
           return;
         }
         fallbackCopy(text);
+      }
+
+      function blobToPng(blob) {
+        return new Promise(function (resolve, reject) {
+          var url = URL.createObjectURL(blob);
+          var img = new Image();
+          img.onload = function () {
+            try {
+              var canvas = document.createElement("canvas");
+              canvas.width = img.naturalWidth;
+              canvas.height = img.naturalHeight;
+              canvas.getContext("2d").drawImage(img, 0, 0);
+              canvas.toBlob(function (png) {
+                URL.revokeObjectURL(url);
+                if (png) resolve(png);
+                else reject(new Error("toBlob failed"));
+              }, "image/png");
+            } catch (err) {
+              URL.revokeObjectURL(url);
+              reject(err);
+            }
+          };
+          img.onerror = function () {
+            URL.revokeObjectURL(url);
+            reject(new Error("image load failed"));
+          };
+          img.src = url;
+        });
+      }
+
+      // 复制图片到系统剪贴板；跨域附件先 fetch，失败再提示
+      async function copyImage(url, mime) {
+        if (!url) {
+          toast("无可复制图片");
+          return;
+        }
+        if (!navigator.clipboard || !window.ClipboardItem) {
+          toast("当前浏览器不支持复制图片");
+          return;
+        }
+        try {
+          var resp = await fetch(url);
+          if (!resp.ok) throw new Error("HTTP " + resp.status);
+          var blob = await resp.blob();
+          var type = blob.type || mime || "image/png";
+          var payload = blob;
+          if (type !== "image/png") {
+            payload = await blobToPng(blob);
+            type = "image/png";
+          }
+          var data = {};
+          data[type] = payload;
+          await navigator.clipboard.write([new ClipboardItem(data)]);
+          toast("已复制图片");
+        } catch (err) {
+          console.error("复制图片失败", err);
+          toast("复制图片失败，可点打开后另存");
+        }
       }
 
       function fallbackCopy(text) {
@@ -573,6 +1000,8 @@
         joinBtn.disabled = false;
         roomInput.disabled = false;
         nameInput.disabled = false;
+        // 主动离开后不再自动进房；口令仍保留在输入框方便下次点进
+        localStorage.setItem(JOINED_KEY, "0");
         setStatus("", "未连接");
         toast("已离开房间");
       }
@@ -591,6 +1020,7 @@
         topic = roomToTopic(room);
         localStorage.setItem(ROOM_KEY, room);
         localStorage.setItem(NAME_KEY, displayName);
+        localStorage.setItem(JOINED_KEY, "1");
         roomInput.disabled = true;
         nameInput.disabled = true;
         joinBtn.disabled = true;
@@ -662,16 +1092,8 @@
         // ntfy 保活 / 开流事件无 message
         if (!envelope.message && !envelope.attachment) return;
 
-        var payload = null;
-        if (envelope.message) {
-          try {
-            payload = JSON.parse(envelope.message);
-          } catch (err) {
-            // 非本工具消息忽略
-            return;
-          }
-        }
-
+        var payload = envelope.message ? parseToolPayload(envelope.message) : null;
+        // 仅附件、无 message 时无法识别本工具协议，忽略
         if (!payload || payload.v !== 1) return;
         notePeer(payload);
 
@@ -821,12 +1243,43 @@
         }
       }
 
+      // fetch 的 header 必须是 ISO-8859-1；中文显示名/文件名只能先 Base64 再放进 Message
+      function utf8ToBase64(str) {
+        var bytes = new TextEncoder().encode(str);
+        var bin = "";
+        var i;
+        for (i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+        return btoa(bin);
+      }
+
+      function base64ToUtf8(b64) {
+        var bin = atob(b64);
+        var bytes = new Uint8Array(bin.length);
+        var i;
+        for (i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return new TextDecoder().decode(bytes);
+      }
+
+      function parseToolPayload(message) {
+        if (!message) return null;
+        try {
+          return JSON.parse(message);
+        } catch (err) {
+          // 附件通道：Message 头为 UTF-8 JSON 的 Base64
+        }
+        try {
+          return JSON.parse(base64ToUtf8(message));
+        } catch (err2) {
+          return null;
+        }
+      }
+
       async function publishAttachment(blob, fileName, meta) {
         var resp = await fetch(NTFY_BASE + "/" + encodeURIComponent(topic), {
           method: "PUT",
           headers: {
             "Filename": sanitizeFileName(fileName),
-            "Message": JSON.stringify(meta),
+            "Message": utf8ToBase64(JSON.stringify(meta)),
             "Content-Type": blob.type || "application/octet-stream"
           },
           body: blob
@@ -841,8 +1294,14 @@
         return published;
       }
 
+      // Filename 头只能 ASCII；真实中文名放在 meta.fileName（经 Message Base64 传递）
       function sanitizeFileName(name) {
-        return String(name || "file").replace(/[^\w.\-()\u4e00-\u9fff]+/g, "_").slice(0, 120);
+        var ascii = String(name || "file")
+          .replace(/[^\x20-\x7E]/g, "_")
+          .replace(/["\\]/g, "_")
+          .trim();
+        if (!ascii || /^\.+$/.test(ascii)) ascii = "file.bin";
+        return ascii.slice(0, 120);
       }
 
       async function sendFiles(fileList) {
@@ -921,6 +1380,37 @@
         toast("已清空");
       });
 
+      lightboxClose.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        closeLightbox();
+      });
+      lightboxZoomIn.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        zoomLightboxBy(1.2);
+      });
+      lightboxZoomOut.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        zoomLightboxBy(1 / 1.2);
+      });
+      lightboxZoomReset.addEventListener("click", function (ev) {
+        ev.stopPropagation();
+        fitLightboxToView();
+      });
+      lightboxBody.addEventListener("wheel", onLightboxWheel, { passive: false });
+      lightboxBody.addEventListener("mousedown", onLightboxPointerDown);
+      window.addEventListener("mousemove", onLightboxPointerMove);
+      window.addEventListener("mouseup", onLightboxPointerUp);
+      lightboxBody.addEventListener("touchstart", onLightboxPointerDown, { passive: false });
+      lightboxBody.addEventListener("touchmove", onLightboxPointerMove, { passive: false });
+      lightboxBody.addEventListener("touchend", onLightboxPointerUp);
+      lightboxBody.addEventListener("touchcancel", onLightboxPointerUp);
+      lightbox.addEventListener("click", function (ev) {
+        if (ev.target === lightbox) closeLightbox();
+      });
+      document.addEventListener("keydown", function (ev) {
+        if (ev.key === "Escape" && !lightbox.hidden) closeLightbox();
+      });
+
       roomInput.addEventListener("keydown", function (ev) {
         if (ev.key === "Enter") joinRoom();
       });
@@ -984,7 +1474,12 @@
       });
 
       renderHistory();
-      setStatus("", "未连接");
+      // 上次已进房且口令仍在：打开页面自动重连，免得点「进入房间」
+      if ((roomInput.value || "").trim() && localStorage.getItem(JOINED_KEY) !== "0") {
+        joinRoom();
+      } else {
+        setStatus("", "未连接");
+      }
     })();
   </script>
 </body>
