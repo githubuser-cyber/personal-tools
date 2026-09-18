@@ -353,7 +353,7 @@
         <button type="button" class="btn btn-primary" id="joinBtn">进入房间</button>
         <button type="button" class="btn" id="leaveBtn" hidden>离开房间</button>
       </div>
-      <p class="hint">口令完全一致才在同一房间。连接走 ntfy 公共实例，消息可能短暂经第三方中转，勿传机密。</p>
+      <p class="hint">口令完全一致才在同一房间。连接走 ntfy 公共实例；久挂若发不出，刷新页面即可重连。勿传机密。</p>
     </div>
 
     <div class="card" id="shareCard" hidden>
@@ -411,15 +411,15 @@
       var MAX_HISTORY = 40;
       var MAX_FILE_BYTES = 15 * 1024 * 1024;
       var MAX_INLINE_CHARS = 3500;
-      var HEARTBEAT_MS = 20000;
-      var PEER_TTL_MS = 45000;
+      var PEER_TTL_MS = 8 * 60 * 1000;
       var SEEN_TTL_MS = 10 * 60 * 1000;
       var FETCH_TIMEOUT_MS = 12000;
       var ATTACH_TIMEOUT_MS = 120000;
-      var SSE_STALE_MS = 90000;
       var SSE_CONNECT_TIMEOUT_MS = 15000;
       var RECONNECT_BASE_MS = 1500;
       var RECONNECT_MAX_MS = 20000;
+      var RATE_LIMIT_BASE_MS = 60000;
+      var RATE_LIMIT_MAX_MS = 10 * 60 * 1000;
 
       var statusDot = document.getElementById("statusDot");
       var statusText = document.getElementById("statusText");
@@ -455,7 +455,6 @@
       var displayName = "";
       var connected = false;
       var eventSource = null;
-      var heartbeatTimer = null;
       var pruneTimer = null;
       var reconnectTimer = null;
       var history = [];
@@ -464,10 +463,11 @@
       var toastTimer = null;
       var lastPasteAt = 0;
       var lastSseAt = 0;
-      var heartbeatFailCount = 0;
       var reconnectAttempt = 0;
-      var sseWatchTimer = null;
       var connectWatchTimer = null;
+      var rateLimitedUntil = 0;
+      var rateLimitBackoffMs = RATE_LIMIT_BASE_MS;
+      var rateLimitResumeTimer = null;
       var lightboxView = {
         scale: 1,
         x: 0,
@@ -983,10 +983,6 @@
       function stopChannel() {
         connected = false;
         closeEventSourceQuiet();
-        if (heartbeatTimer) {
-          clearInterval(heartbeatTimer);
-          heartbeatTimer = null;
-        }
         if (pruneTimer) {
           clearInterval(pruneTimer);
           pruneTimer = null;
@@ -999,9 +995,14 @@
           clearTimeout(connectWatchTimer);
           connectWatchTimer = null;
         }
-        heartbeatFailCount = 0;
+        if (rateLimitResumeTimer) {
+          clearTimeout(rateLimitResumeTimer);
+          rateLimitResumeTimer = null;
+        }
         reconnectAttempt = 0;
         lastSseAt = 0;
+        rateLimitedUntil = 0;
+        rateLimitBackoffMs = RATE_LIMIT_BASE_MS;
         peers = Object.create(null);
         updatePeerUi();
       }
@@ -1036,11 +1037,46 @@
         });
       }
 
-      // 空闲断线 / 心跳失败 / 切回前台：强制重连 SSE，不退出房间
+      function isRateLimited() {
+        return Date.now() < rateLimitedUntil;
+      }
+
+      function markRateLimited() {
+        rateLimitedUntil = Date.now() + rateLimitBackoffMs;
+        rateLimitBackoffMs = Math.min(RATE_LIMIT_MAX_MS, Math.round(rateLimitBackoffMs * 2));
+        setStatus("busy", "通道限流中，稍后自动恢复…");
+        scheduleResumeAfterRateLimit();
+      }
+
+      function scheduleResumeAfterRateLimit() {
+        if (rateLimitResumeTimer) clearTimeout(rateLimitResumeTimer);
+        if (!topic || !isRateLimited()) return;
+        var wait = Math.max(500, rateLimitedUntil - Date.now());
+        rateLimitResumeTimer = setTimeout(function () {
+          rateLimitResumeTimer = null;
+          if (!topic) return;
+          if (isRateLimited()) {
+            scheduleResumeAfterRateLimit();
+            return;
+          }
+          setStatus(connected ? "on" : "busy", connected ? "已连接 · 房间就绪" : "通道异常，请刷新页面");
+        }, wait);
+      }
+
+      function isHttp429(err) {
+        var msg = err && err.message ? String(err.message) : String(err || "");
+        return msg.indexOf("429") >= 0 || msg === "RATE_LIMITED";
+      }
+
+      // SSE 断开时有限次自动重订阅；仍失败请手动刷新页面
       function forceReconnect(reason) {
         if (!topic) return;
+        if (isRateLimited()) {
+          setStatus("busy", "通道限流中，稍后自动恢复…");
+          scheduleResumeAfterRateLimit();
+          return;
+        }
         connected = false;
-        heartbeatFailCount = 0;
         setStatus("busy", "通道中断，正在重连…");
         closeEventSourceQuiet();
         if (connectWatchTimer) {
@@ -1051,7 +1087,7 @@
           clearTimeout(reconnectTimer);
           reconnectTimer = null;
         }
-        scheduleReconnect(reason === "visible" || reason === "online" || reason === "heartbeat" || reason === "send-fail");
+        scheduleReconnect(reason === "online" || reason === "send-fail");
       }
 
       function leaveRoom() {
@@ -1095,6 +1131,11 @@
 
       function openSse() {
         if (!topic) return;
+        if (isRateLimited()) {
+          setStatus("busy", "通道限流中，稍后自动恢复…");
+          scheduleResumeAfterRateLimit();
+          return;
+        }
         closeEventSourceQuiet();
         // since=当前秒，避免进房刷出旧剪贴板
         var url = NTFY_BASE + "/" + encodeURIComponent(topic) + "/sse?since=" + Math.floor(Date.now() / 1000);
@@ -1124,14 +1165,9 @@
           }
           connected = true;
           reconnectAttempt = 0;
-          heartbeatFailCount = 0;
           bumpSseAlive();
           setStatus("on", "已连接 · 房间就绪");
           updatePeerUi();
-          publishHello();
-          if (!heartbeatTimer) {
-            heartbeatTimer = setInterval(publishHello, HEARTBEAT_MS);
-          }
           if (!pruneTimer) {
             pruneTimer = setInterval(updatePeerUi, 5000);
           }
@@ -1227,6 +1263,7 @@
 
       async function publishJson(obj) {
         if (!topic) throw new Error("未进房");
+        if (isRateLimited()) throw new Error("RATE_LIMITED");
         var body = JSON.stringify(obj);
         var resp = await fetchWithTimeout(NTFY_BASE + "/" + encodeURIComponent(topic), {
           method: "POST",
@@ -1235,30 +1272,12 @@
           },
           body: body
         });
+        if (resp.status === 429) {
+          markRateLimited();
+          throw new Error("发布失败 HTTP 429");
+        }
         if (!resp.ok) {
           throw new Error("发布失败 HTTP " + resp.status);
-        }
-      }
-
-      async function publishHello() {
-        if (!topic) return;
-        try {
-          await publishJson({
-            v: 1,
-            type: "hello",
-            id: uid(),
-            deviceId: deviceId,
-            from: displayName,
-            at: Date.now()
-          });
-          heartbeatFailCount = 0;
-        } catch (err) {
-          heartbeatFailCount += 1;
-          console.warn("心跳失败", err);
-          // 连续失败说明 POST 通道或网络已死，主动拆掉僵死 SSE 再连
-          if (heartbeatFailCount >= 2) {
-            forceReconnect("heartbeat");
-          }
         }
       }
 
@@ -1334,9 +1353,13 @@
           toast("已发送");
         } catch (err) {
           console.error("发送文字失败", err);
-          setStatus("err", "发送失败，正在重连…");
-          toast("发送失败，正在重连");
-          forceReconnect("send-fail");
+          if (isHttp429(err)) {
+            setStatus("busy", "通道限流中，稍后自动恢复…");
+            toast("发送太频繁，请稍后再试");
+            return;
+          }
+          setStatus("err", "发送失败，请刷新页面重连");
+          toast("发送失败，请刷新页面");
         }
       }
 
@@ -1372,6 +1395,7 @@
       }
 
       async function publishAttachment(blob, fileName, meta) {
+        if (isRateLimited()) throw new Error("RATE_LIMITED");
         var resp = await fetchWithTimeout(NTFY_BASE + "/" + encodeURIComponent(topic), {
           method: "PUT",
           headers: {
@@ -1381,6 +1405,10 @@
           },
           body: blob
         }, ATTACH_TIMEOUT_MS);
+        if (resp.status === 429) {
+          markRateLimited();
+          throw new Error("附件发布失败 HTTP 429");
+        }
         if (!resp.ok) {
           throw new Error("附件发布失败 HTTP " + resp.status);
         }
@@ -1451,8 +1479,11 @@
             toast("已发送 " + file.name);
           } catch (err) {
             console.error("发送文件失败", err);
-            toast("发送失败：" + file.name);
-            forceReconnect("send-fail");
+            if (isHttp429(err)) {
+              toast("发送太频繁，请稍后再试");
+              break;
+            }
+            toast("发送失败：" + file.name + "，请刷新页面");
           }
         }
         setStatus(connected ? "on" : "busy", connected ? "已连接 · 房间就绪" : "通道中断，正在重连…");
@@ -1571,32 +1602,13 @@
         stopChannel();
       });
 
-      // 切回标签页 / 网络恢复：立刻探测并重连，避免久挂假在线
-      document.addEventListener("visibilitychange", function () {
-        if (document.visibilityState !== "visible" || !topic) return;
-        if (!eventSource || eventSource.readyState !== EventSource.OPEN || !connected) {
-          forceReconnect("visible");
-        } else {
-          publishHello();
+      // 网络恢复时尝试重订 SSE；久挂异常请手动刷新页面
+      window.addEventListener("online", function () {
+        if (!topic || isRateLimited()) return;
+        if (!eventSource || eventSource.readyState !== EventSource.OPEN) {
+          forceReconnect("online");
         }
       });
-      window.addEventListener("online", function () {
-        if (topic) forceReconnect("online");
-      });
-
-      // SSE 僵死检测：长时间无 keepalive / 消息则强制重连
-      if (!sseWatchTimer) {
-        sseWatchTimer = setInterval(function () {
-          if (!topic) return;
-          if (eventSource && eventSource.readyState === EventSource.CLOSED) {
-            forceReconnect("sse-closed");
-            return;
-          }
-          if (lastSseAt && Date.now() - lastSseAt > SSE_STALE_MS) {
-            forceReconnect("sse-stale");
-          }
-        }, 10000);
-      }
 
       renderHistory();
       // 上次已进房且口令仍在：打开页面自动重连，免得点「进入房间」
