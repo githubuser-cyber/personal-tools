@@ -241,7 +241,7 @@
   <div class="app">
     <a class="home-link" href="../../index.html">← 工具箱</a>
     <h1>共享剪贴板</h1>
-    <p class="lead">本机复制后，在本页粘贴即可发到同一口令的设备。口令写进书签后打开即连。连接库已本地化；三台可同时打开，会自动协商主机；公司网打洞失败时走 TURN 中转。</p>
+    <p class="lead">本机复制后，在本页粘贴即可发到同一口令的设备。口令写进书签后打开即连。连接库已本地化。进房时请稍等打洞/中转完成，中途不要反复刷新。</p>
 
     <section class="card">
       <div class="status-row">
@@ -340,6 +340,7 @@
     netGen: 0,
     claimPeer: null,
     hostExists: false,
+    joinFails: 0,
     joined: false
   };
 
@@ -417,25 +418,26 @@
     return ("ptc" + token + readable).slice(0, 52);
   }
 
-  function iceConfig() {
+  function iceConfig(preferRelay) {
     const turnAuth = { username: "free", credential: "free" };
     // STUN 直连；TURN/TURNS（含 TCP/TLS）给公司网打洞失败时中转
-    // 凭证来自公开测试服务 freeTURN.net，非私密密钥
+    const iceServers = [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun.cloudflare.com:3478" },
+      { urls: "stun:freeturn.net:3478" },
+      { urls: "stun:freeturn.net:5349" },
+      Object.assign({ urls: "turn:freeturn.net:3478" }, turnAuth),
+      Object.assign({ urls: "turn:freeturn.net:3478?transport=tcp" }, turnAuth),
+      Object.assign({ urls: "turns:freeturn.net:5349" }, turnAuth),
+      Object.assign({ urls: "turns:freeturn.net:5349?transport=tcp" }, turnAuth),
+      Object.assign({ urls: "turns:freeturn.tel:5349" }, turnAuth),
+      Object.assign({ urls: "turns:freeturn.tel:5349?transport=tcp" }, turnAuth)
+    ];
     return {
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun.cloudflare.com:3478" },
-        { urls: "stun:freeturn.net:3478" },
-        { urls: "stun:freeturn.net:5349" },
-        Object.assign({ urls: "turn:freeturn.net:3478" }, turnAuth),
-        Object.assign({ urls: "turn:freeturn.net:3478?transport=tcp" }, turnAuth),
-        Object.assign({ urls: "turns:freeturn.net:5349" }, turnAuth),
-        Object.assign({ urls: "turns:freeturn.net:5349?transport=tcp" }, turnAuth),
-        Object.assign({ urls: "turns:freeturn.tel:5349" }, turnAuth),
-        Object.assign({ urls: "turns:freeturn.tel:5349?transport=tcp" }, turnAuth)
-      ],
-      iceTransportPolicy: "all",
-      iceCandidatePoolSize: 4
+      iceServers: iceServers,
+      // preferRelay：强制走中转，适合公司网反复直连失败
+      iceTransportPolicy: preferRelay ? "relay" : "all",
+      iceCandidatePoolSize: 8
     };
   }
 
@@ -474,15 +476,18 @@
     return session.joined && session.netGen === gen;
   }
 
-  function scheduleReconnect() {
+  function scheduleReconnect(forceClearHostHint) {
     if (!session.joined) return;
     clearTimeout(session.reconnectTimer);
     clearTimeout(session.connectTimer);
+    if (forceClearHostHint) {
+      session.hostExists = false;
+      writeStorage(STORAGE_HOST_HINT, "");
+    }
     setStatus("busy", "重连中…");
-    // 错开各设备重试，避免再次同时抢同一个主机 ID（尽量短，减少体感等待）
     session.reconnectTimer = setTimeout(function () {
       startNetwork();
-    }, 200 + Math.random() * 500);
+    }, 150 + Math.random() * 350);
   }
 
   function attachConnection(conn, remoteLabel) {
@@ -842,16 +847,17 @@
     return bytes;
   }
 
-  function createPeer(peerId) {
+  function createPeer(peerId, preferRelay) {
     return new Peer(peerId || undefined, {
       debug: 0,
-      config: iceConfig()
+      config: iceConfig(!!preferRelay)
     });
   }
 
   function listenAsHost(peer, gen) {
     session.isHost = true;
     session.hostExists = false;
+    session.joinFails = 0;
     session.peer = peer;
     session.claimPeer = null;
     peer.on("connection", function (conn) {
@@ -866,56 +872,114 @@
         peer.reconnect();
       } catch (error) {
         console.error("主机重连失败", error);
-        scheduleReconnect();
+        scheduleReconnect(false);
       }
     });
     peer.on("error", function (error) {
       console.error("主机错误", error);
       if (!isCurrentGen(gen)) return;
-      if (error && error.type === "network") scheduleReconnect();
+      if (error && error.type === "network") scheduleReconnect(false);
     });
     setStatus("on", "房间在线（主机）");
   }
 
-  function joinAsClient(gen) {
-    const peer = createPeer();
+  function joinAsClient(gen, preferRelay) {
+    const peer = createPeer(undefined, preferRelay);
     session.peer = peer;
     session.isHost = false;
-    setStatus("busy", "正在加入房间…");
-    peer.on("open", function () {
-      if (!isCurrentGen(gen)) return;
-      const conn = peer.connect(session.hostId, { reliable: true });
-      clearTimeout(session.connectTimer);
-      // 公司网 / TURN 打洞常需 10s+，过短会误杀并反复「改抢主机」
-      session.connectTimer = setTimeout(function () {
-        if (!isCurrentGen(gen) || session.connections.size > 0) return;
-        console.warn("加入房间超时，重试" + (session.hostExists ? "（已知有主机）" : ""));
-        scheduleReconnect();
-      }, session.hostExists ? 18000 : 12000);
-      conn.on("open", function () {
+    let connectRound = 0;
+
+    function failSoftOrHard() {
+      if (!isCurrentGen(gen) || session.connections.size > 0) return;
+      session.joinFails += 1;
+      // 已知主机却连不上：清掉过期提示，下次允许重新抢主，避免死循环当客户
+      if (session.joinFails >= 2) {
+        console.warn("多次加入失败，清除主机提示后重试");
+        scheduleReconnect(true);
+        return;
+      }
+      console.warn("加入未完成，换策略重试" + (preferRelay ? "（已强制中转）" : "（下次强制中转）"));
+      // 下一轮强制 TURN，并保留 hostExists（仍优先当客户）
+      session.reconnectTimer = setTimeout(function () {
         if (!isCurrentGen(gen)) return;
+        session.netGen += 1;
+        const nextGen = session.netGen;
+        destroyPeer();
+        joinAsClient(nextGen, true);
+      }, 200);
+    }
+
+    function tryConnectOnce() {
+      if (!isCurrentGen(gen) || !peer || peer.destroyed) return;
+      connectRound += 1;
+      if (connectRound === 1) {
+        setStatus("busy", preferRelay ? "强制中转加入中…" : "正在加入房间…");
+      } else {
+        setStatus("busy", "仍在打洞/中转，请稍候…");
+      }
+
+      let settled = false;
+      const conn = peer.connect(session.hostId, { reliable: true });
+
+      // 软提示：不拆连接，避免打断正在进行的 ICE
+      clearTimeout(session.connectTimer);
+      session.connectTimer = setTimeout(function () {
+        if (settled || !isCurrentGen(gen) || session.connections.size > 0) return;
+        setStatus("busy", "公司网较慢，继续等待连接…");
+      }, 4000);
+
+      // 硬超时：同一 Peer 上再连一次；仍失败再换策略
+      const hardTimer = setTimeout(function () {
+        if (settled || !isCurrentGen(gen) || session.connections.size > 0) return;
+        try { conn.close(); } catch (error) { console.error("关闭未就绪连接失败", error); }
+        if (connectRound < 2) {
+          tryConnectOnce();
+          return;
+        }
+        failSoftOrHard();
+      }, 16000);
+
+      conn.on("open", function () {
+        if (settled || !isCurrentGen(gen)) return;
+        settled = true;
         clearTimeout(session.connectTimer);
+        clearTimeout(hardTimer);
         session.hostExists = true;
+        session.joinFails = 0;
         writeStorage(STORAGE_HOST_HINT, session.room);
         attachConnection(conn);
       });
       conn.on("error", function (error) {
         console.error("连接主机失败", error);
-        if (isCurrentGen(gen)) scheduleReconnect();
+        if (settled || !isCurrentGen(gen)) return;
+        settled = true;
+        clearTimeout(hardTimer);
+        failSoftOrHard();
       });
+    }
+
+    peer.on("open", function () {
+      if (!isCurrentGen(gen)) return;
+      tryConnectOnce();
     });
     peer.on("error", function (error) {
       console.error("客户错误", error);
-      if (isCurrentGen(gen)) scheduleReconnect();
+      if (isCurrentGen(gen)) failSoftOrHard();
     });
     peer.on("disconnected", function () {
-      if (isCurrentGen(gen)) scheduleReconnect();
+      if (!isCurrentGen(gen)) return;
+      if (session.connections.size === 0) {
+        try { peer.reconnect(); } catch (error) {
+          console.error("客户重连信令失败", error);
+          failSoftOrHard();
+        }
+      }
     });
   }
 
   function claimHost(gen) {
     if (!isCurrentGen(gen)) return;
-    const hostPeer = createPeer(session.hostId);
+    const hostPeer = createPeer(session.hostId, false);
     session.claimPeer = hostPeer;
     let settled = false;
 
@@ -929,7 +993,7 @@
       try { hostPeer.destroy(); } catch (destroyError) {
         console.error("释放占用的主机 Peer 失败", destroyError);
       }
-      joinAsClient(gen);
+      joinAsClient(gen, false);
     }
 
     clearTimeout(session.connectTimer);
@@ -937,8 +1001,8 @@
       if (settled || !isCurrentGen(gen)) return;
       settled = true;
       console.warn("抢主机超时，重试");
-      scheduleReconnect();
-    }, 4000);
+      scheduleReconnect(false);
+    }, 3500);
 
     hostPeer.on("open", function () {
       if (settled || !isCurrentGen(gen)) {
@@ -957,7 +1021,7 @@
       if (settled || !isCurrentGen(gen)) return;
       settled = true;
       console.error("建房失败", error);
-      scheduleReconnect();
+      scheduleReconnect(false);
     });
   }
 
@@ -975,14 +1039,13 @@
     session.hostId = roomToHostId(session.room);
     setStatus("busy", "连接中…");
 
-    // 已知房间已有主机时，直接当客户，避免反复抢 ID 空转
+    // 已知房间已有主机：直接当客户，并允许强制中转（由 joinFails 推进）
     if (session.hostExists) {
-      joinAsClient(gen);
+      joinAsClient(gen, session.joinFails > 0);
       return;
     }
 
-    // 首次：短错开后抢主；抢不到再当客户
-    const delay = Math.floor(Math.random() * 200);
+    const delay = Math.floor(Math.random() * 120);
     session.reconnectTimer = setTimeout(function () {
       if (!isCurrentGen(gen)) return;
       claimHost(gen);
@@ -999,6 +1062,7 @@
     session.room = nextRoom;
     session.deviceName = nextName;
     session.joined = true;
+    session.joinFails = 0;
     // 本机曾连过该房间且对方是主机时，刷新后直接当客户，少一轮抢主
     session.hostExists = readStorage(STORAGE_HOST_HINT) === nextRoom;
     writeStorage(STORAGE_ROOM, nextRoom);
@@ -1012,6 +1076,7 @@
   function leaveRoom() {
     session.joined = false;
     session.hostExists = false;
+    session.joinFails = 0;
     session.netGen += 1;
     writeStorage(STORAGE_HOST_HINT, "");
     clearTimeout(session.reconnectTimer);
