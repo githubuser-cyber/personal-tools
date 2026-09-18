@@ -1180,7 +1180,10 @@
             if (err) {
               console.error("订阅失败", err);
               setStatus("err", "订阅失败，请刷新");
+              return;
             }
+            // 进房宣告一次在线；对方收到后会回一声，双方都能统计到台数
+            publishHello(false);
           });
           if (!pruneTimer) {
             pruneTimer = setInterval(updatePeerUi, 5000);
@@ -1231,6 +1234,21 @@
         openMqtt();
       }
 
+      function publishHello(isReply) {
+        if (!topic || !mqttClient || !mqttClient.connected) return;
+        publishJson({
+          v: 1,
+          type: "hello",
+          id: uid(),
+          deviceId: deviceId,
+          from: displayName,
+          at: Date.now(),
+          reply: !!isReply
+        }).catch(function (err) {
+          console.warn("在线宣告失败", err);
+        });
+      }
+
       function handleMqttPayload(raw) {
         if (!raw) return;
         var payload;
@@ -1240,9 +1258,14 @@
           return;
         }
         if (!payload || payload.v !== 1) return;
-        notePeer(payload);
-        if (payload.type === "hello") return;
         if (payload.deviceId === deviceId) return;
+        notePeer(payload);
+
+        // 进房握手：收到对方 hello 后回一次（reply 不再回，避免互刷）
+        if (payload.type === "hello") {
+          if (!payload.reply) publishHello(true);
+          return;
+        }
 
         if (payload.type === "text") {
           if (markSeen(payload.id)) return;
