@@ -241,7 +241,7 @@
   <div class="app">
     <a class="home-link" href="../../index.html">← 工具箱</a>
     <h1>共享剪贴板</h1>
-    <p class="lead">本机复制后，在本页粘贴即可发到同一口令的设备。口令写进书签后打开即连。三台可同时打开，会自动协商主机；公司网打洞失败时走 TURN 中转。</p>
+    <p class="lead">本机复制后，在本页粘贴即可发到同一口令的设备。口令写进书签后打开即连。连接库已本地化；三台可同时打开，会自动协商主机；公司网打洞失败时走 TURN 中转。</p>
 
     <section class="card">
       <div class="status-row">
@@ -287,7 +287,8 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- PeerJS 本地化，避免公司网拦 CDN（jsDelivr QUIC 超时） -->
+  <script src="./vendor/peerjs.min.js"></script>
   <script>
 (function () {
   "use strict";
@@ -475,10 +476,10 @@
     clearTimeout(session.reconnectTimer);
     clearTimeout(session.connectTimer);
     setStatus("busy", "重连中…");
-    // 错开各设备重试，避免再次同时抢同一个主机 ID
+    // 错开各设备重试，避免再次同时抢同一个主机 ID（尽量短，减少体感等待）
     session.reconnectTimer = setTimeout(function () {
       startNetwork();
-    }, 400 + Math.random() * 1400);
+    }, 200 + Math.random() * 500);
   }
 
   function attachConnection(conn, remoteLabel) {
@@ -886,7 +887,7 @@
         if (!isCurrentGen(gen) || session.connections.size > 0) return;
         console.error("加入房间超时，改抢主机");
         scheduleReconnect();
-      }, 7000);
+      }, 4500);
       conn.on("open", function () {
         if (!isCurrentGen(gen)) return;
         clearTimeout(session.connectTimer);
@@ -929,7 +930,7 @@
       settled = true;
       console.error("抢主机超时，重试");
       scheduleReconnect();
-    }, 8000);
+    }, 5000);
 
     hostPeer.on("open", function () {
       if (settled || !isCurrentGen(gen)) {
@@ -955,7 +956,7 @@
   function startNetwork() {
     if (typeof Peer !== "function") {
       setStatus("err", "连接库加载失败");
-      showToast("无法加载 PeerJS，请检查网络", true);
+      showToast("连接库未加载，请强制刷新页面", true);
       return;
     }
     session.netGen += 1;
@@ -965,8 +966,8 @@
     destroyPeer();
     session.hostId = roomToHostId(session.room);
     setStatus("busy", "连接中…");
-    // 同时打开时错开抢主，减少撞 ID
-    const delay = Math.floor(Math.random() * 800);
+    // 同时打开时错开抢主，减少撞 ID（上限压短，加快首连）
+    const delay = Math.floor(Math.random() * 280);
     session.reconnectTimer = setTimeout(function () {
       if (!isCurrentGen(gen)) return;
       claimHost(gen);

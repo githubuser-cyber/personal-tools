@@ -25,7 +25,7 @@ python -m http.server 8080
 index.html                 # 工具主页
 tools/weekly-report/       # 周报填写助手
 tools/image-stitch/        # 图片拼接 + 标注
-tools/clipboard/           # 共享剪贴板（WebRTC，需联网）
+tools/clipboard/           # 共享剪贴板（WebRTC；PeerJS 本地化，信令仍需联网）
 ```
 
 新增工具：在 `tools/` 下新建目录放 `index.html`，并在根目录 `index.html` 的 `tools` 数组里加一项。
