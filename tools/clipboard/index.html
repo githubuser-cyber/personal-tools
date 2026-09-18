@@ -300,6 +300,7 @@
   const STORAGE_ROOM = "pt-clip-room";
   const STORAGE_NAME = "pt-clip-name";
   const STORAGE_DEVICE = "pt-clip-device-id";
+  const STORAGE_HOST_HINT = "pt-clip-host-hint";
 
   const els = {
     statusDot: document.getElementById("statusDot"),
@@ -338,6 +339,7 @@
     connectTimer: 0,
     netGen: 0,
     claimPeer: null,
+    hostExists: false,
     joined: false
   };
 
@@ -432,7 +434,8 @@
         Object.assign({ urls: "turns:freeturn.tel:5349" }, turnAuth),
         Object.assign({ urls: "turns:freeturn.tel:5349?transport=tcp" }, turnAuth)
       ],
-      iceTransportPolicy: "all"
+      iceTransportPolicy: "all",
+      iceCandidatePoolSize: 4
     };
   }
 
@@ -848,6 +851,7 @@
 
   function listenAsHost(peer, gen) {
     session.isHost = true;
+    session.hostExists = false;
     session.peer = peer;
     session.claimPeer = null;
     peer.on("connection", function (conn) {
@@ -882,15 +886,17 @@
       if (!isCurrentGen(gen)) return;
       const conn = peer.connect(session.hostId, { reliable: true });
       clearTimeout(session.connectTimer);
-      // 主机可能还没就绪，短超时后改去抢主机，避免一直卡在连接中
+      // 公司网 / TURN 打洞常需 10s+，过短会误杀并反复「改抢主机」
       session.connectTimer = setTimeout(function () {
         if (!isCurrentGen(gen) || session.connections.size > 0) return;
-        console.error("加入房间超时，改抢主机");
+        console.warn("加入房间超时，重试" + (session.hostExists ? "（已知有主机）" : ""));
         scheduleReconnect();
-      }, 4500);
+      }, session.hostExists ? 18000 : 12000);
       conn.on("open", function () {
         if (!isCurrentGen(gen)) return;
         clearTimeout(session.connectTimer);
+        session.hostExists = true;
+        writeStorage(STORAGE_HOST_HINT, session.room);
         attachConnection(conn);
       });
       conn.on("error", function (error) {
@@ -916,6 +922,8 @@
     function becomeClient() {
       if (settled || !isCurrentGen(gen)) return;
       settled = true;
+      session.hostExists = true;
+      writeStorage(STORAGE_HOST_HINT, session.room);
       clearTimeout(session.connectTimer);
       session.claimPeer = null;
       try { hostPeer.destroy(); } catch (destroyError) {
@@ -928,9 +936,9 @@
     session.connectTimer = setTimeout(function () {
       if (settled || !isCurrentGen(gen)) return;
       settled = true;
-      console.error("抢主机超时，重试");
+      console.warn("抢主机超时，重试");
       scheduleReconnect();
-    }, 5000);
+    }, 4000);
 
     hostPeer.on("open", function () {
       if (settled || !isCurrentGen(gen)) {
@@ -966,8 +974,15 @@
     destroyPeer();
     session.hostId = roomToHostId(session.room);
     setStatus("busy", "连接中…");
-    // 同时打开时错开抢主，减少撞 ID（上限压短，加快首连）
-    const delay = Math.floor(Math.random() * 280);
+
+    // 已知房间已有主机时，直接当客户，避免反复抢 ID 空转
+    if (session.hostExists) {
+      joinAsClient(gen);
+      return;
+    }
+
+    // 首次：短错开后抢主；抢不到再当客户
+    const delay = Math.floor(Math.random() * 200);
     session.reconnectTimer = setTimeout(function () {
       if (!isCurrentGen(gen)) return;
       claimHost(gen);
@@ -984,6 +999,8 @@
     session.room = nextRoom;
     session.deviceName = nextName;
     session.joined = true;
+    // 本机曾连过该房间且对方是主机时，刷新后直接当客户，少一轮抢主
+    session.hostExists = readStorage(STORAGE_HOST_HINT) === nextRoom;
     writeStorage(STORAGE_ROOM, nextRoom);
     writeStorage(STORAGE_NAME, nextName);
     writeLocationHash(nextRoom);
@@ -994,7 +1011,9 @@
 
   function leaveRoom() {
     session.joined = false;
+    session.hostExists = false;
     session.netGen += 1;
+    writeStorage(STORAGE_HOST_HINT, "");
     clearTimeout(session.reconnectTimer);
     clearTimeout(session.connectTimer);
     destroyPeer();
