@@ -29,7 +29,7 @@
 
     html, body {
       margin: 0;
-      min-height: 100%;
+      height: 100%;
       font-family: var(--font);
       color: var(--text);
       background:
@@ -40,33 +40,81 @@
     [hidden] { display: none !important; }
 
     .app {
-      max-width: 720px;
+      max-width: 1180px;
+      height: 100%;
       margin: 0 auto;
-      padding: 28px 18px 48px;
+      padding: 16px 18px 18px;
       padding-left: max(18px, env(safe-area-inset-left));
       padding-right: max(18px, env(safe-area-inset-right));
+      padding-bottom: max(18px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
 
     .home-link {
       display: inline-block;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
       color: var(--accent);
       font-weight: 650;
       text-decoration: none;
+      flex-shrink: 0;
     }
 
     .home-link:hover { text-decoration: underline; }
 
+    .page-head {
+      flex-shrink: 0;
+      margin-bottom: 12px;
+    }
+
     h1 {
-      margin: 0 0 8px;
-      font-size: 1.45rem;
+      margin: 0 0 6px;
+      font-size: 1.35rem;
       letter-spacing: -0.03em;
     }
 
     .lead {
-      margin: 0 0 20px;
+      margin: 0;
       color: var(--muted);
-      font-size: 0.95rem;
+      font-size: 0.9rem;
+    }
+
+    .layout {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .panel-left,
+    .panel-right {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* 左侧随内容增高，不单独出滚动条；右侧占满高度，列表内部滚 */
+    .panel-left {
+      overflow: visible;
+      align-self: start;
+    }
+
+    .panel-right {
+      height: 100%;
+      max-height: 100%;
+      align-self: stretch;
+    }
+
+    .panel-right .card {
+      flex: 1;
+      min-height: 0;
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
     }
 
     .card {
@@ -74,8 +122,28 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      padding: 16px 18px;
-      margin-bottom: 14px;
+      padding: 14px 16px;
+      margin-bottom: 0;
+      flex-shrink: 0;
+    }
+
+    .history-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+
+    .clip-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding-right: 2px;
     }
 
     .status-row {
@@ -166,13 +234,12 @@
       color: var(--text);
     }
 
-    .clip-list { display: flex; flex-direction: column; gap: 10px; }
-
     .clip {
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 12px;
       background: #fff;
+      flex-shrink: 0;
     }
 
     .clip-meta {
@@ -328,53 +395,84 @@
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
+
+    @media (max-width: 860px) {
+      html, body { height: auto; min-height: 100%; }
+      .app {
+        height: auto;
+        min-height: 100vh;
+        padding-bottom: 28px;
+      }
+      .layout {
+        grid-template-columns: 1fr;
+        flex: none;
+      }
+      .panel-left {
+        overflow: visible;
+      }
+      .panel-right {
+        order: -1;
+      }
+      .panel-right .card {
+        flex: none;
+        max-height: min(42vh, 420px);
+      }
+    }
   </style>
 </head>
 <body>
   <div class="app">
     <a class="home-link" href="../../">← 返回工具箱</a>
-    <h1>共享剪贴板</h1>
-    <p class="lead">同一口令即可跨设备同步文字 / 图片 / 文件。走 HTTPS 消息通道（ntfy），不依赖 WebRTC，公司网也能用。口令请自管，勿发敏感内容。</p>
-
-    <div class="card">
-      <div class="status-row">
-        <span class="dot" id="statusDot"></span>
-        <span id="statusText">未连接</span>
-        <span class="peers" id="peerText"></span>
-      </div>
+    <div class="page-head">
+      <h1>共享剪贴板</h1>
+      <p class="lead">同一口令即可跨设备同步文字 / 图片 / 文件。走 MQTT 公共通道（非 ntfy），一般不易被限流。口令请自管，勿发敏感内容。</p>
     </div>
 
-    <div class="card" id="joinCard">
-      <label for="roomInput">房间口令</label>
-      <input id="roomInput" type="text" maxlength="64" placeholder="例如：家里办公室" autocomplete="off" />
-      <label for="nameInput" style="margin-top:12px">本机显示名</label>
-      <input id="nameInput" type="text" maxlength="24" placeholder="例如：手机 / 公司电脑" autocomplete="off" />
-      <div class="row-actions">
-        <button type="button" class="btn btn-primary" id="joinBtn">进入房间</button>
-        <button type="button" class="btn" id="leaveBtn" hidden>离开房间</button>
-      </div>
-      <p class="hint">口令完全一致才在同一房间。连接走 ntfy 公共实例；久挂若发不出，刷新页面即可重连。勿传机密。</p>
-    </div>
+    <div class="layout">
+      <div class="panel-left">
+        <div class="card">
+          <div class="status-row">
+            <span class="dot" id="statusDot"></span>
+            <span id="statusText">未连接</span>
+            <span class="peers" id="peerText"></span>
+          </div>
+        </div>
 
-    <div class="card" id="shareCard" hidden>
-      <label for="textInput">粘贴或输入文字（Ctrl / ⌘ + V 也可）</label>
-      <textarea id="textInput" placeholder="粘贴后点发送，或直接 Ctrl+V 到本页任意处"></textarea>
-      <div class="row-actions">
-        <button type="button" class="btn btn-primary" id="sendTextBtn">发送文字</button>
-        <button type="button" class="btn" id="pickFileBtn">选择文件</button>
-        <input id="fileInput" type="file" hidden multiple />
-      </div>
-      <div class="dropzone" id="dropzone" style="margin-top:12px">拖拽文件到这里，或点「选择文件」</div>
-      <p class="hint">单文件 ≤15MB（通道附件上限）。大文件请改用网盘。</p>
-    </div>
+        <div class="card" id="joinCard">
+          <label for="roomInput">房间口令</label>
+          <input id="roomInput" type="text" maxlength="64" placeholder="例如：家里办公室" autocomplete="off" />
+          <label for="nameInput" style="margin-top:12px">本机显示名</label>
+          <input id="nameInput" type="text" maxlength="24" placeholder="例如：手机 / 公司电脑" autocomplete="off" />
+          <div class="row-actions">
+            <button type="button" class="btn btn-primary" id="joinBtn">进入房间</button>
+            <button type="button" class="btn" id="leaveBtn" hidden>离开房间</button>
+          </div>
+          <p class="hint">口令完全一致才在同一房间。若连不上可刷新页面；仍失败多半是公司网拦了 MQTT。勿传机密。</p>
+        </div>
 
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px">
-        <strong>最近同步</strong>
-        <button type="button" class="btn btn-danger" id="clearBtn">清空本机列表</button>
+        <div class="card" id="shareCard" hidden>
+          <label for="textInput">粘贴或输入文字（Ctrl / ⌘ + V 也可）</label>
+          <textarea id="textInput" placeholder="粘贴后点发送，或直接 Ctrl+V 到本页任意处"></textarea>
+          <div class="row-actions">
+            <button type="button" class="btn btn-primary" id="sendTextBtn">发送文字</button>
+            <button type="button" class="btn" id="pickFileBtn">选择文件</button>
+            <input id="fileInput" type="file" hidden multiple />
+          </div>
+          <div class="dropzone" id="dropzone" style="margin-top:12px">拖拽文件到这里，或点「选择文件」</div>
+          <p class="hint">单文件建议 ≤8MB（分片传输）。大文件请改用网盘。</p>
+        </div>
       </div>
-      <div class="clip-list" id="clipList">
-        <div class="empty" id="emptyHint">还没有内容。进入房间后粘贴即可。</div>
+
+      <div class="panel-right">
+        <div class="card">
+          <div class="history-head">
+            <strong>最近同步</strong>
+            <button type="button" class="btn btn-danger" id="clearBtn">清空本机列表</button>
+          </div>
+          <div class="clip-list" id="clipList">
+            <div class="empty" id="emptyHint">还没有内容。进入房间后粘贴即可。</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -401,25 +499,23 @@
     </div>
   </div>
 
+  <script src="./vendor/mqtt.min.js"></script>
   <script>
     (function () {
       var ROOM_KEY = "pt-clipboard-room";
       var NAME_KEY = "pt-clipboard-name";
       var DEVICE_KEY = "pt-clipboard-device";
       var JOINED_KEY = "pt-clipboard-joined";
-      var NTFY_BASE = "https://ntfy.sh";
+      var MQTT_URLS = [
+        "wss://broker.emqx.io:8084/mqtt",
+        "wss://broker.hivemq.com:8884/mqtt"
+      ];
       var MAX_HISTORY = 40;
-      var MAX_FILE_BYTES = 15 * 1024 * 1024;
-      var MAX_INLINE_CHARS = 3500;
+      var MAX_FILE_BYTES = 8 * 1024 * 1024;
+      var MAX_INLINE_CHARS = 120000;
+      var FILE_CHUNK_BYTES = 32 * 1024;
       var PEER_TTL_MS = 8 * 60 * 1000;
       var SEEN_TTL_MS = 10 * 60 * 1000;
-      var FETCH_TIMEOUT_MS = 12000;
-      var ATTACH_TIMEOUT_MS = 120000;
-      var SSE_CONNECT_TIMEOUT_MS = 15000;
-      var RECONNECT_BASE_MS = 1500;
-      var RECONNECT_MAX_MS = 20000;
-      var RATE_LIMIT_BASE_MS = 60000;
-      var RATE_LIMIT_MAX_MS = 10 * 60 * 1000;
 
       var statusDot = document.getElementById("statusDot");
       var statusText = document.getElementById("statusText");
@@ -454,20 +550,15 @@
       var topic = "";
       var displayName = "";
       var connected = false;
-      var eventSource = null;
+      var mqttClient = null;
+      var mqttUrlIndex = 0;
       var pruneTimer = null;
-      var reconnectTimer = null;
       var history = [];
       var peers = Object.create(null);
       var seenIds = Object.create(null);
+      var pendingFiles = Object.create(null);
       var toastTimer = null;
       var lastPasteAt = 0;
-      var lastSseAt = 0;
-      var reconnectAttempt = 0;
-      var connectWatchTimer = null;
-      var rateLimitedUntil = 0;
-      var rateLimitBackoffMs = RATE_LIMIT_BASE_MS;
-      var rateLimitResumeTimer = null;
       var lightboxView = {
         scale: 1,
         x: 0,
@@ -752,7 +843,7 @@
         }
         var hex = (hash >>> 0).toString(36);
         var safe = String(roomName).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 28);
-        return ("ptclip" + hex + (safe || "r")).slice(0, 64);
+        return ("ptclip/" + hex + (safe || "r")).slice(0, 64);
       }
 
       function uid() {
@@ -878,6 +969,8 @@
           }
           clipList.appendChild(el);
         });
+        // 最新消息在顶部，刷新后滚回顶部，免去找滚动条
+        clipList.scrollTop = 0;
       }
 
       function escapeHtml(s) {
@@ -982,112 +1075,38 @@
 
       function stopChannel() {
         connected = false;
-        closeEventSourceQuiet();
+        closeMqttQuiet();
         if (pruneTimer) {
           clearInterval(pruneTimer);
           pruneTimer = null;
         }
-        if (reconnectTimer) {
-          clearTimeout(reconnectTimer);
-          reconnectTimer = null;
-        }
-        if (connectWatchTimer) {
-          clearTimeout(connectWatchTimer);
-          connectWatchTimer = null;
-        }
-        if (rateLimitResumeTimer) {
-          clearTimeout(rateLimitResumeTimer);
-          rateLimitResumeTimer = null;
-        }
-        reconnectAttempt = 0;
-        lastSseAt = 0;
-        rateLimitedUntil = 0;
-        rateLimitBackoffMs = RATE_LIMIT_BASE_MS;
         peers = Object.create(null);
+        pendingFiles = Object.create(null);
         updatePeerUi();
       }
 
-      function closeEventSourceQuiet() {
-        if (!eventSource) return;
-        // 先卸掉 onerror，避免主动 close 时再触发一次重连风暴
-        eventSource.onerror = null;
-        eventSource.onopen = null;
-        eventSource.onmessage = null;
-        try { eventSource.close(); } catch (e) {}
-        eventSource = null;
+      function closeMqttQuiet() {
+        if (!mqttClient) return;
+        try {
+          mqttClient.removeAllListeners();
+          mqttClient.end(true);
+        } catch (e) {}
+        mqttClient = null;
       }
 
-      function bumpSseAlive() {
-        lastSseAt = Date.now();
+      function uint8ToBase64(bytes) {
+        var bin = "";
+        var i;
+        for (i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+        return btoa(bin);
       }
 
-      function fetchWithTimeout(url, options, timeoutMs) {
-        var controller = new AbortController();
-        var ms = timeoutMs || FETCH_TIMEOUT_MS;
-        var timer = setTimeout(function () {
-          controller.abort();
-        }, ms);
-        var opts = Object.assign({}, options || {}, { signal: controller.signal });
-        return fetch(url, opts).then(function (resp) {
-          clearTimeout(timer);
-          return resp;
-        }, function (err) {
-          clearTimeout(timer);
-          throw err;
-        });
-      }
-
-      function isRateLimited() {
-        return Date.now() < rateLimitedUntil;
-      }
-
-      function markRateLimited() {
-        rateLimitedUntil = Date.now() + rateLimitBackoffMs;
-        rateLimitBackoffMs = Math.min(RATE_LIMIT_MAX_MS, Math.round(rateLimitBackoffMs * 2));
-        setStatus("busy", "通道限流中，稍后自动恢复…");
-        scheduleResumeAfterRateLimit();
-      }
-
-      function scheduleResumeAfterRateLimit() {
-        if (rateLimitResumeTimer) clearTimeout(rateLimitResumeTimer);
-        if (!topic || !isRateLimited()) return;
-        var wait = Math.max(500, rateLimitedUntil - Date.now());
-        rateLimitResumeTimer = setTimeout(function () {
-          rateLimitResumeTimer = null;
-          if (!topic) return;
-          if (isRateLimited()) {
-            scheduleResumeAfterRateLimit();
-            return;
-          }
-          setStatus(connected ? "on" : "busy", connected ? "已连接 · 房间就绪" : "通道异常，请刷新页面");
-        }, wait);
-      }
-
-      function isHttp429(err) {
-        var msg = err && err.message ? String(err.message) : String(err || "");
-        return msg.indexOf("429") >= 0 || msg === "RATE_LIMITED";
-      }
-
-      // SSE 断开时有限次自动重订阅；仍失败请手动刷新页面
-      function forceReconnect(reason) {
-        if (!topic) return;
-        if (isRateLimited()) {
-          setStatus("busy", "通道限流中，稍后自动恢复…");
-          scheduleResumeAfterRateLimit();
-          return;
-        }
-        connected = false;
-        setStatus("busy", "通道中断，正在重连…");
-        closeEventSourceQuiet();
-        if (connectWatchTimer) {
-          clearTimeout(connectWatchTimer);
-          connectWatchTimer = null;
-        }
-        if (reconnectTimer) {
-          clearTimeout(reconnectTimer);
-          reconnectTimer = null;
-        }
-        scheduleReconnect(reason === "online" || reason === "send-fail");
+      function base64ToUint8(b64) {
+        var bin = atob(b64);
+        var bytes = new Uint8Array(bin.length);
+        var i;
+        for (i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return bytes;
       }
 
       function leaveRoom() {
@@ -1099,7 +1118,6 @@
         joinBtn.disabled = false;
         roomInput.disabled = false;
         nameInput.disabled = false;
-        // 主动离开后不再自动进房；口令仍保留在输入框方便下次点进
         localStorage.setItem(JOINED_KEY, "0");
         setStatus("", "未连接");
         toast("已离开房间");
@@ -1111,6 +1129,11 @@
         if (!nextRoom) {
           toast("请填写房间口令");
           roomInput.focus();
+          return;
+        }
+        if (typeof mqtt === "undefined" || !mqtt.connect) {
+          setStatus("err", "MQTT 库加载失败");
+          toast("MQTT 库未加载，请刷新");
           return;
         }
         stopChannel();
@@ -1125,110 +1148,104 @@
         joinBtn.disabled = true;
         leaveBtn.hidden = false;
         shareCard.hidden = false;
+        mqttUrlIndex = 0;
         setStatus("busy", "正在连接通道…");
-        openSse();
+        openMqtt();
       }
 
-      function openSse() {
+      function openMqtt() {
         if (!topic) return;
-        if (isRateLimited()) {
-          setStatus("busy", "通道限流中，稍后自动恢复…");
-          scheduleResumeAfterRateLimit();
-          return;
-        }
-        closeEventSourceQuiet();
-        // since=当前秒，避免进房刷出旧剪贴板
-        var url = NTFY_BASE + "/" + encodeURIComponent(topic) + "/sse?since=" + Math.floor(Date.now() / 1000);
-        setStatus("busy", "正在订阅房间…");
-        bumpSseAlive();
+        closeMqttQuiet();
+        var url = MQTT_URLS[mqttUrlIndex % MQTT_URLS.length];
+        setStatus("busy", "正在连接 " + (mqttUrlIndex % MQTT_URLS.length + 1) + "/" + MQTT_URLS.length + "…");
         try {
-          eventSource = new EventSource(url);
+          mqttClient = mqtt.connect(url, {
+            clientId: "ptc" + deviceId.slice(0, 12) + Math.random().toString(36).slice(2, 6),
+            clean: true,
+            reconnectPeriod: 5000,
+            connectTimeout: 12000,
+            protocolVersion: 4
+          });
         } catch (err) {
-          setStatus("err", "订阅失败，将重试");
-          scheduleReconnect(false);
+          console.error("MQTT 连接创建失败", err);
+          tryNextBroker();
           return;
         }
 
-        if (connectWatchTimer) clearTimeout(connectWatchTimer);
-        connectWatchTimer = setTimeout(function () {
-          connectWatchTimer = null;
-          if (!topic) return;
-          if (!eventSource || eventSource.readyState !== EventSource.OPEN) {
-            forceReconnect("connect-timeout");
-          }
-        }, SSE_CONNECT_TIMEOUT_MS);
-
-        eventSource.onopen = function () {
-          if (connectWatchTimer) {
-            clearTimeout(connectWatchTimer);
-            connectWatchTimer = null;
-          }
+        mqttClient.on("connect", function () {
           connected = true;
-          reconnectAttempt = 0;
-          bumpSseAlive();
           setStatus("on", "已连接 · 房间就绪");
           updatePeerUi();
+          mqttClient.subscribe(topic, { qos: 0 }, function (err) {
+            if (err) {
+              console.error("订阅失败", err);
+              setStatus("err", "订阅失败，请刷新");
+            }
+          });
           if (!pruneTimer) {
             pruneTimer = setInterval(updatePeerUi, 5000);
           }
-        };
-
-        // ntfy 命名事件：保活 / 开流也算通道仍活着
-        eventSource.addEventListener("keepalive", function () {
-          bumpSseAlive();
-        });
-        eventSource.addEventListener("open", function () {
-          bumpSseAlive();
         });
 
-        eventSource.onerror = function () {
+        mqttClient.on("message", function (msgTopic, payload) {
+          if (msgTopic !== topic) return;
+          handleMqttPayload(payload.toString());
+        });
+
+        mqttClient.on("reconnect", function () {
           connected = false;
-          setStatus("busy", "通道中断，正在重连…");
-          closeEventSourceQuiet();
-          scheduleReconnect(false);
-        };
+          setStatus("busy", "通道重连中…");
+        });
 
-        eventSource.onmessage = function (ev) {
-          bumpSseAlive();
-          handleNtfyRaw(ev.data);
-        };
+        mqttClient.on("close", function () {
+          connected = false;
+          if (topic) setStatus("busy", "通道断开，自动重连中…");
+        });
+
+        mqttClient.on("error", function (err) {
+          console.error("MQTT 错误", err);
+        });
+
+        mqttClient.on("offline", function () {
+          connected = false;
+          setStatus("busy", "通道离线，重连中…");
+        });
+
+        setTimeout(function () {
+          if (!topic || connected) return;
+          if (mqttClient && !mqttClient.connected) {
+            tryNextBroker();
+          }
+        }, 14000);
       }
 
-      function scheduleReconnect(immediate) {
+      function tryNextBroker() {
         if (!topic) return;
-        if (reconnectTimer) return;
-        var delay = immediate
-          ? 400
-          : Math.min(RECONNECT_MAX_MS, Math.round(RECONNECT_BASE_MS * Math.pow(1.7, reconnectAttempt)));
-        reconnectAttempt += 1;
-        reconnectTimer = setTimeout(function () {
-          reconnectTimer = null;
-          openSse();
-        }, delay);
+        closeMqttQuiet();
+        mqttUrlIndex += 1;
+        if (mqttUrlIndex >= MQTT_URLS.length * 2) {
+          setStatus("err", "连接失败，请刷新或检查网络");
+          toast("通道连不上，请刷新重试");
+          return;
+        }
+        openMqtt();
       }
 
-      function handleNtfyRaw(raw) {
+      function handleMqttPayload(raw) {
         if (!raw) return;
-        var envelope;
+        var payload;
         try {
-          envelope = JSON.parse(raw);
+          payload = JSON.parse(raw);
         } catch (err) {
           return;
         }
-        // ntfy 保活 / 开流事件无 message
-        if (!envelope.message && !envelope.attachment) return;
-
-        var payload = envelope.message ? parseToolPayload(envelope.message) : null;
-        // 仅附件、无 message 时无法识别本工具协议，忽略
         if (!payload || payload.v !== 1) return;
         notePeer(payload);
-
         if (payload.type === "hello") return;
-
         if (payload.deviceId === deviceId) return;
-        if (markSeen(payload.id)) return;
 
         if (payload.type === "text") {
+          if (markSeen(payload.id)) return;
           pushLocal({
             kind: "text",
             id: payload.id,
@@ -1241,44 +1258,79 @@
           return;
         }
 
-        if (payload.type === "file") {
-          var fileUrl = payload.url;
-          if (!fileUrl && envelope.attachment && envelope.attachment.url) {
-            fileUrl = envelope.attachment.url;
-          }
-          pushLocal({
-            kind: "file",
-            id: payload.id,
-            from: payload.from || "对端",
-            at: payload.at || Date.now(),
-            fileName: payload.fileName || (envelope.attachment && envelope.attachment.name) || "文件",
-            mime: payload.mime || (envelope.attachment && envelope.attachment.type) || "",
-            size: payload.size || (envelope.attachment && envelope.attachment.size) || 0,
-            url: fileUrl || "",
-            self: false
-          });
-          toast("收到文件");
+        if (payload.type === "file-chunk") {
+          acceptFileChunk(payload);
         }
       }
 
-      async function publishJson(obj) {
-        if (!topic) throw new Error("未进房");
-        if (isRateLimited()) throw new Error("RATE_LIMITED");
+      function acceptFileChunk(payload) {
+        if (!payload || !payload.id) return;
+        var bag = pendingFiles[payload.id];
+        if (!bag) {
+          bag = {
+            from: payload.from || "对端",
+            at: payload.at || Date.now(),
+            fileName: payload.fileName || "文件",
+            mime: payload.mime || "application/octet-stream",
+            size: payload.size || 0,
+            total: payload.total || 1,
+            chunks: []
+          };
+          pendingFiles[payload.id] = bag;
+        }
+        bag.chunks[payload.index] = payload.data || "";
+        var got = 0;
+        var i;
+        for (i = 0; i < bag.total; i++) {
+          if (typeof bag.chunks[i] === "string") got += 1;
+        }
+        if (got < bag.total) return;
+        if (markSeen(payload.id)) {
+          delete pendingFiles[payload.id];
+          return;
+        }
+        try {
+          var parts = [];
+          for (i = 0; i < bag.total; i++) parts.push(base64ToUint8(bag.chunks[i]));
+          var totalLen = 0;
+          for (i = 0; i < parts.length; i++) totalLen += parts[i].length;
+          var merged = new Uint8Array(totalLen);
+          var offset = 0;
+          for (i = 0; i < parts.length; i++) {
+            merged.set(parts[i], offset);
+            offset += parts[i].length;
+          }
+          var blob = new Blob([merged], { type: bag.mime });
+          var url = URL.createObjectURL(blob);
+          pushLocal({
+            kind: "file",
+            id: payload.id,
+            from: bag.from,
+            at: bag.at,
+            fileName: bag.fileName,
+            mime: bag.mime,
+            size: bag.size || blob.size,
+            url: url,
+            self: false
+          });
+          toast("收到文件");
+        } catch (err) {
+          console.error("组装文件失败", err);
+          toast("收到文件但组装失败");
+        }
+        delete pendingFiles[payload.id];
+      }
+
+      function publishJson(obj) {
+        if (!topic) return Promise.reject(new Error("未进房"));
+        if (!mqttClient || !mqttClient.connected) return Promise.reject(new Error("未连接"));
         var body = JSON.stringify(obj);
-        var resp = await fetchWithTimeout(NTFY_BASE + "/" + encodeURIComponent(topic), {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain; charset=utf-8"
-          },
-          body: body
+        return new Promise(function (resolve, reject) {
+          mqttClient.publish(topic, body, { qos: 0 }, function (err) {
+            if (err) reject(err);
+            else resolve();
+          });
         });
-        if (resp.status === 429) {
-          markRateLimited();
-          throw new Error("发布失败 HTTP 429");
-        }
-        if (!resp.ok) {
-          throw new Error("发布失败 HTTP " + resp.status);
-        }
       }
 
       async function sendText(text) {
@@ -1291,142 +1343,87 @@
           toast("请先进入房间");
           return;
         }
+        if (!connected) {
+          toast("尚未连上，请稍候或刷新");
+          return;
+        }
 
         var id = uid();
         var at = Date.now();
-        var meta = {
-          v: 1,
-          type: "text",
-          id: id,
-          deviceId: deviceId,
-          from: displayName,
-          at: at,
-          text: content
-        };
-
         setStatus("busy", "正在发送…");
         try {
           if (content.length <= MAX_INLINE_CHARS) {
-            await publishJson(meta);
-          } else {
-            // 超长文字走附件，避免 4KB 消息上限
-            var blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-            var fileMeta = {
+            await publishJson({
               v: 1,
-              type: "file",
+              type: "text",
               id: id,
               deviceId: deviceId,
               from: displayName,
               at: at,
-              fileName: "clipboard.txt",
-              mime: "text/plain",
-              size: blob.size
-            };
-            await publishAttachment(blob, "clipboard.txt", fileMeta);
+              text: content
+            });
+            markSeen(id);
             pushLocal({
-              kind: "file",
+              kind: "text",
               id: id,
               from: displayName,
               at: at,
-              fileName: "clipboard.txt",
-              mime: "text/plain",
-              size: blob.size,
-              url: "",
+              text: content,
               self: true
             });
             textInput.value = "";
             setStatus("on", "已连接 · 房间就绪");
-            toast("已发送（长文附件）");
+            toast("已发送");
             return;
           }
-          markSeen(id);
-          pushLocal({
-            kind: "text",
-            id: id,
-            from: displayName,
-            at: at,
-            text: content,
-            self: true
-          });
+          var blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+          await publishFileBlob(blob, "clipboard.txt", "text/plain", id, at);
           textInput.value = "";
           setStatus("on", "已连接 · 房间就绪");
-          toast("已发送");
+          toast("已发送（长文分片）");
         } catch (err) {
           console.error("发送文字失败", err);
-          if (isHttp429(err)) {
-            setStatus("busy", "通道限流中，稍后自动恢复…");
-            toast("发送太频繁，请稍后再试");
-            return;
-          }
-          setStatus("err", "发送失败，请刷新页面重连");
-          toast("发送失败，请刷新页面");
+          setStatus("err", "发送失败");
+          toast("发送失败，请重试");
         }
       }
 
-      // fetch 的 header 必须是 ISO-8859-1；中文显示名/文件名只能先 Base64 再放进 Message
-      function utf8ToBase64(str) {
-        var bytes = new TextEncoder().encode(str);
-        var bin = "";
+      async function publishFileBlob(blob, fileName, mime, id, at) {
+        var buffer = await blob.arrayBuffer();
+        var bytes = new Uint8Array(buffer);
+        var total = Math.max(1, Math.ceil(bytes.length / FILE_CHUNK_BYTES));
         var i;
-        for (i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-        return btoa(bin);
-      }
-
-      function base64ToUtf8(b64) {
-        var bin = atob(b64);
-        var bytes = new Uint8Array(bin.length);
-        var i;
-        for (i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        return new TextDecoder().decode(bytes);
-      }
-
-      function parseToolPayload(message) {
-        if (!message) return null;
-        try {
-          return JSON.parse(message);
-        } catch (err) {
-          // 附件通道：Message 头为 UTF-8 JSON 的 Base64
+        for (i = 0; i < total; i++) {
+          var slice = bytes.subarray(i * FILE_CHUNK_BYTES, (i + 1) * FILE_CHUNK_BYTES);
+          setStatus("busy", "正在发送 " + fileName + " (" + (i + 1) + "/" + total + ")…");
+          await publishJson({
+            v: 1,
+            type: "file-chunk",
+            id: id,
+            deviceId: deviceId,
+            from: displayName,
+            at: at,
+            fileName: fileName,
+            mime: mime || "application/octet-stream",
+            size: blob.size,
+            index: i,
+            total: total,
+            data: uint8ToBase64(slice)
+          });
         }
-        try {
-          return JSON.parse(base64ToUtf8(message));
-        } catch (err2) {
-          return null;
-        }
-      }
-
-      async function publishAttachment(blob, fileName, meta) {
-        if (isRateLimited()) throw new Error("RATE_LIMITED");
-        var resp = await fetchWithTimeout(NTFY_BASE + "/" + encodeURIComponent(topic), {
-          method: "PUT",
-          headers: {
-            "Filename": sanitizeFileName(fileName),
-            "Message": utf8ToBase64(JSON.stringify(meta)),
-            "Content-Type": blob.type || "application/octet-stream"
-          },
-          body: blob
-        }, ATTACH_TIMEOUT_MS);
-        if (resp.status === 429) {
-          markRateLimited();
-          throw new Error("附件发布失败 HTTP 429");
-        }
-        if (!resp.ok) {
-          throw new Error("附件发布失败 HTTP " + resp.status);
-        }
-        var published = null;
-        try {
-          published = await resp.json();
-        } catch (e) {}
-        return published;
-      }
-
-      // Filename 头只能 ASCII；真实中文名放在 meta.fileName（经 Message Base64 传递）
-      function sanitizeFileName(name) {
-        var ascii = String(name || "file")
-          .replace(/[^\x20-\x7E]/g, "_")
-          .replace(/["\\]/g, "_")
-          .trim();
-        if (!ascii || /^\.+$/.test(ascii)) ascii = "file.bin";
-        return ascii.slice(0, 120);
+        markSeen(id);
+        var localUrl = URL.createObjectURL(blob);
+        pushLocal({
+          kind: "file",
+          id: id,
+          from: displayName,
+          at: at,
+          fileName: fileName,
+          mime: mime || "",
+          size: blob.size,
+          url: localUrl,
+          self: true
+        });
       }
 
       async function sendFiles(fileList) {
@@ -1436,57 +1433,29 @@
           toast("请先进入房间");
           return;
         }
+        if (!connected) {
+          toast("尚未连上，请稍候或刷新");
+          return;
+        }
 
         var i;
         for (i = 0; i < files.length; i++) {
           var file = files[i];
           if (file.size > MAX_FILE_BYTES) {
-            toast(file.name + " 超过 15MB，已跳过");
+            toast(file.name + " 超过 8MB，已跳过");
             continue;
           }
           var id = uid();
           var at = Date.now();
-          var meta = {
-            v: 1,
-            type: "file",
-            id: id,
-            deviceId: deviceId,
-            from: displayName,
-            at: at,
-            fileName: file.name,
-            mime: file.type || "application/octet-stream",
-            size: file.size
-          };
-          setStatus("busy", "正在发送 " + file.name + "…");
           try {
-            var published = await publishAttachment(file, file.name, meta);
-            var url = "";
-            if (published && published.attachment && published.attachment.url) {
-              url = published.attachment.url;
-            }
-            markSeen(id);
-            pushLocal({
-              kind: "file",
-              id: id,
-              from: displayName,
-              at: at,
-              fileName: file.name,
-              mime: file.type || "",
-              size: file.size,
-              url: url,
-              self: true
-            });
+            await publishFileBlob(file, file.name, file.type || "application/octet-stream", id, at);
             toast("已发送 " + file.name);
           } catch (err) {
             console.error("发送文件失败", err);
-            if (isHttp429(err)) {
-              toast("发送太频繁，请稍后再试");
-              break;
-            }
-            toast("发送失败：" + file.name + "，请刷新页面");
+            toast("发送失败：" + file.name);
           }
         }
-        setStatus(connected ? "on" : "busy", connected ? "已连接 · 房间就绪" : "通道中断，正在重连…");
+        setStatus(connected ? "on" : "busy", connected ? "已连接 · 房间就绪" : "通道断开，自动重连中…");
       }
 
       joinBtn.addEventListener("click", function () {
@@ -1604,9 +1573,9 @@
 
       // 网络恢复时尝试重订 SSE；久挂异常请手动刷新页面
       window.addEventListener("online", function () {
-        if (!topic || isRateLimited()) return;
-        if (!eventSource || eventSource.readyState !== EventSource.OPEN) {
-          forceReconnect("online");
+        if (!topic) return;
+        if (!mqttClient || !mqttClient.connected) {
+          openMqtt();
         }
       });
 
