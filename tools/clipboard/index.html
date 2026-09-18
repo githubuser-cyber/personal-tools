@@ -1110,6 +1110,8 @@
       }
 
       function leaveRoom() {
+        // 先宣告离开，再拆连接，让对端立刻减台数
+        publishBye();
         stopChannel();
         room = "";
         topic = "";
@@ -1249,6 +1251,23 @@
         });
       }
 
+      // 关页/离开时尽量发出；不 await，避免拆连接前被卡住
+      function publishBye() {
+        if (!topic || !mqttClient || !mqttClient.connected) return;
+        try {
+          mqttClient.publish(topic, JSON.stringify({
+            v: 1,
+            type: "bye",
+            id: uid(),
+            deviceId: deviceId,
+            from: displayName,
+            at: Date.now()
+          }), { qos: 0 });
+        } catch (err) {
+          console.warn("离开宣告失败", err);
+        }
+      }
+
       function handleMqttPayload(raw) {
         if (!raw) return;
         var payload;
@@ -1259,6 +1278,16 @@
         }
         if (!payload || payload.v !== 1) return;
         if (payload.deviceId === deviceId) return;
+
+        // 对端离开：立刻从在线列表移除
+        if (payload.type === "bye") {
+          if (peers[payload.deviceId]) {
+            delete peers[payload.deviceId];
+            updatePeerUi();
+          }
+          return;
+        }
+
         notePeer(payload);
 
         // 进房握手：收到对方 hello 后回一次（reply 不再回，避免互刷）
@@ -1590,7 +1619,11 @@
         }
       });
 
+      window.addEventListener("pagehide", function () {
+        publishBye();
+      });
       window.addEventListener("beforeunload", function () {
+        publishBye();
         stopChannel();
       });
 
