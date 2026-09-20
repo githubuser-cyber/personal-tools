@@ -955,9 +955,10 @@
               var openBtn = document.createElement("a");
               openBtn.className = "btn";
               openBtn.href = item.url;
-              openBtn.target = "_blank";
               openBtn.rel = "noopener";
-              openBtn.textContent = "打开 / 下载";
+              // blob URL 不设 download 时，浏览器会存成 UUID 且无后缀
+              openBtn.download = item.fileName || "file";
+              openBtn.textContent = "下载";
               fileActions.appendChild(openBtn);
             }
             var isImage = item.mime && item.mime.indexOf("image/") === 0 && item.url;
