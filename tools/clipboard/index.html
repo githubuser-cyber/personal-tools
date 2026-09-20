@@ -492,7 +492,7 @@
             <input id="fileInput" type="file" hidden multiple />
           </div>
           <div class="dropzone" id="dropzone" style="margin-top:12px">拖拽文件到这里，或点「选择文件」</div>
-          <p class="hint">单文件建议 ≤8MB。多文件可并行上传并显示各自进度；丢了可点「重发」。</p>
+          <p class="hint">单文件建议 ≤8MB。卡住可点「重新接收」补齐；发送方可点「重发」。</p>
         </div>
       </div>
 
@@ -546,9 +546,10 @@
       var MAX_HISTORY = 40;
       var MAX_FILE_BYTES = 8 * 1024 * 1024;
       var MAX_INLINE_CHARS = 120000;
-      var FILE_CHUNK_BYTES = 128 * 1024;
+      var FILE_CHUNK_BYTES = 96 * 1024;
       var UPLOAD_CONCURRENCY = 2;
-      var CHUNK_INFLIGHT = 6;
+      var CHUNK_INFLIGHT = 3;
+      var RECEIVE_STALL_MS = 5000;
       var PEER_TTL_MS = 8 * 60 * 1000;
       var SEEN_TTL_MS = 10 * 60 * 1000;
 
@@ -986,6 +987,11 @@
               item.upload.status === "pending" ||
               item.upload.status === "receiving"
             );
+            var canRereceive = !item.self && !item.url && item.upload && (
+              item.upload.status === "receiving" ||
+              item.upload.status === "stalled" ||
+              item.upload.status === "error"
+            );
             if (item.url && !transferring) {
               var openBtn = document.createElement("a");
               openBtn.className = "btn";
@@ -1006,7 +1012,17 @@
               });
               fileActions.appendChild(copyImgBtn);
             }
-            if (!transferring) {
+            if (canRereceive) {
+              var rereceiveBtn = document.createElement("button");
+              rereceiveBtn.type = "button";
+              rereceiveBtn.className = "btn btn-primary";
+              rereceiveBtn.textContent = "重新接收";
+              rereceiveBtn.addEventListener("click", function () {
+                requestRereceive(item);
+              });
+              fileActions.appendChild(rereceiveBtn);
+            }
+            if (!transferring && !canRereceive) {
               var resendFileBtn = document.createElement("button");
               resendFileBtn.type = "button";
               resendFileBtn.className = "btn";
@@ -1052,7 +1068,10 @@
           label.textContent = "排队中…";
           label.classList.add("is-pending");
         } else if (upload.status === "error") {
-          label.textContent = "上传失败" + (upload.error ? "：" + upload.error : "");
+          label.textContent = "失败" + (upload.error ? "：" + upload.error : "");
+          label.classList.add("is-err");
+        } else if (upload.status === "stalled") {
+          label.textContent = "接收中断 " + done + "/" + total + "（可点重新接收）";
           label.classList.add("is-err");
         } else if (upload.status === "receiving") {
           label.textContent = "接收中 " + done + "/" + total + "（" + pct + "%）";
@@ -1061,7 +1080,7 @@
         }
         var bar = document.createElement("div");
         bar.className = "clip-progress";
-        if (upload.status === "error") bar.classList.add("is-err");
+        if (upload.status === "error" || upload.status === "stalled") bar.classList.add("is-err");
         if (upload.status === "pending") bar.classList.add("is-pending");
         var fill = document.createElement("span");
         fill.style.width = (upload.status === "pending" ? 8 : pct) + "%";
@@ -1220,6 +1239,9 @@
           clearInterval(pruneTimer);
           pruneTimer = null;
         }
+        Object.keys(pendingFiles).forEach(function (fileId) {
+          clearReceiveWatch(pendingFiles[fileId]);
+        });
         peers = Object.create(null);
         pendingFiles = Object.create(null);
         updatePeerUi();
@@ -1452,6 +1474,199 @@
 
         if (payload.type === "file-chunk") {
           acceptFileChunk(payload);
+          return;
+        }
+        if (payload.type === "file-done") {
+          handleFileDone(payload);
+          return;
+        }
+        if (payload.type === "file-need") {
+          handleFileNeed(payload);
+        }
+      }
+
+      function listMissingChunks(bag) {
+        var missing = [];
+        var i;
+        for (i = 0; i < bag.total; i++) {
+          if (!bag.chunks[i]) missing.push(i);
+        }
+        return missing;
+      }
+
+      function clearReceiveWatch(bag) {
+        if (bag && bag.stallTimer) {
+          clearTimeout(bag.stallTimer);
+          bag.stallTimer = null;
+        }
+      }
+
+      function touchReceiveWatch(fileId) {
+        var bag = pendingFiles[fileId];
+        if (!bag) return;
+        clearReceiveWatch(bag);
+        bag.stallTimer = setTimeout(function () {
+          onReceiveStalled(fileId);
+        }, RECEIVE_STALL_MS);
+      }
+
+      function onReceiveStalled(fileId) {
+        var bag = pendingFiles[fileId];
+        if (!bag || bag.got >= bag.total) return;
+        var missing = listMissingChunks(bag);
+        patchLocal(fileId, {
+          upload: {
+            done: bag.got,
+            total: bag.total,
+            status: "stalled",
+            error: "缺 " + missing.length + " 片"
+          }
+        }, true);
+        // 自动向发送端要一次缺片
+        if (!bag.autoAsked) {
+          bag.autoAsked = true;
+          askFileChunks(fileId, missing, false);
+        }
+      }
+
+      function askFileChunks(fileId, missing, isManual) {
+        if (!connected) {
+          toast("尚未连上，请稍候");
+          return;
+        }
+        var bag = pendingFiles[fileId];
+        var total = bag ? bag.total : (missing && missing.length) || 1;
+        publishJson({
+          v: 1,
+          type: "file-need",
+          id: fileId,
+          missing: missing || [],
+          total: total,
+          deviceId: deviceId,
+          from: displayName,
+          at: Date.now()
+        }, 1).then(function () {
+          if (bag) {
+            patchLocal(fileId, {
+              upload: { done: bag.got, total: bag.total, status: "receiving" }
+            }, true);
+            touchReceiveWatch(fileId);
+          }
+          toast(isManual ? "已请求重新发送" : "正在补齐缺失分片…");
+        }).catch(function (err) {
+          console.error("请求补片失败", err);
+          toast("请求补片失败");
+        });
+      }
+
+      function requestRereceive(item) {
+        if (!item || !item.id) return;
+        if (!connected) {
+          toast("尚未连上，请稍候");
+          return;
+        }
+        var bag = pendingFiles[item.id];
+        var total = (bag && bag.total) || (item.upload && item.upload.total) || 1;
+        if (!bag) {
+          bag = {
+            from: item.from || "对端",
+            at: item.at || Date.now(),
+            fileName: item.fileName || "文件",
+            mime: item.mime || "application/octet-stream",
+            size: item.size || 0,
+            total: total,
+            chunks: [],
+            got: 0,
+            autoAsked: false
+          };
+          pendingFiles[item.id] = bag;
+        } else {
+          clearReceiveWatch(bag);
+          bag.chunks = [];
+          bag.got = 0;
+          bag.autoAsked = false;
+        }
+        var missing = [];
+        var i;
+        for (i = 0; i < bag.total; i++) missing.push(i);
+        patchLocal(item.id, {
+          url: "",
+          blob: null,
+          upload: { done: 0, total: bag.total, status: "receiving" }
+        }, true);
+        askFileChunks(item.id, missing, true);
+      }
+
+      function handleFileDone(payload) {
+        if (!payload || !payload.id) return;
+        if (seenIds[payload.id]) return;
+        var bag = pendingFiles[payload.id];
+        if (!bag) {
+          // 一份都没收到：建占位并整文件重要
+          var total = payload.total || 1;
+          bag = {
+            from: payload.from || "对端",
+            at: payload.at || Date.now(),
+            fileName: payload.fileName || "文件",
+            mime: payload.mime || "application/octet-stream",
+            size: payload.size || 0,
+            total: total,
+            chunks: [],
+            got: 0,
+            autoAsked: true
+          };
+          pendingFiles[payload.id] = bag;
+          pushLocal({
+            kind: "file",
+            id: payload.id,
+            from: bag.from,
+            at: bag.at,
+            fileName: bag.fileName,
+            mime: bag.mime,
+            size: bag.size,
+            url: "",
+            self: false,
+            upload: { done: 0, total: total, status: "receiving" }
+          });
+          var all = [];
+          var i;
+          for (i = 0; i < total; i++) all.push(i);
+          askFileChunks(payload.id, all, false);
+          return;
+        }
+        if (bag.got >= bag.total) return;
+        var missing = listMissingChunks(bag);
+        if (!missing.length) return;
+        bag.autoAsked = true;
+        askFileChunks(payload.id, missing, false);
+      }
+
+      async function handleFileNeed(payload) {
+        if (!payload || !payload.id) return;
+        var item = null;
+        var i;
+        for (i = 0; i < history.length; i++) {
+          if (history[i].id === payload.id && history[i].blob) {
+            item = history[i];
+            break;
+          }
+        }
+        if (!item || !item.blob) {
+          console.warn("对端要补片但本地无文件", payload.id);
+          return;
+        }
+        var missing = payload.missing;
+        if (!missing || !missing.length) {
+          var all = [];
+          var totalGuess = Math.max(1, Math.ceil(item.blob.size / FILE_CHUNK_BYTES));
+          for (i = 0; i < totalGuess; i++) all.push(i);
+          missing = all;
+        }
+        toast("正在补发 " + (item.fileName || "文件"));
+        try {
+          await publishFileChunks(item.blob, item.fileName || "文件", item.mime || item.blob.type || "application/octet-stream", item.id, item.at || Date.now(), missing);
+        } catch (err) {
+          console.error("补发失败", err);
         }
       }
 
@@ -1470,10 +1685,10 @@
             size: payload.size || 0,
             total: payload.total || 1,
             chunks: [],
-            got: 0
+            got: 0,
+            autoAsked: false
           };
           pendingFiles[payload.id] = bag;
-          // 首包就进列表，显示接收进度，避免「半天没反应」
           pushLocal({
             kind: "file",
             id: payload.id,
@@ -1492,7 +1707,6 @@
         var index = payload.index;
         if (index == null || index < 0 || index >= bag.total) return;
         if (!bag.chunks[index]) {
-          // 收到即解码，完成时少一轮 base64 转换
           try {
             bag.chunks[index] = base64ToUint8(payload.data || "");
             bag.got += 1;
@@ -1502,12 +1716,15 @@
           }
         }
 
+        touchReceiveWatch(payload.id);
+
         var complete = bag.got >= bag.total;
         patchLocal(payload.id, {
           upload: { done: bag.got, total: bag.total, status: "receiving" }
         }, complete || isNew);
 
         if (!complete) return;
+        clearReceiveWatch(bag);
         if (markSeen(payload.id)) {
           delete pendingFiles[payload.id];
           return;
@@ -1679,6 +1896,35 @@
         }
       }
 
+      async function publishFileChunks(blob, fileName, mime, id, at, indices) {
+        var buffer = await blob.arrayBuffer();
+        var bytes = new Uint8Array(buffer);
+        var total = Math.max(1, Math.ceil(bytes.length / FILE_CHUNK_BYTES));
+        var list = indices && indices.length ? indices.slice() : [];
+        var i;
+        if (!list.length) {
+          for (i = 0; i < total; i++) list.push(i);
+        }
+        await runPool(list, CHUNK_INFLIGHT, async function (chunkIndex) {
+          if (chunkIndex < 0 || chunkIndex >= total) return;
+          var slice = bytes.subarray(chunkIndex * FILE_CHUNK_BYTES, (chunkIndex + 1) * FILE_CHUNK_BYTES);
+          await publishJson({
+            v: 1,
+            type: "file-chunk",
+            id: id,
+            deviceId: deviceId,
+            from: displayName,
+            at: at,
+            fileName: fileName,
+            mime: mime || "application/octet-stream",
+            size: blob.size,
+            index: chunkIndex,
+            total: total,
+            data: uint8ToBase64(slice)
+          }, 1);
+        });
+      }
+
       async function publishFileBlob(blob, fileName, mime, id, at, options) {
         options = options || {};
         var buffer = await blob.arrayBuffer();
@@ -1712,10 +1958,9 @@
         }
 
         var completed = 0;
-        // 多分片并行发出，加快发送；末片仍用 qos1
+        // 全部分片 qos1 + 有限并行，降低缺片卡死
         await runPool(indices, CHUNK_INFLIGHT, async function (chunkIndex) {
           var slice = bytes.subarray(chunkIndex * FILE_CHUNK_BYTES, (chunkIndex + 1) * FILE_CHUNK_BYTES);
-          var isLast = chunkIndex + 1 === total;
           await publishJson({
             v: 1,
             type: "file-chunk",
@@ -1729,7 +1974,7 @@
             index: chunkIndex,
             total: total,
             data: uint8ToBase64(slice)
-          }, isLast ? 1 : 0);
+          }, 1);
           completed += 1;
           patchLocal(id, {
             upload: { done: completed, total: total, status: "uploading" }
@@ -1738,6 +1983,19 @@
 
         markSeen(id);
         patchLocal(id, { upload: null }, true);
+        // 通知对端发送结束，便于对端发现缺片并自动补要
+        await publishJson({
+          v: 1,
+          type: "file-done",
+          id: id,
+          deviceId: deviceId,
+          from: displayName,
+          at: at,
+          fileName: fileName,
+          mime: mime || "application/octet-stream",
+          size: blob.size,
+          total: total
+        }, 1);
       }
 
       async function sendFiles(fileList) {
