@@ -267,6 +267,39 @@
       flex-wrap: wrap;
     }
 
+    .clip-progress-wrap {
+      margin-top: 8px;
+      width: 100%;
+    }
+
+    .clip-progress-text {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .clip-progress-text.is-err { color: var(--danger); }
+    .clip-progress-text.is-ok { color: var(--ok); }
+
+    .clip-progress {
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .clip-progress > span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: var(--accent);
+      border-radius: 999px;
+      transition: width 0.12s linear;
+    }
+
+    .clip-progress.is-err > span { background: var(--danger); }
+    .clip-progress.is-pending > span { background: #94a3b8; }
+
     .clip-thumb {
       max-width: 100%;
       max-height: 160px;
@@ -459,7 +492,7 @@
             <input id="fileInput" type="file" hidden multiple />
           </div>
           <div class="dropzone" id="dropzone" style="margin-top:12px">拖拽文件到这里，或点「选择文件」</div>
-          <p class="hint">单文件建议 ≤8MB（分片 + QoS1）。丢了可点「重发」。大文件请改用网盘。</p>
+          <p class="hint">单文件建议 ≤8MB。多文件可并行上传并显示各自进度；丢了可点「重发」。</p>
         </div>
       </div>
 
@@ -513,9 +546,8 @@
       var MAX_HISTORY = 40;
       var MAX_FILE_BYTES = 8 * 1024 * 1024;
       var MAX_INLINE_CHARS = 120000;
-      var FILE_CHUNK_BYTES = 24 * 1024;
-      var CHUNK_GAP_MS = 40;
-      var FILE_GAP_MS = 80;
+      var FILE_CHUNK_BYTES = 96 * 1024;
+      var UPLOAD_CONCURRENCY = 2;
       var PEER_TTL_MS = 8 * 60 * 1000;
       var SEEN_TTL_MS = 10 * 60 * 1000;
 
@@ -562,6 +594,7 @@
       var toastTimer = null;
       var lastPasteAt = 0;
       var uidSeq = 0;
+      var progressRenderTimer = null;
       var lightboxView = {
         scale: 1,
         x: 0,
@@ -854,12 +887,6 @@
         return Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + uidSeq.toString(36);
       }
 
-      function sleep(ms) {
-        return new Promise(function (resolve) {
-          setTimeout(resolve, ms);
-        });
-      }
-
       function pruneSeen() {
         var now = Date.now();
         Object.keys(seenIds).forEach(function (id) {
@@ -906,7 +933,8 @@
         updatePeerUi();
       }
 
-      function renderHistory() {
+      function renderHistory(scrollToTop) {
+        var keepScroll = clipList.scrollTop;
         clipList.querySelectorAll(".clip").forEach(function (node) {
           node.remove();
         });
@@ -914,6 +942,7 @@
         history.forEach(function (item) {
           var el = document.createElement("div");
           el.className = "clip";
+          if (item.id) el.setAttribute("data-id", item.id);
           var meta = document.createElement("div");
           meta.className = "clip-meta";
           meta.innerHTML = "<span>" + escapeHtml(item.from || "未知") + (item.self ? "（本机）" : "") + "</span><span>" + formatTime(item.at) + "</span>";
@@ -951,17 +980,17 @@
             fileRow.appendChild(info);
             var fileActions = document.createElement("div");
             fileActions.className = "row-actions";
-            if (item.url) {
+            var uploading = item.upload && (item.upload.status === "uploading" || item.upload.status === "pending");
+            if (item.url && !uploading) {
               var openBtn = document.createElement("a");
               openBtn.className = "btn";
               openBtn.href = item.url;
               openBtn.rel = "noopener";
-              // blob URL 不设 download 时，浏览器会存成 UUID 且无后缀
               openBtn.download = item.fileName || "file";
               openBtn.textContent = "下载";
               fileActions.appendChild(openBtn);
             }
-            var isImage = item.mime && item.mime.indexOf("image/") === 0 && item.url;
+            var isImage = item.mime && item.mime.indexOf("image/") === 0 && item.url && !uploading;
             if (isImage) {
               var copyImgBtn = document.createElement("button");
               copyImgBtn.type = "button";
@@ -972,16 +1001,23 @@
               });
               fileActions.appendChild(copyImgBtn);
             }
-            var resendFileBtn = document.createElement("button");
-            resendFileBtn.type = "button";
-            resendFileBtn.className = "btn";
-            resendFileBtn.textContent = "重发";
-            resendFileBtn.addEventListener("click", function () {
-              resendItem(item);
-            });
-            fileActions.appendChild(resendFileBtn);
+            if (!uploading) {
+              var resendFileBtn = document.createElement("button");
+              resendFileBtn.type = "button";
+              resendFileBtn.className = "btn";
+              resendFileBtn.textContent = "重发";
+              resendFileBtn.addEventListener("click", function () {
+                resendItem(item);
+              });
+              fileActions.appendChild(resendFileBtn);
+            }
             fileRow.appendChild(fileActions);
             el.appendChild(fileRow);
+
+            if (item.upload && item.upload.status !== "done") {
+              el.appendChild(buildUploadProgress(item.upload));
+            }
+
             if (isImage) {
               var img = document.createElement("img");
               img.className = "clip-thumb";
@@ -996,8 +1032,36 @@
           }
           clipList.appendChild(el);
         });
-        // 最新消息在顶部，刷新后滚回顶部，免去找滚动条
-        clipList.scrollTop = 0;
+        clipList.scrollTop = scrollToTop ? 0 : keepScroll;
+      }
+
+      function buildUploadProgress(upload) {
+        var wrap = document.createElement("div");
+        wrap.className = "clip-progress-wrap";
+        var total = Math.max(1, upload.total || 1);
+        var done = Math.max(0, upload.done || 0);
+        var pct = Math.min(100, Math.round((done / total) * 100));
+        var label = document.createElement("div");
+        label.className = "clip-progress-text";
+        if (upload.status === "pending") {
+          label.textContent = "排队中…";
+          label.classList.add("is-pending");
+        } else if (upload.status === "error") {
+          label.textContent = "上传失败" + (upload.error ? "：" + upload.error : "");
+          label.classList.add("is-err");
+        } else {
+          label.textContent = "上传中 " + done + "/" + total + "（" + pct + "%）";
+        }
+        var bar = document.createElement("div");
+        bar.className = "clip-progress";
+        if (upload.status === "error") bar.classList.add("is-err");
+        if (upload.status === "pending") bar.classList.add("is-pending");
+        var fill = document.createElement("span");
+        fill.style.width = (upload.status === "pending" ? 8 : pct) + "%";
+        bar.appendChild(fill);
+        wrap.appendChild(label);
+        wrap.appendChild(bar);
+        return wrap;
       }
 
       function escapeHtml(s) {
@@ -1011,7 +1075,49 @@
       function pushLocal(item) {
         history.unshift(item);
         if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
-        renderHistory();
+        renderHistory(true);
+      }
+
+      function patchLocal(id, patch, immediate) {
+        var idx = -1;
+        var i;
+        for (i = 0; i < history.length; i++) {
+          if (history[i].id === id) {
+            idx = i;
+            break;
+          }
+        }
+        if (idx < 0) return;
+        history[idx] = Object.assign({}, history[idx], patch);
+        if (immediate) {
+          if (progressRenderTimer) {
+            clearTimeout(progressRenderTimer);
+            progressRenderTimer = null;
+          }
+          renderHistory(false);
+          return;
+        }
+        if (progressRenderTimer) return;
+        progressRenderTimer = setTimeout(function () {
+          progressRenderTimer = null;
+          renderHistory(false);
+        }, 80);
+      }
+
+      async function runPool(items, limit, worker) {
+        var cursor = 0;
+        async function runOne() {
+          while (cursor < items.length) {
+            var index = cursor;
+            cursor += 1;
+            await worker(items[index], index);
+          }
+        }
+        var n = Math.min(limit || 1, items.length || 1);
+        var tasks = [];
+        var t;
+        for (t = 0; t < n; t++) tasks.push(runOne());
+        await Promise.all(tasks);
       }
 
       function copyText(text) {
@@ -1529,15 +1635,40 @@
         }
       }
 
-      async function publishFileBlob(blob, fileName, mime, id, at) {
+      async function publishFileBlob(blob, fileName, mime, id, at, options) {
+        options = options || {};
         var buffer = await blob.arrayBuffer();
         var bytes = new Uint8Array(buffer);
         var total = Math.max(1, Math.ceil(bytes.length / FILE_CHUNK_BYTES));
+        var localUrl = options.url || URL.createObjectURL(blob);
         var i;
+
+        if (options.alreadyInList) {
+          patchLocal(id, {
+            url: localUrl,
+            blob: blob,
+            upload: { done: 0, total: total, status: "uploading" }
+          }, true);
+        } else {
+          pushLocal({
+            kind: "file",
+            id: id,
+            from: displayName,
+            at: at,
+            fileName: fileName,
+            mime: mime || "",
+            size: blob.size,
+            url: localUrl,
+            blob: blob,
+            self: true,
+            upload: { done: 0, total: total, status: "uploading" }
+          });
+        }
+
         for (i = 0; i < total; i++) {
           var slice = bytes.subarray(i * FILE_CHUNK_BYTES, (i + 1) * FILE_CHUNK_BYTES);
-          setStatus("busy", "正在发送 " + fileName + " (" + (i + 1) + "/" + total + ")…");
-          // qos 1 + 分片间隔：降低公共 broker 丢包导致少收文件
+          var isLast = i + 1 === total;
+          // 中间分片 qos0 提速；末片 qos1 尽量确保收齐
           await publishJson({
             v: 1,
             type: "file-chunk",
@@ -1551,23 +1682,17 @@
             index: i,
             total: total,
             data: uint8ToBase64(slice)
-          }, 1);
-          if (i + 1 < total) await sleep(CHUNK_GAP_MS);
+          }, isLast ? 1 : 0);
+          patchLocal(id, {
+            upload: { done: i + 1, total: total, status: "uploading" }
+          }, isLast);
         }
         markSeen(id);
-        var localUrl = URL.createObjectURL(blob);
-        pushLocal({
-          kind: "file",
-          id: id,
-          from: displayName,
-          at: at,
-          fileName: fileName,
-          mime: mime || "",
-          size: blob.size,
-          url: localUrl,
-          blob: blob,
-          self: true
-        });
+        patchLocal(id, {
+          upload: { done: total, total: total, status: "done" }
+        }, true);
+        // 完成后去掉进度条
+        patchLocal(id, { upload: null }, true);
       }
 
       async function sendFiles(fileList) {
@@ -1582,6 +1707,7 @@
           return;
         }
 
+        var jobs = [];
         var i;
         for (i = 0; i < files.length; i++) {
           var file = files[i];
@@ -1591,16 +1717,62 @@
           }
           var id = uid();
           var at = Date.now();
-          try {
-            await publishFileBlob(file, file.name, file.type || "application/octet-stream", id, at);
-            toast("已发送 " + file.name);
-            if (i + 1 < files.length) await sleep(FILE_GAP_MS);
-          } catch (err) {
-            console.error("发送文件失败", err);
-            toast("发送失败：" + file.name);
-          }
+          var totalChunks = Math.max(1, Math.ceil(file.size / FILE_CHUNK_BYTES));
+          var previewUrl = URL.createObjectURL(file);
+          pushLocal({
+            kind: "file",
+            id: id,
+            from: displayName,
+            at: at,
+            fileName: file.name,
+            mime: file.type || "application/octet-stream",
+            size: file.size,
+            url: previewUrl,
+            blob: file,
+            self: true,
+            upload: { done: 0, total: totalChunks, status: "pending" }
+          });
+          jobs.push({
+            file: file,
+            id: id,
+            at: at,
+            url: previewUrl
+          });
         }
+        if (!jobs.length) return;
+
+        setStatus("busy", "正在上传 " + jobs.length + " 个文件…");
+        var okCount = 0;
+        var failCount = 0;
+        await runPool(jobs, UPLOAD_CONCURRENCY, async function (job) {
+          try {
+            await publishFileBlob(
+              job.file,
+              job.file.name,
+              job.file.type || "application/octet-stream",
+              job.id,
+              job.at,
+              { alreadyInList: true, url: job.url }
+            );
+            okCount += 1;
+          } catch (err) {
+            failCount += 1;
+            console.error("发送文件失败", err);
+            patchLocal(job.id, {
+              upload: {
+                done: 0,
+                total: Math.max(1, Math.ceil(job.file.size / FILE_CHUNK_BYTES)),
+                status: "error",
+                error: "请点重发"
+              }
+            }, true);
+          }
+        });
+
         setStatus(connected ? "on" : "busy", connected ? "已连接 · 房间就绪" : "通道断开，自动重连中…");
+        if (failCount && okCount) toast("完成：成功 " + okCount + "，失败 " + failCount);
+        else if (failCount) toast("上传失败，可点重发");
+        else toast("已发送 " + okCount + " 个文件");
       }
 
       joinBtn.addEventListener("click", function () {
