@@ -220,39 +220,158 @@
     .dropzone strong { color: var(--accent); }
 
     .settings {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 14px 18px;
       margin-top: 16px;
-      padding: 12px;
-      border-radius: 14px;
-      background: #f8fafc;
-      border: 1px solid rgba(226, 232, 240, 0.9);
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: #f6f8fa;
+      border: 1px solid #d0d7de;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
     }
 
     .field label {
       display: block;
-      font-size: 0.78rem;
-      color: var(--muted);
-      margin-bottom: 5px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
+      font-size: 0.75rem;
+      color: #656d76;
+      margin: 0;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      line-height: 1;
     }
 
     .field input[type="number"],
-    .field input[type="color"],
-    .field select {
+    .field input[type="color"] {
       width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 9px 11px;
+      height: 32px;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 4px 10px;
       background: #fff;
       color: var(--text);
+      box-shadow: inset 0 1px 0 rgba(208, 215, 222, 0.2);
+    }
+
+    .field input[type="number"] {
+      width: 88px;
     }
 
     .field input[type="color"] {
-      padding: 4px;
-      height: 40px;
+      width: 44px;
+      padding: 3px;
+      cursor: pointer;
+    }
+
+    .field-seg {
+      flex: 1 1 auto;
+    }
+
+    /* GitHub Primer 风格分段控件：整条轨道 + 内嵌选中态 */
+    .seg {
+      display: inline-flex;
+      align-items: stretch;
+      width: 100%;
+      max-width: 100%;
+      padding: 3px;
+      gap: 0;
+      background: #eff2f5;
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      box-shadow: inset 0 1px 0 rgba(208, 215, 222, 0.35);
+    }
+
+    .seg-opt {
+      position: relative;
+      flex: 1 1 0;
+      min-width: 0;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .seg-opt + .seg-opt::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 1px;
+      background: #d0d7de;
+      pointer-events: none;
+      z-index: 0;
+      transition: opacity 0.12s ease;
+    }
+
+    .seg-opt input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+      margin: 0;
+      pointer-events: none;
+    }
+
+    .seg-opt span {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 26px;
+      padding: 0 10px;
+      border-radius: 5px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #656d76;
+      font-size: 0.8rem;
+      font-weight: 600;
+      line-height: 1;
+      white-space: nowrap;
+      user-select: none;
+      transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    }
+
+    .seg-opt:hover span {
+      color: #24292f;
+    }
+
+    .seg-opt input:checked + span {
+      background: #fff;
+      color: #24292f;
+      border-color: #d0d7de;
+      box-shadow: 0 1px 0 rgba(27, 31, 36, 0.04), 0 1px 3px rgba(27, 31, 36, 0.08);
+    }
+
+    .seg-opt:has(input:checked) + .seg-opt::before,
+    .seg-opt:has(input:checked)::before {
+      opacity: 0;
+    }
+
+    .seg-opt input:focus-visible + span {
+      outline: 2px solid rgba(15, 118, 110, 0.45);
+      outline-offset: 1px;
+    }
+
+    @media (max-width: 640px) {
+      .settings {
+        gap: 12px;
+      }
+
+      .field-seg {
+        flex: 1 1 100%;
+      }
+
+      .seg-opt span {
+        padding: 0 6px;
+        font-size: 0.76rem;
+      }
     }
 
     .thumbs {
@@ -830,28 +949,43 @@
       <input type="file" id="fileInput" accept="image/*" multiple hidden />
 
       <div class="settings">
-        <div class="field">
-          <label for="direction">拼接方向</label>
-          <select id="direction">
-            <option value="vertical">纵向（长图）</option>
-            <option value="horizontal">横向（宽图）</option>
-          </select>
+        <div class="field field-seg">
+          <label>拼接方向</label>
+          <div class="seg" id="direction" role="radiogroup" aria-label="拼接方向">
+            <label class="seg-opt" title="纵向拼接成长图">
+              <input type="radio" name="direction" value="vertical" checked />
+              <span>纵向</span>
+            </label>
+            <label class="seg-opt" title="横向拼接成宽图">
+              <input type="radio" name="direction" value="horizontal" />
+              <span>横向</span>
+            </label>
+          </div>
         </div>
-        <div class="field">
-          <label for="scaleMode">对齐缩放</label>
-          <select id="scaleMode">
-            <option value="max" selected>按最长边对齐（放大）</option>
-            <option value="min">按最短边对齐（缩小）</option>
-            <option value="none">保持原尺寸</option>
-          </select>
+        <div class="field field-seg">
+          <label>对齐缩放</label>
+          <div class="seg" id="scaleMode" role="radiogroup" aria-label="对齐缩放">
+            <label class="seg-opt" title="按最长边对齐并放大">
+              <input type="radio" name="scaleMode" value="max" checked />
+              <span>最长边</span>
+            </label>
+            <label class="seg-opt" title="按最短边对齐并缩小">
+              <input type="radio" name="scaleMode" value="min" />
+              <span>最短边</span>
+            </label>
+            <label class="seg-opt" title="不缩放，保持各图原尺寸">
+              <input type="radio" name="scaleMode" value="none" />
+              <span>原尺寸</span>
+            </label>
+          </div>
         </div>
         <div class="field">
           <label for="gap">间距 (px)</label>
           <input type="number" id="gap" min="0" max="200" value="50" />
         </div>
         <div class="field">
-          <label for="bgColor">底色 / 间距色</label>
-          <input type="color" id="bgColor" value="#000000" />
+          <label for="bgColor">底色</label>
+          <input type="color" id="bgColor" value="#000000" title="底色 / 间距色" />
         </div>
       </div>
 
@@ -1032,6 +1166,17 @@
   var moveLastPt = null;
   var moveDirty = false;
   var textCommitLock = false;
+
+  function getRadioValue(groupEl) {
+    var checked = groupEl.querySelector('input[type="radio"]:checked');
+    return checked ? checked.value : "";
+  }
+
+  function onRadioGroup(groupEl, type, handler) {
+    groupEl.querySelectorAll('input[type="radio"]').forEach(function (radio) {
+      radio.addEventListener(type, handler);
+    });
+  }
 
   var els = {
     dropzone: document.getElementById("dropzone"),
@@ -1654,8 +1799,8 @@
 
   function getSettings() {
     return {
-      direction: els.direction.value,
-      scaleMode: els.scaleMode.value,
+      direction: getRadioValue(els.direction),
+      scaleMode: getRadioValue(els.scaleMode),
       gap: Math.max(0, parseInt(els.gap.value, 10) || 0),
       bgColor: els.bgColor.value || "#000000"
     };
@@ -2826,8 +2971,8 @@
   });
 
   ["change", "input"].forEach(function (name) {
-    els.direction.addEventListener(name, schedulePreview);
-    els.scaleMode.addEventListener(name, schedulePreview);
+    onRadioGroup(els.direction, name, schedulePreview);
+    onRadioGroup(els.scaleMode, name, schedulePreview);
     els.gap.addEventListener(name, schedulePreview);
     els.bgColor.addEventListener(name, schedulePreview);
   });
