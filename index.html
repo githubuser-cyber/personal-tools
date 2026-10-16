@@ -9,278 +9,719 @@
   <style>
     :root {
       --text: #303133;
+      --text-regular: #606266;
       --muted: #909399;
-      --accent: #1677FF;
-      --accent-2: #0958D9;
+      --primary: #1677FF;
+      --primary-hover: #4096FF;
+      --primary-soft: #ecf5ff;
+      --primary-border: #c6e2ff;
+      --success: #67c23a;
+      --warning: #e6a23c;
+      --danger: #f56c6c;
       --border: #e4e7ed;
+      --border-lighter: #ebeef5;
       --bg: #f5f7fa;
       --surface: #ffffff;
-      --radius: 8px;
+      --segment: #f0f2f5;
+      --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.12);
       --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      --topbar-h: 52px;
     }
 
     * { box-sizing: border-box; }
 
+    [hidden] { display: none !important; }
+
+    html,
     body {
       margin: 0;
-      min-height: 100vh;
+      height: 100%;
+      overflow: hidden;
       font-family: var(--font);
       color: var(--text);
-      font-size: 14px;
-      line-height: 1.55;
-      -webkit-text-size-adjust: 100%;
       background: var(--bg);
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    .app {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 40px 20px 56px;
-      padding-left: max(20px, env(safe-area-inset-left));
-      padding-right: max(20px, env(safe-area-inset-right));
-    }
+    button { font: inherit; }
 
-    .hero {
+    .shell {
       display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 24px;
-      padding: 20px 22px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      flex-direction: column;
+      height: 100%;
+      height: 100dvh;
     }
 
-    .badge {
+    /* —— 顶栏 —— */
+    .topbar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-height: var(--topbar-h);
+      padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+
+    .brand {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      color: var(--text);
+      background: none;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .brand-logo {
+      display: grid;
+      place-items: center;
+      width: 26px;
+      height: 26px;
+      color: #fff;
+      background: linear-gradient(135deg, #1677FF, #4096FF);
+      border-radius: 7px;
+    }
+
+    .brand-logo svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 2px;
+      min-width: 0;
+      padding: 3px;
+      overflow-x: auto;
+      background: var(--segment);
+      border-radius: 8px;
+      scrollbar-width: none;
+    }
+
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 32px;
+      padding: 0 14px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-regular);
+      background: transparent;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.15s, background-color 0.15s, box-shadow 0.15s;
+    }
+
+    .tab svg {
+      flex: 0 0 auto;
+      width: 16px;
+      height: 16px;
+    }
+
+    .tab:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    .tab.is-active {
+      font-weight: 600;
+      color: var(--primary);
+      background: var(--surface);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .tab:focus-visible,
+    .brand:focus-visible,
+    .clip-chip:focus-visible,
+    .tool-card:focus-visible {
+      outline: 2px solid var(--primary-border);
+      outline-offset: 1px;
+    }
+
+    /* 剪贴板连接状态：绿=已连接，橙=连接中，红=连不上，灰=没进房间 */
+    .status-dot {
+      flex: 0 0 auto;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #c0c4cc;
+    }
+
+    .status-dot.is-on { background: var(--success); }
+
+    .status-dot.is-busy { background: var(--warning); }
+
+    .status-dot.is-err { background: var(--danger); }
+
+    .tab-badge {
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 18px;
+      text-align: center;
+      color: #fff;
+      background: var(--danger);
+      border-radius: 9px;
+    }
+
+    .clip-chip {
+      flex-shrink: 0;
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 2px 10px;
-      border-radius: 4px;
-      background: #ecf5ff;
-      border: 1px solid #d9ecff;
-      color: var(--accent);
+      height: 28px;
+      margin-left: auto;
+      padding: 0 12px;
       font-size: 12px;
-      font-weight: 500;
-      margin-bottom: 10px;
-    }
-
-    .badge i {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--accent);
-    }
-
-    .hero h1 {
-      margin: 0 0 8px;
-      font-size: clamp(1.5rem, 3.5vw, 1.85rem);
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      color: var(--text);
-    }
-
-    .hero p {
-      margin: 0;
-      max-width: 36em;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .hero-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .chip {
-      padding: 4px 10px;
-      border-radius: 4px;
-      background: #fff;
+      color: var(--text-regular);
+      background: var(--surface);
       border: 1px solid var(--border);
-      color: #606266;
-      font-size: 12px;
-      font-weight: 500;
+      border-radius: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.15s, background-color 0.15s, border-color 0.15s;
     }
 
-    .tools {
+    .clip-chip:hover {
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-color: var(--primary-border);
+    }
+
+    /* —— 工具区 —— */
+    .frames {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      background: var(--bg);
+    }
+
+    .frames iframe {
+      position: absolute;
+      inset: 0;
+      display: none;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: var(--bg);
+    }
+
+    .frames iframe.is-active { display: block; }
+
+    .welcome {
+      position: absolute;
+      inset: 0;
+      display: none;
+      overflow: auto;
+      padding: 48px 20px;
+    }
+
+    .welcome.is-active { display: block; }
+
+    .welcome-inner {
+      max-width: 880px;
+      margin: 0 auto;
+    }
+
+    .welcome h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .welcome p {
+      margin: 0 0 24px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--muted);
+    }
+
+    .welcome-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 16px;
     }
 
     .tool-card {
-      position: relative;
       display: flex;
       flex-direction: column;
-      min-height: 188px;
+      align-items: flex-start;
+      gap: 10px;
       padding: 20px;
+      text-align: left;
+      color: var(--text);
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      text-decoration: none;
-      color: inherit;
-      overflow: hidden;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      border: 1px solid var(--border-lighter);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
     }
 
-    .tool-card::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 3px;
-      height: 100%;
-      background: var(--accent);
-      opacity: 0;
-      transition: opacity 0.15s;
-    }
-
-    .tool-card:hover,
-    .tool-card:focus-visible {
-      border-color: #c6e2ff;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-      outline: none;
-    }
-
-    .tool-card:hover::before,
-    .tool-card:focus-visible::before {
-      opacity: 1;
+    .tool-card:hover {
+      border-color: var(--primary-border);
+      box-shadow: 0 6px 20px rgba(22, 119, 255, 0.1);
+      transform: translateY(-2px);
     }
 
     .tool-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 8px;
       display: grid;
       place-items: center;
-      margin-bottom: 14px;
-      background: #ecf5ff;
-      color: var(--accent);
+      width: 40px;
+      height: 40px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-radius: 10px;
     }
 
     .tool-icon svg {
       width: 22px;
       height: 22px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 1.8;
-      stroke-linecap: round;
-      stroke-linejoin: round;
     }
 
-    .tool-card h2 {
-      margin: 0 0 8px;
+    .tool-name {
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 650;
     }
 
-    .tool-card p {
-      margin: 0;
-      color: var(--muted);
+    .tool-desc {
       font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-regular);
+    }
+
+    .tool-open {
+      margin-top: auto;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--primary);
+    }
+
+    /* —— 其他工具里收到剪贴板内容时的提醒 —— */
+    .notice {
+      position: fixed;
+      top: calc(var(--topbar-h) + env(safe-area-inset-top) + 12px);
+      right: max(16px, env(safe-area-inset-right));
+      z-index: 30;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      width: min(340px, calc(100vw - 32px));
+      padding: 12px 14px;
+      text-align: left;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border-lighter);
+      border-radius: 8px;
+      box-shadow: var(--shadow-pop);
+      cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateX(16px);
+      transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
+    }
+
+    .notice.show {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: none;
+    }
+
+    .notice .tool-icon {
+      flex: 0 0 auto;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+    }
+
+    .notice .tool-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .notice-body {
+      min-width: 0;
       flex: 1;
     }
 
-    .tool-foot {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-top: 16px;
+    .notice-title,
+    .notice-text,
+    .notice-hint { display: block; }
+
+    .notice-title {
+      font-size: 14px;
+      font-weight: 600;
     }
 
-    .tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .tag {
-      font-size: 12px;
-      font-weight: 500;
-      color: #909399;
-      background: #f5f7fa;
-      border-radius: 4px;
-      padding: 2px 8px;
-    }
-
-    .go {
+    .notice-text {
+      margin-top: 2px;
+      overflow: hidden;
       font-size: 13px;
-      font-weight: 500;
-      color: var(--accent);
+      color: var(--text-regular);
+      text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    footer {
-      margin-top: 36px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 13px;
+    .notice-hint {
+      margin-top: 4px;
+      font-size: 12px;
+      color: var(--primary);
+    }
+
+    @media (max-width: 760px) {
+      .clip-chip { display: none; }
+    }
+
+    @media (max-width: 640px) {
+      .topbar { gap: 10px; }
+
+      .brand-name { display: none; }
+
+      .tabs { flex: 1; }
+
+      .tab {
+        flex: 1 1 0;
+        padding: 0 8px;
+      }
+
+      .welcome { padding: 28px 16px; }
+
+      .welcome h1 { font-size: 20px; }
+    }
+
+    @media (max-width: 380px) {
+      .tab svg { display: none; }
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <header class="hero">
-      <div>
-        <div class="badge"><i></i> 纯本地 · 可离线</div>
-        <h1>个人工具箱</h1>
-        <p>常用小工具合集，数据留在本机浏览器，不上传服务器。</p>
-      </div>
-      <div class="hero-meta">
-        <span class="chip">GitHub Pages</span>
-        <span class="chip">无账号</span>
-      </div>
+  <div class="shell">
+    <header class="topbar">
+      <button type="button" class="brand" id="brand" title="回到工具列表">
+        <span class="brand-logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        </span>
+        <span class="brand-name">个人工具箱</span>
+      </button>
+      <nav class="tabs" id="tabs" role="tablist" aria-label="工具切换"></nav>
+      <button type="button" class="clip-chip" id="clipChip" hidden>
+        <span class="status-dot" id="clipChipDot"></span>
+        <span id="clipChipText"></span>
+      </button>
     </header>
-
-    <div class="tools" id="toolList"></div>
-
-    <footer>跨设备：在工具内「复制 / 导入」成稿文字即可同步内容</footer>
+    <main class="frames" id="frames">
+      <section class="welcome is-active" id="welcome">
+        <div class="welcome-inner">
+          <h1>想用哪个工具？</h1>
+          <p>三个工具在同一个页面里切换，互不打断：共享剪贴板进房后，切去写周报、拼图也一直保持连接，收到内容会在右上角提醒。</p>
+          <div class="welcome-grid" id="welcomeGrid"></div>
+        </div>
+      </section>
+    </main>
   </div>
 
+  <button type="button" class="notice" id="notice" aria-live="polite">
+    <span class="tool-icon" id="noticeIcon" aria-hidden="true"></span>
+    <span class="notice-body">
+      <span class="notice-title" id="noticeTitle"></span>
+      <span class="notice-text" id="noticeText"></span>
+      <span class="notice-hint">点击查看</span>
+    </span>
+  </button>
+
   <script>
-(function () {
-  var tools = [
-    {
-      name: "周报填写助手",
-      desc: "本周 / 下周事项填写、预览、按项目整理，一键复制与导入成稿。",
-      href: "./tools/weekly-report/",
-      tags: ["办公", "草稿"],
-      icon: '<svg viewBox="0 0 24 24"><path d="M8 4h8v3H8z"/><path d="M6 7h12v14H6z"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>'
-    },
-    {
-      name: "图片拼接助手",
-      desc: "批量上传、拖拽或粘贴，横纵拼接，标注后复制 / 下载，全程离线。",
-      href: "./tools/image-stitch/",
-      tags: ["图片", "离线"],
-      icon: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="8" height="7" rx="1.5"/><rect x="13" y="4" width="8" height="7" rx="1.5"/><rect x="3" y="13" width="18" height="7" rx="1.5"/></svg>'
-    },
-    {
-      name: "共享剪贴板",
-      desc: "同一口令跨设备同步文字/文件。走 MQTT 通道，少限流。",
-      href: "./tools/clipboard/",
-      tags: ["同步", "需联网"],
-      icon: '<svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="4" rx="1"/><rect x="5" y="7" width="14" height="14" rx="2"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>'
-    }
+(() => {
+  const LAST_KEY = "pt-shell-last-tab";
+  const CLIPBOARD_ROOM_KEY = "pt-clipboard-room";
+  const CLIPBOARD_JOINED_KEY = "pt-clipboard-joined";
+  const CLIPBOARD_MESSAGE_SOURCE = "pt-clipboard";
+  const CLIPBOARD_PRELOAD_DELAY_MS = 800;
+  const NOTICE_MS = 6000;
+  const ICONS = {
+    weekly: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>',
+    stitch: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="8" rx="1.5"/><rect x="4" y="13" width="16" height="8" rx="1.5"/></svg>',
+    clipboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h4"/></svg>'
+  };
+  const TOOLS = [
+    { id: "weekly", name: "周报填写", src: "./tools/weekly-report/", desc: "边填边按项目、进度自动排好，写完一键复制成文" },
+    { id: "stitch", name: "图片拼接", src: "./tools/image-stitch/", desc: "多张截图拼成长图或宽图，可标注、裁剪后直接复制" },
+    { id: "clipboard", name: "共享剪贴板", src: "./tools/clipboard/", desc: "手机、电脑互传文字、截图和文件，填同一个口令就连上" }
   ];
 
-  var list = document.getElementById("toolList");
-  list.innerHTML = tools.map(function (tool) {
-    var tags = tool.tags.map(function (t) {
-      return '<span class="tag">' + t + "</span>";
-    }).join("");
-    return (
-      '<a class="tool-card" href="' + tool.href + '">' +
-        '<div class="tool-icon">' + tool.icon + "</div>" +
-        "<h2>" + tool.name + "</h2>" +
-        "<p>" + tool.desc + "</p>" +
-        '<div class="tool-foot"><div class="tags">' + tags + '</div><span class="go">打开 →</span></div>' +
-      "</a>"
-    );
-  }).join("");
+  const els = {
+    brand: document.getElementById("brand"),
+    tabs: document.getElementById("tabs"),
+    frames: document.getElementById("frames"),
+    welcome: document.getElementById("welcome"),
+    welcomeGrid: document.getElementById("welcomeGrid"),
+    clipChip: document.getElementById("clipChip"),
+    clipChipDot: document.getElementById("clipChipDot"),
+    clipChipText: document.getElementById("clipChipText"),
+    notice: document.getElementById("notice"),
+    noticeIcon: document.getElementById("noticeIcon"),
+    noticeTitle: document.getElementById("noticeTitle"),
+    noticeText: document.getElementById("noticeText")
+  };
+  const frames = new Map();
+  const tabParts = new Map();
+  const clipboardState = { loaded: false, status: "", label: "", unread: 0 };
+  const noticeState = { timer: 0, hovering: false };
+  let activeId = "";
+
+  function readStorage(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch (err) {
+      console.error("读取本地存储失败", key, err);
+      return null;
+    }
+  }
+
+  function writeStorage(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch (err) {
+      console.error("写入本地存储失败", key, err);
+    }
+  }
+
+  function toolById(id) {
+    return TOOLS.find((tool) => tool.id === id) || null;
+  }
+
+  function buildTabs() {
+    TOOLS.forEach((tool) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "tab";
+      button.setAttribute("role", "tab");
+      button.setAttribute("aria-selected", "false");
+      button.dataset.id = tool.id;
+      button.innerHTML = ICONS[tool.id] + "<span>" + tool.name + "</span>";
+      const parts = { button, dot: null, badge: null };
+      if (tool.id === "clipboard") {
+        parts.dot = document.createElement("span");
+        parts.dot.className = "status-dot";
+        parts.dot.hidden = true;
+        parts.badge = document.createElement("span");
+        parts.badge.className = "tab-badge";
+        parts.badge.hidden = true;
+        button.appendChild(parts.dot);
+        button.appendChild(parts.badge);
+      }
+      button.addEventListener("click", () => activate(tool.id, true));
+      els.tabs.appendChild(button);
+      tabParts.set(tool.id, parts);
+
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "tool-card";
+      card.innerHTML =
+        '<span class="tool-icon" aria-hidden="true">' + ICONS[tool.id] + "</span>" +
+        '<span class="tool-name">' + tool.name + "</span>" +
+        '<span class="tool-desc">' + tool.desc + "</span>" +
+        '<span class="tool-open">打开 →</span>';
+      card.addEventListener("click", () => activate(tool.id, true));
+      els.welcomeGrid.appendChild(card);
+    });
+    els.noticeIcon.innerHTML = ICONS.clipboard;
+  }
+
+  /** iframe 只建一次、切换只改显隐，保证剪贴板在其他工具里也不断线 */
+  function ensureFrame(tool) {
+    if (frames.has(tool.id)) return frames.get(tool.id);
+    const iframe = document.createElement("iframe");
+    iframe.title = tool.name;
+    iframe.setAttribute("allow", "clipboard-read; clipboard-write");
+    iframe.src = tool.src;
+    els.frames.appendChild(iframe);
+    frames.set(tool.id, iframe);
+    if (tool.id === "clipboard") {
+      clipboardState.loaded = true;
+      if (!clipboardState.label) clipboardState.label = "加载中…";
+      renderClipboardIndicators();
+    }
+    return iframe;
+  }
+
+  function activate(id, updateHash) {
+    const tool = toolById(id);
+    if (!tool) return;
+    activeId = id;
+    els.welcome.classList.remove("is-active");
+    ensureFrame(tool);
+    TOOLS.forEach((item) => {
+      const on = item.id === id;
+      const parts = tabParts.get(item.id);
+      parts.button.classList.toggle("is-active", on);
+      parts.button.setAttribute("aria-selected", on ? "true" : "false");
+      parts.button.tabIndex = on ? 0 : -1;
+      const frame = frames.get(item.id);
+      if (frame) frame.classList.toggle("is-active", on);
+    });
+    writeStorage(LAST_KEY, id);
+    if (updateHash && location.hash !== "#" + id) history.replaceState(null, "", "#" + id);
+    if (id === "clipboard") {
+      hideNotice();
+      if (!document.hidden) clipboardState.unread = 0;
+    }
+    renderClipboardIndicators();
+  }
+
+  function showWelcome() {
+    activeId = "";
+    els.welcome.classList.add("is-active");
+    TOOLS.forEach((item) => {
+      const parts = tabParts.get(item.id);
+      parts.button.classList.remove("is-active");
+      parts.button.setAttribute("aria-selected", "false");
+      parts.button.tabIndex = 0;
+      const frame = frames.get(item.id);
+      if (frame) frame.classList.remove("is-active");
+    });
+    if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+    renderClipboardIndicators();
+  }
+
+  function updateTitle() {
+    const tool = toolById(activeId);
+    const base = tool ? tool.name + " · 个人工具箱" : "个人工具箱";
+    document.title = clipboardState.unread ? "(" + clipboardState.unread + ") " + base : base;
+  }
+
+  function renderClipboardIndicators() {
+    const parts = tabParts.get("clipboard");
+    const dotClass = "status-dot" + (clipboardState.status ? " is-" + clipboardState.status : "");
+    parts.dot.hidden = !clipboardState.loaded;
+    parts.dot.className = dotClass;
+    parts.badge.hidden = !clipboardState.unread;
+    parts.badge.textContent = clipboardState.unread > 99 ? "99+" : String(clipboardState.unread);
+    parts.button.title = clipboardState.loaded ? "共享剪贴板：" + clipboardState.label : "共享剪贴板";
+    els.clipChip.hidden = !clipboardState.loaded || activeId === "clipboard";
+    els.clipChipDot.className = dotClass;
+    els.clipChipText.textContent = "剪贴板 · " + clipboardState.label;
+    els.clipChip.title = "切换到共享剪贴板";
+    updateTitle();
+  }
+
+  function showNotice(title, text) {
+    els.noticeTitle.textContent = title;
+    els.noticeText.textContent = text;
+    els.notice.classList.add("show");
+    noticeState.hovering = false;
+    scheduleNoticeHide();
+  }
+
+  function scheduleNoticeHide() {
+    clearTimeout(noticeState.timer);
+    noticeState.timer = setTimeout(() => {
+      if (!noticeState.hovering) hideNotice();
+    }, NOTICE_MS);
+  }
+
+  function hideNotice() {
+    clearTimeout(noticeState.timer);
+    els.notice.classList.remove("show");
+  }
+
+  /** 只接受剪贴板 iframe 发来的状态/收件消息，其他来源一律忽略 */
+  function onFrameMessage(event) {
+    const frame = frames.get("clipboard");
+    if (!frame || event.source !== frame.contentWindow) return;
+    const data = event.data;
+    if (!data || data.source !== CLIPBOARD_MESSAGE_SOURCE) return;
+    if (data.type === "status") {
+      clipboardState.status = String(data.status || "");
+      clipboardState.label = String(data.label || "未进入房间");
+      renderClipboardIndicators();
+      return;
+    }
+    if (data.type !== "received") return;
+    const watching = activeId === "clipboard" && !document.hidden;
+    if (watching) return;
+    clipboardState.unread += 1;
+    renderClipboardIndicators();
+    if (activeId !== "clipboard") {
+      showNotice("共享剪贴板 · 来自「" + String(data.from || "对端") + "」", String(data.summary || "收到新内容"));
+    }
+  }
+
+  function resolveInitial() {
+    const hash = (location.hash || "").replace(/^#/, "");
+    if (toolById(hash)) return hash;
+    const last = readStorage(LAST_KEY);
+    return toolById(last) ? last : "";
+  }
+
+  /** 上次在剪贴板里没点「离开」：后台提前加载，打开工具箱就自动连上 */
+  function shouldPreloadClipboard() {
+    return Boolean((readStorage(CLIPBOARD_ROOM_KEY) || "").trim()) && readStorage(CLIPBOARD_JOINED_KEY) !== "0";
+  }
+
+  function onTabsKeydown(event) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    const index = TOOLS.findIndex((tool) => tool.id === activeId);
+    const step = event.key === "ArrowRight" ? 1 : -1;
+    const next = TOOLS[(Math.max(index, 0) + step + TOOLS.length) % TOOLS.length];
+    event.preventDefault();
+    activate(next.id, true);
+    tabParts.get(next.id).button.focus();
+  }
+
+  function bindEvents() {
+    els.brand.addEventListener("click", showWelcome);
+    els.tabs.addEventListener("keydown", onTabsKeydown);
+    els.clipChip.addEventListener("click", () => activate("clipboard", true));
+    els.notice.addEventListener("click", () => activate("clipboard", true));
+    els.notice.addEventListener("mouseenter", () => {
+      noticeState.hovering = true;
+      clearTimeout(noticeState.timer);
+    });
+    els.notice.addEventListener("mouseleave", () => {
+      noticeState.hovering = false;
+      scheduleNoticeHide();
+    });
+    window.addEventListener("message", onFrameMessage);
+    window.addEventListener("hashchange", () => {
+      const hash = (location.hash || "").replace(/^#/, "");
+      if (toolById(hash)) activate(hash, false);
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden || activeId !== "clipboard" || !clipboardState.unread) return;
+      clipboardState.unread = 0;
+      renderClipboardIndicators();
+    });
+  }
+
+  buildTabs();
+  bindEvents();
+  const initial = resolveInitial();
+  if (initial) activate(initial, true);
+  else renderClipboardIndicators();
+  if (initial !== "clipboard" && shouldPreloadClipboard()) {
+    setTimeout(() => ensureFrame(toolById("clipboard")), CLIPBOARD_PRELOAD_DELAY_MS);
+  }
 })();
   </script>
 </body>

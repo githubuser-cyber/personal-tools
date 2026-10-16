@@ -8,41 +8,57 @@
   <title>图片拼接助手</title>
   <style>
     :root {
-      --bg0: #f5f7fa;
-      --bg1: #f5f7fa;
+      --bg: #f5f7fa;
       --surface: #ffffff;
-      --text: #0f172a;
-      --muted: #64748b;
-      --border: #e4e7ed;
+      --fill: #fafafa;
+      --text: #303133;
+      --text-regular: #606266;
+      --muted: #909399;
+      --placeholder: #a8abb2;
+      --border: #dcdfe6;
+      --border-light: #e4e7ed;
+      --border-lighter: #ebeef5;
+      --primary: #1677FF;
+      --primary-hover: #4096FF;
+      --primary-active: #0958D9;
+      --primary-soft: #ecf5ff;
+      --primary-soft-border: #d9ecff;
+      --primary-border: #c6e2ff;
+      --warning: #e6a23c;
+      --warning-text: #b88230;
+      --warning-soft: #fdf6ec;
+      --warning-border: #f5dab1;
+      --danger: #f56c6c;
+      --danger-soft: #fef0f0;
+      --danger-border: #fbc4c4;
       --accent: #1677FF;
-      --accent-hover: #0958D9;
-      --accent-soft: rgba(22, 119, 255, 0.12);
-      --danger: #b91c1c;
       --ok: #1677FF;
       --radius: 8px;
+      --radius-sm: 4px;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.14);
       --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       --dock-h: 76px;
-      --glass: #ffffff;
-      --glass-strong: #ffffff;
-      --glass-border: #e4e7ed;
-      --glass-blur: none;
-      --glass-inset: none;
-      --glass-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-      --btn-3d: none;
-      --shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
     }
 
     * { box-sizing: border-box; }
 
-    html, body {
+    [hidden] { display: none !important; }
+
+    html,
+    body {
       margin: 0;
       min-height: 100%;
+    }
+
+    body {
       font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.5;
       color: var(--text);
-      background: #f5f7fa;
+      background: var(--bg);
       -webkit-text-size-adjust: 100%;
-      
-      
+      -webkit-tap-highlight-color: transparent;
     }
 
     button, input, select { font: inherit; }
@@ -50,58 +66,48 @@
     .app {
       max-width: 1040px;
       margin: 0 auto;
-      padding: 18px 16px calc(var(--dock-h) + 28px);
-      padding-left: max(16px, env(safe-area-inset-left));
-      padding-right: max(16px, env(safe-area-inset-right));
+      padding: 24px 20px calc(var(--dock-h) + 36px);
+      padding-left: max(20px, env(safe-area-inset-left));
+      padding-right: max(20px, env(safe-area-inset-right));
     }
 
-    .back-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 14px;
-      padding: 6px 12px;
-      border-radius: 4px;
-      background: #fff;
-      border: 1px solid #dcdfe6;
-      color: #606266;
-      text-decoration: none;
+    html.in-shell .app { padding-top: 16px; }
+    html.in-shell .home-link { display: none !important; }
+
+    .home-link {
+      display: inline-block;
+      margin-bottom: 6px;
       font-size: 13px;
-      font-weight: 500;
-      box-shadow: none;
+      color: var(--primary);
+      text-decoration: none;
     }
 
-    .back-link:hover { color: var(--accent); }
+    .home-link:hover { text-decoration: underline; }
 
-    header.top {
+    /* —— 页头 —— */
+    .page-head {
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-start;
+      align-items: flex-end;
       justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-      padding: 16px 18px;
-      background: #fff;
-      border: 1px solid #e4e7ed;
-      border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      gap: 12px 16px;
+      margin-bottom: 14px;
     }
 
-    header.top h1 {
-      margin: 0 0 6px;
-      font-size: clamp(1.3rem, 3vw, 1.55rem);
-      font-weight: 760;
-      letter-spacing: -0.02em;
-    }
-
-    header.top .sub {
+    .page-head h1 {
       margin: 0;
-      color: var(--muted);
-      font-size: 0.9rem;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
     }
 
-    .header-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .page-head .sub {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
 
+    /* —— 按钮（Element 风格） —— */
     .btn {
       appearance: none;
       display: inline-flex;
@@ -110,63 +116,64 @@
       gap: 6px;
       height: 36px;
       padding: 0 16px;
-      font: inherit;
       font-size: 14px;
       font-weight: 500;
       line-height: 1;
-      border-radius: 4px;
-      border: 1px solid #dcdfe6;
-      background: #fff;
-      color: #606266;
+      color: var(--text-regular);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
       cursor: pointer;
-      box-shadow: none;
-      transform: none;
-      text-shadow: none;
-      transition: color 0.1s, background-color 0.1s, border-color 0.1s;
+      white-space: nowrap;
+      user-select: none;
+      transition: color 0.15s, background-color 0.15s, border-color 0.15s;
     }
 
     .btn:hover:not(:disabled) {
-      color: #1677FF;
-      border-color: #c6e2ff;
-      background: #ecf5ff;
-      transform: none;
-      filter: none;
-      box-shadow: none;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-color: var(--primary-border);
     }
 
     .btn:active:not(:disabled) {
-      color: #0958D9;
-      border-color: #1677FF;
-      background: #ecf5ff;
-      transform: none;
-      box-shadow: none;
-      filter: none;
+      color: var(--primary-active);
+      border-color: var(--primary);
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--primary-border);
+      outline-offset: 1px;
     }
 
     .btn:disabled {
       color: #c0c4cc;
-      background: #fff;
-      border-color: #ebeef5;
+      background: var(--surface);
+      border-color: var(--border-lighter);
       cursor: not-allowed;
-      opacity: 1;
+    }
+
+    .btn-sm {
+      height: 28px;
+      padding: 0 10px;
+      font-size: 13px;
     }
 
     .btn-primary {
       color: #fff;
-      background: #1677FF;
-      border-color: #1677FF;
+      background: var(--primary);
+      border-color: var(--primary);
     }
 
     .btn-primary:hover:not(:disabled) {
       color: #fff;
-      background: #4096FF;
-      border-color: #4096FF;
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
     }
 
     .btn-primary:active:not(:disabled) {
       color: #fff;
-      background: #0958D9;
-      border-color: #0958D9;
+      background: var(--primary-active);
+      border-color: var(--primary-active);
     }
 
     .btn-primary:disabled {
@@ -175,138 +182,154 @@
       border-color: #a0cfff;
     }
 
-    .btn-danger {
-      color: #f56c6c;
-      background: #fff;
-      border-color: #fbc4c4;
+    .btn-accent {
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-color: var(--primary-soft-border);
     }
 
-    .btn-danger:hover:not(:disabled) {
+    .btn-accent:hover:not(:disabled) {
       color: #fff;
-      background: #f56c6c;
-      border-color: #f56c6c;
+      background: var(--primary);
+      border-color: var(--primary);
     }
 
-    .btn-ghost {
-      color: #606266;
-      background: #fff;
-      border-color: #dcdfe6;
+    .btn-text-danger {
+      color: var(--muted);
+      background: transparent;
+      border-color: transparent;
     }
 
-    .btn-ghost:hover:not(:disabled) {
-      color: #1677FF;
-      border-color: #c6e2ff;
-      background: #ecf5ff;
+    .btn-text-danger:hover:not(:disabled),
+    .btn-text-danger:active:not(:disabled) {
+      color: var(--danger);
+      background: var(--danger-soft);
+      border-color: var(--danger-border);
     }
 
-    .btn-sm {
-      height: 28px;
-      padding: 0 12px;
-      font-size: 12px;
-    }
-
+    /* —— 面板 —— */
     .panel {
-      background: #fff;
-      border: 1px solid #e4e7ed;
-      border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-      padding: 18px 18px 16px;
       margin-bottom: 14px;
+      padding: 18px;
+      background: var(--surface);
+      border: 1px solid var(--border-lighter);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
     }
 
     .panel-title {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin: 0 0 6px;
+      margin: 0 0 12px;
     }
 
     .panel-title .step {
-      width: 24px;
-      height: 24px;
-      border-radius: 4px;
       display: grid;
       place-items: center;
+      width: 22px;
+      height: 22px;
       font-size: 12px;
       font-weight: 600;
-      color: #1677FF;
-      background: #ecf5ff;
-      border: 1px solid #d9ecff;
-      box-shadow: none;
+      color: #fff;
+      background: var(--primary);
+      border-radius: 50%;
     }
 
     .panel h2 {
       margin: 0;
-      font-size: 1.05rem;
-      font-weight: 720;
-      letter-spacing: -0.01em;
+      font-size: 16px;
+      font-weight: 650;
+    }
+
+    .panel-title .count {
+      font-size: 13px;
+      color: var(--muted);
     }
 
     .hint {
-      margin: 0 0 14px;
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.6;
       color: var(--muted);
-      font-size: 0.86rem;
     }
 
+    /* —— 添加图片 —— */
     .dropzone {
-      border: 1px dashed #c0c4cc;
-      border-radius: 8px;
-      padding: 32px 16px;
-      text-align: center;
-      background: #fafafa;
-      transition: border-color 0.15s, background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 22px 16px;
+      background: var(--fill);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
       cursor: pointer;
       user-select: none;
-      box-shadow: none;
+      transition: border-color 0.15s, background-color 0.15s;
     }
 
-    .dropzone .dz-icon {
-      width: 54px;
-      height: 54px;
-      margin: 0 auto 12px;
-      border-radius: 16px;
+    .dropzone:hover,
+    .dropzone:focus-visible,
+    .dropzone.is-drag {
+      background: var(--primary-soft);
+      border-color: var(--primary);
+      outline: none;
+    }
+
+    .dropzone.is-drag { border-style: solid; }
+
+    .dz-icon {
+      flex: 0 0 auto;
       display: grid;
       place-items: center;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.45));
-      color: var(--accent);
-      border: 1px solid rgba(255, 255, 255, 0.75);
-      box-shadow: var(--btn-3d);
+      width: 44px;
+      height: 44px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-radius: 10px;
     }
 
-    .dropzone .dz-icon svg {
-      width: 26px;
-      height: 26px;
+    .dropzone:hover .dz-icon,
+    .dropzone.is-drag .dz-icon { background: var(--surface); }
+
+    .dz-icon svg {
+      width: 22px;
+      height: 22px;
       stroke: currentColor;
       fill: none;
-      stroke-width: 1.8;
+      stroke-width: 2;
       stroke-linecap: round;
       stroke-linejoin: round;
     }
 
-    .dropzone .dz-title {
-      font-weight: 700;
-      font-size: 0.98rem;
-      margin-bottom: 4px;
+    .dz-title {
+      font-size: 15px;
+      font-weight: 600;
     }
 
-    .dropzone.is-drag {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      box-shadow: inset 0 0 0 1px rgba(22, 119, 255, 0.22), var(--glass-shadow);
+    .dz-sub {
+      margin-top: 2px;
+      font-size: 12px;
+      color: var(--muted);
     }
 
-    .dropzone strong { color: var(--accent); }
+    .dz-sub b {
+      font-weight: 600;
+      color: var(--text-regular);
+    }
 
+    /* —— 拼接设置 —— */
     .settings {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      gap: 14px 18px;
-      margin-top: 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto auto;
+      align-items: end;
+      gap: 14px 16px;
+      margin-top: 14px;
       padding: 14px 16px;
-      border-radius: 8px;
-      background: #f5f7fa;
-      border: 1px solid #e4e7ed;
+      background: var(--bg);
+      border: 1px solid var(--border-lighter);
+      border-radius: var(--radius);
     }
 
     .field {
@@ -316,281 +339,305 @@
       min-width: 0;
     }
 
-    .field label {
+    .field > label,
+    .field-label {
       display: block;
-      font-size: 0.75rem;
-      color: #656d76;
       margin: 0;
+      font-size: 12px;
       font-weight: 600;
-      letter-spacing: 0.01em;
       line-height: 1;
-    }
-
-    .field input[type="number"],
-    .field input[type="color"] {
-      width: 100%;
-      height: 36px;
-      border: 1px solid #dcdfe6;
-      border-radius: 4px;
-      padding: 4px 10px;
-      background: #fff;
-      color: var(--text);
-      box-shadow: none;
+      color: var(--text-regular);
     }
 
     .field input[type="number"] {
       width: 96px;
+      height: 36px;
+      padding: 0 10px;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .field input[type="number"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
     }
 
     .field input[type="color"] {
       width: 48px;
-      padding: 4px;
+      height: 36px;
+      padding: 3px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
       cursor: pointer;
     }
 
-    .field-seg {
-      flex: 1 1 220px;
-      min-width: 200px;
+    .scale-explain {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin: 0;
+      padding: 8px 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-regular);
+      background: var(--surface);
+      border: 1px solid var(--border-lighter);
+      border-radius: var(--radius-sm);
+    }
+
+    .scale-explain::before {
+      content: "i";
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 16px;
+      height: 16px;
+      margin-top: 3px;
+      font-size: 11px;
+      font-weight: 700;
+      font-style: italic;
+      line-height: 1;
+      color: #fff;
+      background: var(--primary);
+      border-radius: 50%;
     }
 
     .seg {
-      display: inline-flex;
-      align-items: stretch;
+      display: flex;
       width: 100%;
-      max-width: 100%;
-      padding: 0;
-      gap: 0;
-      background: #fff;
-      border: 1px solid #dcdfe6;
-      border-radius: 4px;
       overflow: hidden;
-      box-shadow: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
     }
 
     .seg-opt {
       position: relative;
       flex: 1 1 0;
-      min-width: 72px;
+      min-width: 0;
       margin: 0;
       cursor: pointer;
     }
 
-    .seg-opt + .seg-opt::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 8px;
-      bottom: 8px;
-      width: 1px;
-      background: rgba(148, 163, 184, 0.35);
-      pointer-events: none;
-      z-index: 0;
-      transition: opacity 0.12s ease;
-    }
+    .seg-opt + .seg-opt { border-left: 1px solid var(--border); }
 
     .seg-opt input {
       position: absolute;
-      opacity: 0;
       width: 0;
       height: 0;
       margin: 0;
+      opacity: 0;
       pointer-events: none;
     }
 
     .seg-opt span {
-      position: relative;
-      z-index: 1;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 36px;
-      padding: 0 14px;
-      border-radius: 0;
-      border: none;
-      background: transparent;
-      color: #606266;
+      min-height: 34px;
+      padding: 0 10px;
       font-size: 13px;
       font-weight: 500;
       line-height: 1.2;
+      color: var(--text-regular);
       white-space: nowrap;
       user-select: none;
-      transition: background 0.1s, color 0.1s;
+      transition: background-color 0.15s, color 0.15s;
     }
 
-    .seg-opt:hover span {
-      color: #24292f;
-    }
+    .seg-opt:hover span { color: var(--primary); }
 
     .seg-opt input:checked + span {
-      background: #1677FF;
       color: #fff;
-      border-color: transparent;
-      box-shadow: none;
-      border-radius: 0;
-    }
-
-    .seg-opt:has(input:checked) + .seg-opt::before,
-    .seg-opt:has(input:checked)::before {
-      opacity: 0;
+      background: var(--primary);
     }
 
     .seg-opt input:focus-visible + span {
-      outline: 2px solid rgba(22, 119, 255, 0.45);
-      outline-offset: 1px;
+      outline: 2px solid var(--primary-border);
+      outline-offset: -2px;
     }
 
-    @media (max-width: 640px) {
-      .settings {
-        gap: 12px;
-      }
-
-      .field-seg {
-        flex: 1 1 100%;
-        min-width: 0;
-      }
-
-      .seg-opt {
-        min-width: 0;
-      }
-
-      .seg-opt span {
-        min-height: 40px;
-        padding: 0 12px;
-        font-size: 0.86rem;
-      }
-    }
+    /* —— 已添加的图片 —— */
+    .thumbs-head { margin: 16px 0 8px; }
 
     .thumbs {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      margin-top: 14px;
+      gap: 8px;
     }
+
+    .thumbs:empty { display: none; }
 
     .thumb {
       display: grid;
-      grid-template-columns: 148px 1fr auto;
-      gap: 12px 14px;
+      grid-template-columns: auto 96px minmax(0, 1fr) auto;
+      grid-template-areas: "idx img meta actions";
       align-items: center;
-      border: 1px solid #e4e7ed;
-      border-radius: 8px;
-      padding: 12px;
-      background: #fff;
-      box-shadow: none;
+      gap: 12px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border-lighter);
+      border-radius: var(--radius);
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
 
-    .thumb.is-dragging { opacity: 0.55; }
+    .thumb:hover { border-color: var(--border); }
+
+    .thumb.is-dragging { opacity: 0.5; }
+
+    .thumb.is-drop-target {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+    }
+
+    .thumb-index {
+      grid-area: idx;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      width: 22px;
+      color: var(--muted);
+      cursor: grab;
+    }
+
+    .thumb-index .grip {
+      font-size: 10px;
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+
+    .thumb-index .num {
+      font-size: 13px;
+      font-weight: 600;
+    }
 
     .thumb-preview {
-      width: 148px;
-      height: 110px;
-      border-radius: 10px;
-      object-fit: cover;
-      background: #e2e8f0;
+      grid-area: img;
       display: block;
+      width: 96px;
+      height: 72px;
+      object-fit: cover;
+      background: var(--border-lighter);
+      border: 1px solid var(--border-lighter);
+      border-radius: 6px;
       cursor: zoom-in;
-      border: 1px solid var(--border);
+      transition: border-color 0.15s;
     }
 
-    .thumb-preview:hover {
-      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.32);
-    }
+    .thumb-preview:hover { border-color: var(--primary); }
 
     .thumb-meta {
+      grid-area: meta;
       min-width: 0;
-      font-size: 0.9rem;
     }
 
     .thumb-meta .name {
-      white-space: nowrap;
       overflow: hidden;
+      font-size: 14px;
+      font-weight: 600;
       text-overflow: ellipsis;
-      font-weight: 700;
+      white-space: nowrap;
     }
 
-    .thumb-meta .size { color: var(--muted); margin-top: 4px; font-size: 0.84rem; }
+    .thumb-meta .size {
+      margin-top: 2px;
+      font-size: 12px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .thumb-meta .scaled { color: var(--primary); }
+
+    .thumb-meta .scaled.is-up { color: var(--warning-text); }
 
     .thumb-actions {
+      grid-area: actions;
       display: flex;
-      flex-direction: column;
-      gap: 8px;
-      min-width: 72px;
+      gap: 4px;
     }
 
-    .thumb-actions button {
-      border: 1px solid var(--border);
-      background: #f8fafc;
-      border-radius: 10px;
-      min-height: 40px;
-      width: 100%;
-      cursor: pointer;
-      padding: 8px 12px;
-      line-height: 1.2;
-      color: #334155;
-      font-size: 0.9rem;
-      font-weight: 700;
-      white-space: nowrap;
+    .thumb-actions .btn-step {
+      width: 30px;
+      padding: 0;
     }
 
-    .thumb-actions button:hover:not(:disabled) {
-      border-color: #94a3b8;
-      background: #fff;
+    /* —— 拼接预览 —— */
+    .preview-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 12px;
+      margin-bottom: 12px;
     }
 
-    .thumb-actions button:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
+    .preview-head .panel-title { margin: 0; }
+
+    .output-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.4;
+      color: var(--text-regular);
+      background: var(--bg);
+      border: 1px solid var(--border-lighter);
+      border-radius: 13px;
+      font-variant-numeric: tabular-nums;
     }
 
-    .thumb-actions button.is-danger {
-      color: var(--danger);
-      border-color: #fecaca;
-      background: #fff5f5;
-    }
-
-    .thumb-actions button.is-danger:hover:not(:disabled) {
-      background: #fee2e2;
+    .output-chip.is-warn {
+      color: var(--warning-text);
+      background: var(--warning-soft);
+      border-color: var(--warning-border);
     }
 
     .preview-wrap {
       overflow: auto;
-      max-height: min(52vh, 560px);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background:
-        linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
-        linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
-        linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
-      background-size: 18px 18px;
-      background-position: 0 0, 0 9px, 9px -9px, -9px 0;
-      background-color: #f5f7fa;
+      max-height: min(56vh, 600px);
       padding: 16px;
       text-align: center;
+      border: 1px solid var(--border-lighter);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(45deg, #ebeef5 25%, transparent 25%),
+        linear-gradient(-45deg, #ebeef5 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #ebeef5 75%),
+        linear-gradient(-45deg, transparent 75%, #ebeef5 75%);
+      background-size: 18px 18px;
+      background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+      background-color: var(--bg);
     }
 
     .preview-wrap canvas {
       max-width: 100%;
       height: auto;
       vertical-align: middle;
-      background: transparent;
-      border-radius: 4px;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+      border-radius: 2px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
       cursor: zoom-in;
     }
 
     .preview-empty {
-      color: var(--muted);
-      padding: 48px 12px;
-      font-size: 0.95rem;
-      background: rgba(255, 255, 255, 0.72);
-      border-radius: 12px;
       display: inline-block;
+      padding: 40px 16px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: var(--radius);
     }
 
-    .preview-empty[hidden] {
-      display: none !important;
-    }
+    .preview-tip { margin-top: 8px; }
 
     .lightbox {
       position: fixed;
@@ -933,186 +980,270 @@
       background: #fff;
     }
 
+    /* —— 拼接页底栏：桌面悬浮居中，窄屏贴底 —— */
     .compose-dock {
       position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      left: 50%;
+      bottom: max(16px, env(safe-area-inset-bottom));
       z-index: 30;
       display: flex;
-      gap: 10px;
-      justify-content: center;
-      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
-      background: #fff;
-      border-top: 1px solid #e4e7ed;
-      box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.04);
-    }
-
-    .compose-dock .btn { flex: 1; max-width: 200px; justify-content: center; }
-
-    .preview-head {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .preview-head .panel-title { margin-bottom: 4px; }
-
-    .preview-actions {
-      display: flex;
-      flex-wrap: wrap;
+      align-items: center;
       gap: 8px;
+      width: max-content;
+      max-width: calc(100vw - 24px);
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.96);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+      transform: translateX(-50%);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
     }
 
+    .dock-info {
+      padding: 0 10px 0 6px;
+      font-size: 13px;
+      color: var(--text-regular);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .dock-info b {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .compose-dock .btn {
+      height: 40px;
+      padding: 0 18px;
+    }
+
+    .lightbox-bar .btn {
+      height: 32px;
+      padding: 0 14px;
+      color: #e2e8f0;
+      background: #334155;
+      border-color: #475569;
+    }
+
+    .lightbox-bar .btn:hover:not(:disabled),
+    .lightbox-bar .btn:active:not(:disabled) {
+      color: #fff;
+      background: #475569;
+      border-color: #64748b;
+    }
+
+    /* —— 提示条：鼠标停在上面时不消失 —— */
     .toast {
       position: fixed;
       left: 50%;
-      bottom: calc(var(--dock-h) + 18px);
-      transform: translateX(-50%) translateY(12px);
-      background: #0f172a;
-      color: #fff;
+      bottom: calc(var(--dock-h) + 20px);
+      z-index: 60;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      max-width: min(92vw, 440px);
       padding: 10px 16px;
-      border-radius: 10px;
-      font-size: 0.92rem;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border-lighter);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-pop);
       opacity: 0;
       pointer-events: none;
+      transform: translateX(-50%) translateY(12px);
       transition: opacity 0.2s, transform 0.2s;
-      z-index: 60;
-      max-width: min(90vw, 360px);
-      text-align: center;
     }
 
     .toast.show {
       opacity: 1;
+      pointer-events: auto;
       transform: translateX(-50%) translateY(0);
     }
 
-    body.is-edit .compose-dock,
+    .toast-icon {
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      margin-top: 1px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      color: #fff;
+      background: #67c23a;
+      border-radius: 50%;
+    }
+
+    .toast.is-warn {
+      background: var(--warning-soft);
+      border-color: var(--warning-border);
+    }
+
+    .toast.is-warn .toast-icon { background: var(--warning); }
+
     body.is-edit .toast { bottom: 88px; }
 
+    @media (max-width: 760px) {
+      .settings { grid-template-columns: auto auto; justify-content: start; }
+      .settings .field-seg { grid-column: 1 / -1; }
+    }
+
     @media (max-width: 640px) {
-      header.top { padding: 14px 14px; }
-      header.top h1 { font-size: 1.22rem; }
+      .app { padding: 14px 12px calc(var(--dock-h) + 40px); }
+      html.in-shell .app { padding-top: 12px; }
+      .page-head { align-items: center; margin-bottom: 12px; }
+      .page-head h1 { font-size: 19px; }
+      .page-head .sub { display: none; }
+      .panel { padding: 14px 12px; }
+      .dropzone {
+        flex-direction: column;
+        gap: 10px;
+        padding: 18px 12px;
+        text-align: center;
+      }
+      .settings { padding: 12px; }
       .thumb {
-        grid-template-columns: 120px 1fr auto;
+        grid-template-columns: auto 72px minmax(0, 1fr);
+        grid-template-areas:
+          "idx img meta"
+          "idx img actions";
+        row-gap: 6px;
+        column-gap: 10px;
+        padding: 8px 10px;
       }
-      .thumb-preview {
-        width: 120px;
-        height: 90px;
+      .thumb-preview { width: 72px; height: 72px; }
+      .thumb-actions { justify-content: flex-start; }
+      .compose-dock {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: auto;
+        max-width: none;
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+        border-width: 1px 0 0;
+        border-radius: 12px 12px 0 0;
+        transform: none;
       }
-      .thumb-actions {
-        min-width: 64px;
+      .dock-info { display: none; }
+      .compose-dock .btn {
+        flex: 1 1 0;
+        height: 42px;
+        padding: 0 6px;
       }
-      .thumb-actions button {
-        min-height: 38px;
-        padding: 6px 10px;
-        font-size: 0.86rem;
+      .toast {
+        left: 12px;
+        right: 12px;
+        max-width: none;
+        transform: translateY(12px);
       }
-      .preview-actions { width: 100%; }
-      .preview-actions .btn { flex: 1; }
+      .toast.show { transform: translateY(0); }
     }
   </style>
+  <script>
+    if (window.self !== window.top) document.documentElement.classList.add("in-shell");
+  </script>
 </head>
 <body>
   <div class="app">
-    <a class="back-link compose-only" href="../../">← 返回工具箱</a>
-
-    <header class="top compose-only">
+    <header class="page-head compose-only">
       <div>
+        <a class="home-link" href="../../">← 工具箱</a>
         <h1>图片拼接助手</h1>
-        <p class="sub">批量上传 / 拖拽 / Ctrl+V · 拼接后可标注 · 纯本地离线</p>
+        <p class="sub">多张截图拼成一张长图或宽图，还能标注、打码、裁剪 · 全程在本机处理，不上传</p>
       </div>
-      <div class="header-actions">
-        <button type="button" class="btn btn-ghost" id="btnClearAll">清空</button>
-      </div>
+      <button type="button" class="btn" id="btnClearAll" disabled title="移除已添加的全部图片">清空</button>
     </header>
 
     <section class="panel compose-only" id="uploadPanel">
       <div class="panel-title">
         <span class="step">1</span>
         <h2>添加图片</h2>
+        <span class="count" id="imageCount"></span>
       </div>
-      <p class="hint">支持多选本地文件、拖入本页，或复制图片后 Ctrl+V 粘贴（手机可用相册多选）。</p>
       <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="选择或拖入图片">
         <div class="dz-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M12 16V5"/><path d="M8 9l4-4 4 4"/><path d="M4 19h16"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 15V4" /><path d="M7.5 8.5 12 4l4.5 4.5" /><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" /></svg>
         </div>
-        <div class="dz-title">点击选择，或把图片拖到这里</div>
-        <div style="margin-top:4px;font-size:0.86rem;color:var(--muted)">也可 <strong>Ctrl+V</strong> 粘贴剪贴板图片</div>
+        <div>
+          <div class="dz-title">点击选择图片，或拖到这里</div>
+          <div class="dz-sub">可多选；也能直接 <b>Ctrl + V</b> 粘贴截图，手机可从相册多选</div>
+        </div>
       </div>
       <input type="file" id="fileInput" accept="image/*" multiple hidden />
 
       <div class="settings">
         <div class="field field-seg">
-          <label>拼接方向</label>
-          <div class="seg" id="direction" role="radiogroup" aria-label="拼接方向">
-            <label class="seg-opt" title="纵向拼接成长图">
+          <span class="field-label" id="directionLabel">拼接方向</span>
+          <div class="seg" id="direction" role="radiogroup" aria-labelledby="directionLabel">
+            <label class="seg-opt" title="从上到下拼成一张长图">
               <input type="radio" name="direction" value="vertical" checked />
-              <span>纵向</span>
+              <span>纵向 · 长图</span>
             </label>
-            <label class="seg-opt" title="横向拼接成宽图">
+            <label class="seg-opt" title="从左到右拼成一张宽图">
               <input type="radio" name="direction" value="horizontal" />
-              <span>横向</span>
+              <span>横向 · 宽图</span>
             </label>
           </div>
         </div>
         <div class="field field-seg">
-          <label>对齐缩放</label>
-          <div class="seg" id="scaleMode" role="radiogroup" aria-label="对齐缩放">
-            <label class="seg-opt" title="按最长边对齐并放大">
+          <span class="field-label" id="scaleLabel">对齐缩放</span>
+          <div class="seg" id="scaleMode" role="radiogroup" aria-labelledby="scaleLabel">
+            <label class="seg-opt">
               <input type="radio" name="scaleMode" value="max" checked />
-              <span>最长边</span>
+              <span id="scaleMaxText">对齐最宽</span>
             </label>
-            <label class="seg-opt" title="按最短边对齐并缩小">
+            <label class="seg-opt">
               <input type="radio" name="scaleMode" value="min" />
-              <span>最短边</span>
+              <span id="scaleMinText">对齐最窄</span>
             </label>
-            <label class="seg-opt" title="不缩放，保持各图原尺寸">
+            <label class="seg-opt">
               <input type="radio" name="scaleMode" value="none" />
               <span>原尺寸</span>
             </label>
           </div>
         </div>
         <div class="field">
-          <label for="gap">间距 (px)</label>
-          <input type="number" id="gap" min="0" max="200" value="50" />
+          <label for="gap">间距（px）</label>
+          <input type="number" id="gap" min="0" max="500" step="10" value="50" inputmode="numeric" />
         </div>
         <div class="field">
           <label for="bgColor">底色</label>
-          <input type="color" id="bgColor" value="#000000" title="底色 / 间距色" />
+          <input type="color" id="bgColor" value="#000000" title="图片之间的间距、以及没铺满的空白处用这个颜色" />
         </div>
+        <p class="scale-explain" id="scaleExplain"></p>
       </div>
 
+      <div class="thumbs-head" id="thumbsHead" hidden>
+        <p class="hint">按住左侧序号拖动可调整顺序，也可以用 ↑ ↓；点缩略图看大图</p>
+      </div>
       <div class="thumbs" id="thumbList"></div>
     </section>
 
     <section class="panel compose-only">
       <div class="preview-head">
-        <div>
-          <div class="panel-title">
-            <span class="step">2</span>
-            <h2>拼接预览</h2>
-          </div>
-          <p class="hint" style="margin-bottom:0">预览为缩小显示；可直接复制/下载成图，点击预览图可看大图。</p>
+        <div class="panel-title">
+          <span class="step">2</span>
+          <h2>拼接预览</h2>
         </div>
-        <div class="preview-actions">
-          <button type="button" class="btn btn-ghost" id="btnCopyStitch" disabled>复制图片</button>
-          <button type="button" class="btn btn-primary" id="btnDownloadStitch" disabled>下载图片</button>
-        </div>
+        <span class="output-chip" id="outputChip" hidden></span>
       </div>
       <div class="preview-wrap" id="previewWrap">
-        <div class="preview-empty" id="previewEmpty">添加至少 1 张图片后显示预览</div>
-        <canvas id="previewCanvas" hidden></canvas>
+        <div class="preview-empty" id="previewEmpty">添加图片后，这里会实时显示拼接效果</div>
+        <canvas id="previewCanvas" hidden title="点击全屏查看"></canvas>
       </div>
+      <p class="hint preview-tip" id="previewTip" hidden>这里是缩小显示，点击可全屏查看；复制、下载用的是原图清晰度。</p>
     </section>
 
     <div class="compose-dock compose-only">
-      <button type="button" class="btn btn-ghost" id="btnCopyStitchDock" disabled>复制</button>
-      <button type="button" class="btn btn-ghost" id="btnDownloadStitchDock" disabled>下载</button>
-      <button type="button" class="btn btn-primary" id="btnEnterEdit" disabled>进入标注</button>
+      <span class="dock-info" id="dockInfo">还没添加图片</span>
+      <button type="button" class="btn" id="btnCopyStitchDock" disabled title="复制拼好的图，可直接粘贴到聊天或文档">复制图片</button>
+      <button type="button" class="btn" id="btnDownloadStitchDock" disabled title="保存为 PNG 文件">下载图片</button>
+      <button type="button" class="btn btn-primary" id="btnEnterEdit" disabled title="在拼好的图上画框、箭头、文字，打马赛克或裁剪">标注 / 裁剪</button>
     </div>
 
     <!-- 编辑态 -->
@@ -1204,7 +1335,10 @@
     </button>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span class="toast-icon" id="toastIcon" aria-hidden="true">✓</span>
+    <span id="toastText"></span>
+  </div>
 
   <div class="lightbox" id="lightbox" hidden>
     <div class="lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="lightboxTitle">
@@ -1212,8 +1346,8 @@
         <span class="title" id="lightboxTitle">预览</span>
         <div class="bar-actions">
           <span class="zoom-val" id="lightboxZoomVal">100%</span>
-          <button type="button" class="btn btn-ghost" id="btnLightboxReset" style="color:#e2e8f0;background:#334155;border-color:#475569;">重置</button>
-          <button type="button" class="btn btn-ghost" id="btnLightboxClose" style="color:#e2e8f0;background:#334155;border-color:#475569;">关闭</button>
+          <button type="button" class="btn" id="btnLightboxReset" title="恢复适应窗口的大小">重置</button>
+          <button type="button" class="btn" id="btnLightboxClose" title="Esc 也能关闭">关闭</button>
         </div>
       </div>
       <div class="lightbox-body" id="lightboxBody">
@@ -1229,8 +1363,16 @@
 (function () {
   "use strict";
 
-  var images = []; // { id, name, bitmap, width, height, url }
-  var previewTimer = null;
+  const EXPORT_MAX_EDGE = 8000;
+  const PREVIEW_MAX_EDGE = 1400;
+  const GAP_MAX = 500;
+  const TOAST_MS = 3200;
+  const TOAST_WARN_MS = 5200;
+  const toastState = { timer: 0, hovering: false, duration: TOAST_MS };
+  let images = []; // { id, name, bitmap, width, height, url }
+  let previewTimer = 0;
+  let fileDragDepth = 0;
+  let thumbDragIndex = -1;
   var tool = "pan";
   var drawing = false;
   var startPt = null;
@@ -1275,19 +1417,25 @@
     });
   }
 
-  var els = {
+  const els = {
     dropzone: document.getElementById("dropzone"),
     fileInput: document.getElementById("fileInput"),
     thumbList: document.getElementById("thumbList"),
+    thumbsHead: document.getElementById("thumbsHead"),
+    imageCount: document.getElementById("imageCount"),
     direction: document.getElementById("direction"),
     scaleMode: document.getElementById("scaleMode"),
+    scaleMaxText: document.getElementById("scaleMaxText"),
+    scaleMinText: document.getElementById("scaleMinText"),
+    scaleExplain: document.getElementById("scaleExplain"),
     gap: document.getElementById("gap"),
     bgColor: document.getElementById("bgColor"),
     previewCanvas: document.getElementById("previewCanvas"),
     previewEmpty: document.getElementById("previewEmpty"),
+    previewTip: document.getElementById("previewTip"),
+    outputChip: document.getElementById("outputChip"),
+    dockInfo: document.getElementById("dockInfo"),
     btnEnterEdit: document.getElementById("btnEnterEdit"),
-    btnCopyStitch: document.getElementById("btnCopyStitch"),
-    btnDownloadStitch: document.getElementById("btnDownloadStitch"),
     btnCopyStitchDock: document.getElementById("btnCopyStitchDock"),
     btnDownloadStitchDock: document.getElementById("btnDownloadStitchDock"),
     btnClearAll: document.getElementById("btnClearAll"),
@@ -1312,6 +1460,8 @@
     strokeWidth: document.getElementById("strokeWidth"),
     textPop: document.getElementById("textPop"),
     toast: document.getElementById("toast"),
+    toastIcon: document.getElementById("toastIcon"),
+    toastText: document.getElementById("toastText"),
     btnUndo: document.getElementById("btnUndo"),
     btnRedo: document.getElementById("btnRedo"),
     btnDeleteShape: document.getElementById("btnDeleteShape")
@@ -1321,163 +1471,170 @@
     return "img_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
   }
 
-  function showToast(msg, isErr) {
-    els.toast.textContent = msg;
-    els.toast.style.background = isErr ? "#7f1d1d" : "#0f172a";
+  /** 第二个参数为 true 时用橙色提醒样式并多停留一会儿；鼠标停在提示上时不消失 */
+  function showToast(message, isWarn) {
+    const warn = Boolean(isWarn);
+    els.toastText.textContent = message;
+    els.toastIcon.textContent = warn ? "!" : "✓";
+    els.toast.classList.toggle("is-warn", warn);
     els.toast.classList.add("show");
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(function () {
-      els.toast.classList.remove("show");
-    }, 2200);
+    toastState.duration = warn ? TOAST_WARN_MS : TOAST_MS;
+    scheduleToastHide();
   }
 
-  function revokeUrl(item) {
-    if (item && item.url) {
-      try { URL.revokeObjectURL(item.url); } catch (e) { /* ignore */ }
-      item.url = "";
-    }
+  function scheduleToastHide() {
+    clearTimeout(toastState.timer);
+    toastState.timer = setTimeout(() => {
+      if (!toastState.hovering) els.toast.classList.remove("show");
+    }, toastState.duration);
+  }
+
+  function releaseImage(item) {
+    if (!item) return;
+    if (item.bitmap && item.bitmap.close) item.bitmap.close();
+    if (item.url) URL.revokeObjectURL(item.url);
+    item.url = "";
   }
 
   function loadBitmapFromBlob(blob, name) {
-    return createImageBitmap(blob).then(function (bitmap) {
-      var url = URL.createObjectURL(blob);
-      return {
-        id: uid(),
-        name: name || "image",
-        bitmap: bitmap,
-        width: bitmap.width,
-        height: bitmap.height,
-        url: url
-      };
-    });
+    return createImageBitmap(blob).then((bitmap) => ({
+      id: uid(),
+      name: name || "image",
+      bitmap,
+      width: bitmap.width,
+      height: bitmap.height,
+      url: URL.createObjectURL(blob)
+    }));
   }
 
-  function addFiles(fileList) {
-    var files = Array.prototype.slice.call(fileList || []).filter(function (f) {
-      return f && f.type && f.type.indexOf("image/") === 0;
-    });
+  /**
+   * 追加图片：非图片文件跳过，单张解码失败不影响其他张，按选择顺序排在已有图片后面。
+   * 提示里写清加了几张、一共几张、跳过或失败了几个。
+   */
+  function addFiles(fileList, verb) {
+    const all = Array.from(fileList || []);
+    const files = all.filter((file) => file && file.type && file.type.indexOf("image/") === 0);
+    const skipped = all.length - files.length;
     if (!files.length) {
-      showToast("没有可用的图片文件", true);
+      showToast(all.length ? "选中的不是图片：支持 PNG、JPG、WebP、GIF 等图片格式" : "没有读到图片", true);
       return;
     }
-    Promise.all(files.map(function (file) {
-      return loadBitmapFromBlob(file, file.name);
-    })).then(function (items) {
-      images = images.concat(items);
+    Promise.allSettled(files.map((file) => loadBitmapFromBlob(file, file.name))).then((results) => {
+      const loaded = [];
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled") loaded.push(result.value);
+        else console.error("图片解码失败", files[index].name, result.reason);
+      });
+      const failed = results.length - loaded.length;
+      images = images.concat(loaded);
       renderThumbs();
       schedulePreview();
-      showToast("已添加 " + items.length + " 张");
-    }).catch(function (err) {
-      console.error(err);
-      showToast("读取图片失败", true);
+      const parts = [];
+      if (loaded.length) parts.push((verb || "已添加") + " " + loaded.length + " 张，共 " + images.length + " 张");
+      if (failed) parts.push(failed + " 张读不出来（文件可能损坏或格式不支持）");
+      if (skipped) parts.push(skipped + " 个不是图片，已跳过");
+      showToast(parts.join("；"), failed > 0 || skipped > 0);
     });
   }
 
+  /** 粘贴里有图片就整批添加并返回 true；只有文字时返回 false，交给调用方决定是否提示 */
   function addClipboardItems(clipboardData) {
     if (!clipboardData) return false;
-    var items = clipboardData.items;
-    if (items) {
-      var found = false;
-      for (var i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf("image/") === 0) {
-          var file = items[i].getAsFile();
-          if (file) {
-            addFiles([file]);
-            found = true;
-          }
-        }
-      }
-      if (found) return true;
-    }
-    var files = clipboardData.files;
-    if (files && files.length) {
-      addFiles(files);
-      return true;
-    }
-    return false;
+    const fromItems = Array.from(clipboardData.items || [])
+      .filter((entry) => entry.kind === "file" && entry.type.indexOf("image/") === 0)
+      .map((entry) => entry.getAsFile())
+      .filter(Boolean);
+    const files = fromItems.length ? fromItems : Array.from(clipboardData.files || []);
+    if (!files.length) return false;
+    addFiles(files, "已粘贴");
+    return true;
   }
 
+  /** 每行显示原尺寸；按当前对齐方式会被缩放时，再标出拼接后的尺寸和比例（放大用橙色提醒可能变糊） */
   function renderThumbs() {
-    els.thumbList.innerHTML = "";
-    images.forEach(function (item, index) {
-      var row = document.createElement("div");
+    const sizes = computeScaledSizes(getSettings());
+    const fragment = document.createDocumentFragment();
+    images.forEach((item, index) => {
+      const scaled = sizes[index];
+      const ratio = Math.round((scaled.w / item.width) * 100);
+      const row = document.createElement("div");
       row.className = "thumb";
       row.draggable = true;
       row.dataset.id = item.id;
-
-      var img = document.createElement("img");
-      img.className = "thumb-preview";
+      row.innerHTML =
+        '<div class="thumb-index" title="按住拖动调整顺序"><span class="grip" aria-hidden="true">⋮⋮</span><span class="num">' + (index + 1) + "</span></div>" +
+        '<img class="thumb-preview" draggable="false" title="点击看大图" />' +
+        '<div class="thumb-meta"><div class="name"></div><div class="size">' + item.width + " × " + item.height +
+        (ratio === 100 ? "" : '<span class="scaled' + (ratio > 100 ? " is-up" : "") + '"> → ' + scaled.w + " × " + scaled.h + "（" + (ratio > 100 ? "放大" : "缩小") + "到 " + ratio + "%）</span>") +
+        "</div></div>" +
+        '<div class="thumb-actions">' +
+        '<button type="button" class="btn btn-sm btn-step" data-act="up" title="往前挪一位" aria-label="上移"' + (index === 0 ? " disabled" : "") + ">↑</button>" +
+        '<button type="button" class="btn btn-sm btn-step" data-act="down" title="往后挪一位" aria-label="下移"' + (index === images.length - 1 ? " disabled" : "") + ">↓</button>" +
+        '<button type="button" class="btn btn-sm btn-text-danger" data-act="del" title="从拼接里去掉这张，不影响原文件">移除</button>' +
+        "</div>";
+      const img = row.querySelector(".thumb-preview");
       img.src = item.url;
       img.alt = item.name;
-      img.title = "点击预览大图";
-      img.addEventListener("click", function (event) {
+      const name = row.querySelector(".name");
+      name.textContent = item.name;
+      name.title = item.name;
+
+      img.addEventListener("click", (event) => {
         event.stopPropagation();
-        var title = item.name + "（" + item.width + " × " + item.height + "）";
+        const title = item.name + "（" + item.width + " × " + item.height + "）";
         if (item.bitmap) openLightboxBitmap(item.bitmap, item.width, item.height, title);
         else openLightboxUrl(item.url, title);
       });
-
-      var meta = document.createElement("div");
-      meta.className = "thumb-meta";
-      meta.innerHTML =
-        '<div class="name">' + escapeHtml(item.name) + "</div>" +
-        '<div class="size">' + item.width + " × " + item.height + " · #" + (index + 1) + "</div>";
-
-      var actions = document.createElement("div");
-      actions.className = "thumb-actions";
-      actions.innerHTML =
-        '<button type="button" data-act="up"' + (index === 0 ? " disabled" : "") + ">上移</button>" +
-        '<button type="button" data-act="down"' + (index === images.length - 1 ? " disabled" : "") + ">下移</button>" +
-        '<button type="button" class="is-danger" data-act="del">删除</button>';
-
-      actions.addEventListener("click", function (event) {
-        var btn = event.target.closest("button");
-        if (!btn || btn.disabled) return;
+      row.querySelector(".thumb-actions").addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+        if (!button || button.disabled) return;
         event.stopPropagation();
-        var act = btn.getAttribute("data-act");
+        const act = button.dataset.act;
         if (act === "up") moveItem(index, index - 1);
         else if (act === "down") moveItem(index, index + 1);
         else if (act === "del") removeItem(index);
       });
 
-      row.addEventListener("dragstart", function (event) {
-        if (event.target && event.target.closest && event.target.closest("button")) {
+      // 只认本列表内发起的拖动；拖入文件交给整页的投放处理
+      row.addEventListener("dragstart", (event) => {
+        if (event.target.closest && event.target.closest("button")) {
           event.preventDefault();
           return;
         }
+        thumbDragIndex = index;
         row.classList.add("is-dragging");
-        event.dataTransfer.setData("text/plain", String(index));
+        event.dataTransfer.setData("text/plain", item.name);
         event.dataTransfer.effectAllowed = "move";
       });
-      row.addEventListener("dragend", function () {
+      row.addEventListener("dragend", () => {
+        thumbDragIndex = -1;
         row.classList.remove("is-dragging");
+        els.thumbList.querySelectorAll(".is-drop-target").forEach((target) => target.classList.remove("is-drop-target"));
       });
-      row.addEventListener("dragover", function (event) {
+      row.addEventListener("dragover", (event) => {
+        if (thumbDragIndex < 0) return;
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
+        if (thumbDragIndex !== index) row.classList.add("is-drop-target");
       });
-      row.addEventListener("drop", function (event) {
+      row.addEventListener("dragleave", (event) => {
+        if (!row.contains(event.relatedTarget)) row.classList.remove("is-drop-target");
+      });
+      row.addEventListener("drop", (event) => {
+        if (thumbDragIndex < 0) return;
         event.preventDefault();
-        var from = parseInt(event.dataTransfer.getData("text/plain"), 10);
-        if (isNaN(from) || from === index) return;
-        moveItem(from, index);
+        row.classList.remove("is-drop-target");
+        moveItem(thumbDragIndex, index);
       });
-
-      row.appendChild(img);
-      row.appendChild(meta);
-      row.appendChild(actions);
-      els.thumbList.appendChild(row);
+      fragment.appendChild(row);
     });
-    els.btnEnterEdit.disabled = images.length === 0;
-    setStitchExportEnabled(images.length > 0);
-  }
-
-  function setStitchExportEnabled(enabled) {
-    var disabled = !enabled;
-    els.btnCopyStitch.disabled = disabled;
-    els.btnDownloadStitch.disabled = disabled;
-    els.btnCopyStitchDock.disabled = disabled;
-    els.btnDownloadStitchDock.disabled = disabled;
+    els.thumbList.replaceChildren(fragment);
+    els.thumbsHead.hidden = images.length < 2;
+    els.imageCount.textContent = images.length ? "已添加 " + images.length + " 张" : "";
+    els.btnClearAll.disabled = !images.length;
+    els.btnEnterEdit.disabled = !images.length;
+    els.btnCopyStitchDock.disabled = !images.length;
+    els.btnDownloadStitchDock.disabled = !images.length;
   }
 
   var lightboxView = {
@@ -1847,130 +2004,118 @@
   }
 
   function previewStitchLarge() {
-    // 灯箱只用显示分辨率拼接，导出/下载仍走全分辨率
-    var out = stitchToCanvas(getSettings(), getLightboxDisplayMaxEdge());
+    // 灯箱只按屏幕分辨率拼接，标题写导出时的真实尺寸
+    const settings = getSettings();
+    const out = stitchToCanvas(settings, getLightboxDisplayMaxEdge());
     if (!out) {
       showToast("请先添加图片", true);
       return;
     }
-    openLightboxCanvas(out, "拼接结果（" + out.width + " × " + out.height + "）");
-  }
-
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+    const size = exportSize(settings);
+    openLightboxCanvas(out, "拼接结果 · 导出 " + size.w + " × " + size.h);
   }
 
   function moveItem(from, to) {
-    if (to < 0 || to >= images.length) return;
-    var item = images.splice(from, 1)[0];
+    if (to < 0 || to >= images.length || from === to) return;
+    const item = images.splice(from, 1)[0];
     images.splice(to, 0, item);
     renderThumbs();
     schedulePreview();
   }
 
   function removeItem(index) {
-    var item = images.splice(index, 1)[0];
-    if (item) {
-      try { item.bitmap.close(); } catch (e) { /* ignore */ }
-      revokeUrl(item);
-    }
+    const item = images.splice(index, 1)[0];
+    if (!item) return;
+    releaseImage(item);
     renderThumbs();
     schedulePreview();
+    showToast("已移除「" + item.name + "」" + (images.length ? "，还剩 " + images.length + " 张" : "，列表已经空了"));
   }
 
   function clearAll() {
     if (!images.length) return;
-    if (!window.confirm("清空全部已添加图片？")) return;
-    images.forEach(function (item) {
-      try { item.bitmap.close(); } catch (e) { /* ignore */ }
-      revokeUrl(item);
-    });
+    if (!window.confirm("清空已添加的 " + images.length + " 张图片？只是从这里移除，原文件不受影响。")) return;
+    images.forEach(releaseImage);
     images = [];
     renderThumbs();
     schedulePreview();
+    showToast("已清空，可以重新添加图片");
   }
 
   function getSettings() {
     return {
       direction: getRadioValue(els.direction),
       scaleMode: getRadioValue(els.scaleMode),
-      gap: Math.max(0, parseInt(els.gap.value, 10) || 0),
+      gap: Math.min(GAP_MAX, Math.max(0, parseInt(els.gap.value, 10) || 0)),
       bgColor: els.bgColor.value || "#000000"
     };
   }
 
+  /** 纵向统一宽度、横向统一高度：max 向最大的看齐（小图放大），min 向最小的看齐（大图缩小），none 不缩放 */
   function computeScaledSizes(settings) {
-    if (!images.length) return [];
-    var vertical = settings.direction === "vertical";
-    var mode = settings.scaleMode;
-    var sizes = images.map(function (img) {
-      return { w: img.width, h: img.height, img: img };
-    });
-
-    if (mode === "none") return sizes;
-
-    if (vertical) {
-      var widths = sizes.map(function (s) { return s.w; });
-      var targetW = mode === "min" ? Math.min.apply(null, widths) : Math.max.apply(null, widths);
-      return sizes.map(function (s) {
-        var scale = targetW / s.w;
-        return { w: Math.round(s.w * scale), h: Math.round(s.h * scale), img: s.img };
-      });
-    }
-
-    var heights = sizes.map(function (s) { return s.h; });
-    var targetH = mode === "min" ? Math.min.apply(null, heights) : Math.max.apply(null, heights);
-    return sizes.map(function (s) {
-      var scale = targetH / s.h;
-      return { w: Math.round(s.w * scale), h: Math.round(s.h * scale), img: s.img };
+    const sizes = images.map((item) => ({ w: item.width, h: item.height, img: item }));
+    if (!sizes.length || settings.scaleMode === "none") return sizes;
+    const vertical = settings.direction === "vertical";
+    const edges = sizes.map((size) => (vertical ? size.w : size.h));
+    const target = settings.scaleMode === "min" ? Math.min(...edges) : Math.max(...edges);
+    return sizes.map((size) => {
+      const scale = target / (vertical ? size.w : size.h);
+      return { w: Math.round(size.w * scale), h: Math.round(size.h * scale), img: size.img };
     });
   }
 
-  function stitchToCanvas(settings, maxEdge) {
-    var sizes = computeScaledSizes(settings);
+  /** 成图原始像素尺寸，未做 8000 封顶；没有图片返回 null */
+  function measureStitch(sizes, settings) {
     if (!sizes.length) return null;
-
-    var gap = settings.gap;
-    var vertical = settings.direction === "vertical";
-    var totalW;
-    var totalH;
-
-    if (vertical) {
-      totalW = Math.max.apply(null, sizes.map(function (s) { return s.w; }));
-      totalH = sizes.reduce(function (sum, s) { return sum + s.h; }, 0) + gap * (sizes.length - 1);
-    } else {
-      totalH = Math.max.apply(null, sizes.map(function (s) { return s.h; }));
-      totalW = sizes.reduce(function (sum, s) { return sum + s.w; }, 0) + gap * (sizes.length - 1);
+    const gapTotal = settings.gap * (sizes.length - 1);
+    if (settings.direction === "vertical") {
+      return { w: Math.max(...sizes.map((size) => size.w)), h: sizes.reduce((sum, size) => sum + size.h, 0) + gapTotal };
     }
+    return { w: sizes.reduce((sum, size) => sum + size.w, 0) + gapTotal, h: Math.max(...sizes.map((size) => size.h)) };
+  }
 
-    var scale = 1;
-    if (maxEdge && Math.max(totalW, totalH) > maxEdge) {
-      scale = maxEdge / Math.max(totalW, totalH);
-    }
+  /**
+   * 复制、下载、标注实际用的尺寸：最长边超过 8000 时等比缩小（与 stitchToCanvas 的取整一致），
+   * capped 表示是否缩过，rawW / rawH 是缩之前的尺寸；没有图片返回 null
+   */
+  function exportSize(settings, sizes) {
+    const total = measureStitch(sizes || computeScaledSizes(settings), settings);
+    if (!total) return null;
+    const longest = Math.max(total.w, total.h);
+    const scale = longest > EXPORT_MAX_EDGE ? EXPORT_MAX_EDGE / longest : 1;
+    return {
+      w: Math.max(1, Math.round(total.w * scale)),
+      h: Math.max(1, Math.round(total.h * scale)),
+      rawW: total.w,
+      rawH: total.h,
+      capped: scale < 1
+    };
+  }
 
-    var canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(totalW * scale));
-    canvas.height = Math.max(1, Math.round(totalH * scale));
-    var ctx = canvas.getContext("2d");
+  /** 按设置拼接：maxEdge 为 0 表示原尺寸，否则最长边缩到 maxEdge 以内；传入 target 时直接画在它上面 */
+  function stitchToCanvas(settings, maxEdge, target) {
+    const sizes = computeScaledSizes(settings);
+    const total = measureStitch(sizes, settings);
+    if (!total) return null;
+    const vertical = settings.direction === "vertical";
+    const longest = Math.max(total.w, total.h);
+    const scale = maxEdge && longest > maxEdge ? maxEdge / longest : 1;
+    const canvas = target || document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(total.w * scale));
+    canvas.height = Math.max(1, Math.round(total.h * scale));
+    const ctx = canvas.getContext("2d");
     ctx.fillStyle = settings.bgColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    var x = 0;
-    var y = 0;
-    sizes.forEach(function (s, index) {
-      var dw = s.w * scale;
-      var dh = s.h * scale;
-      var dx = vertical ? (canvas.width - dw) / 2 : x;
-      var dy = vertical ? y : (canvas.height - dh) / 2;
-      ctx.drawImage(s.img.bitmap, dx, dy, dw, dh);
-      if (vertical) y += dh + (index < sizes.length - 1 ? gap * scale : 0);
-      else x += dw + (index < sizes.length - 1 ? gap * scale : 0);
+    const gap = settings.gap * scale;
+    let offset = 0;
+    sizes.forEach((size) => {
+      const drawW = size.w * scale;
+      const drawH = size.h * scale;
+      const drawX = vertical ? (canvas.width - drawW) / 2 : offset;
+      const drawY = vertical ? offset : (canvas.height - drawH) / 2;
+      ctx.drawImage(size.img.bitmap, drawX, drawY, drawW, drawH);
+      offset += (vertical ? drawH : drawW) + gap;
     });
-
     return canvas;
   }
 
@@ -1979,92 +2124,75 @@
     previewTimer = setTimeout(renderPreview, 80);
   }
 
+  /** 刷新缩放说明、成图尺寸和预览图；成图超过 8000px 时提前说明导出会等比缩小 */
   function renderPreview() {
-    if (!images.length) {
-      els.previewCanvas.hidden = true;
-      els.previewEmpty.hidden = false;
-      els.previewEmpty.style.display = "";
-      els.btnEnterEdit.disabled = true;
-      setStitchExportEnabled(false);
+    const settings = getSettings();
+    const sizes = computeScaledSizes(settings);
+    const size = exportSize(settings, sizes);
+    updateScaleExplain(settings);
+    els.previewEmpty.hidden = Boolean(size);
+    els.previewCanvas.hidden = !size;
+    els.previewTip.hidden = !size;
+    els.outputChip.hidden = !size;
+    if (!size) {
+      els.dockInfo.textContent = "还没添加图片";
       return;
     }
-    var canvas = stitchToCanvas(getSettings(), 1400);
-    if (!canvas) {
-      els.previewCanvas.hidden = true;
-      els.previewEmpty.hidden = false;
-      els.previewEmpty.style.display = "";
-      return;
-    }
-    var preview = els.previewCanvas;
-    var ctx = preview.getContext("2d");
-    preview.width = canvas.width;
-    preview.height = canvas.height;
-    ctx.clearRect(0, 0, preview.width, preview.height);
-    ctx.drawImage(canvas, 0, 0);
-    preview.hidden = false;
-    els.previewEmpty.hidden = true;
-    els.previewEmpty.style.display = "none";
-    els.btnEnterEdit.disabled = false;
-    setStitchExportEnabled(true);
+    els.outputChip.classList.toggle("is-warn", size.capped);
+    els.outputChip.textContent = size.capped
+      ? "原始 " + size.rawW + " × " + size.rawH + "，超过 " + EXPORT_MAX_EDGE + "px，复制/下载时等比缩到 " + size.w + " × " + size.h
+      : "成图 " + size.w + " × " + size.h + " px";
+    els.dockInfo.textContent = images.length + " 张 · " + size.w + " × " + size.h;
+    stitchToCanvas(settings, PREVIEW_MAX_EDGE, els.previewCanvas);
   }
 
-  /** 导出用原图像素拼接（过大则缩到边长 8000） */
-  function stitchFullForExport() {
-    if (!images.length) return null;
-    var full = stitchToCanvas(getSettings(), 0);
-    if (!full) return null;
-    var edge = Math.max(full.width, full.height);
-    if (edge > 8000) {
-      var scaled = document.createElement("canvas");
-      var s = 8000 / edge;
-      scaled.width = Math.round(full.width * s);
-      scaled.height = Math.round(full.height * s);
-      scaled.getContext("2d").drawImage(full, 0, 0, scaled.width, scaled.height);
-      return scaled;
+  /** 对齐缩放的大白话说明：随方向切换「宽 / 高」字眼，有图时带上实际像素，图片本来一样大时直接说明无需缩放 */
+  function updateScaleExplain(settings) {
+    const vertical = settings.direction === "vertical";
+    const edgeName = vertical ? "宽度" : "高度";
+    const bigWord = vertical ? "宽" : "高";
+    const smallWord = vertical ? "窄" : "矮";
+    els.scaleMaxText.textContent = "对齐最" + bigWord;
+    els.scaleMinText.textContent = "对齐最" + smallWord;
+    const edges = images.map((item) => (vertical ? item.width : item.height));
+    const maxPx = edges.length ? Math.max(...edges) : 0;
+    const minPx = edges.length ? Math.min(...edges) : 0;
+    let text;
+    if (edges.length === 1) {
+      text = "只有一张图，不用对齐；再加几张" + edgeName + "不同的图，这里会说明怎么缩放";
+    } else if (edges.length > 1 && maxPx === minPx) {
+      text = "这些图" + edgeName + "都是 " + maxPx + "px，不需要缩放，三个选项效果一样";
+    } else if (settings.scaleMode === "max") {
+      text = edgeName + "统一成最" + bigWord + "那张" + (maxPx ? "的 " + maxPx + "px" : "") + "：" + smallWord + "的图会被放大（可能略糊），拼出来" + (vertical ? "左右" : "上下") + "边缘整齐";
+    } else if (settings.scaleMode === "min") {
+      text = edgeName + "统一成最" + smallWord + "那张" + (minPx ? "的 " + minPx + "px" : "") + "：" + bigWord + "的图会被缩小，画面清晰、文件更小";
+    } else {
+      text = "每张保持原尺寸：比最" + bigWord + "那张" + smallWord + "的图会居中摆放，" + (vertical ? "左右两侧" : "上下两边") + "露出底色";
     }
-    return full;
+    els.scaleExplain.textContent = text;
+  }
+
+  /** 导出直接按封顶尺寸绘制，不先画原尺寸：浏览器画布有尺寸上限，超长图先画原尺寸会得到空白图 */
+  function stitchForExport() {
+    return images.length ? stitchToCanvas(getSettings(), EXPORT_MAX_EDGE) : null;
   }
 
   function downloadStitchPng() {
-    var out = stitchFullForExport();
+    const out = stitchForExport();
     if (!out) {
       showToast("请先添加图片", true);
       return;
     }
-    canvasToBlob(out).then(function (blob) {
-      var a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "stitch-" + formatStamp() + ".png";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
-      showToast("已开始下载");
-    }).catch(function () {
-      showToast("下载失败", true);
-    });
+    saveCanvasPng(out);
   }
 
   function copyStitchPng() {
-    var out = stitchFullForExport();
+    const out = stitchForExport();
     if (!out) {
       showToast("请先添加图片", true);
       return;
     }
-    if (!navigator.clipboard || !window.ClipboardItem) {
-      showToast("当前浏览器不支持复制图片，请改用下载", true);
-      return;
-    }
-    canvasToBlob(out).then(function (blob) {
-      return navigator.clipboard.write([
-        new ClipboardItem({ "image/png": blob })
-      ]);
-    }).then(function () {
-      showToast("已复制到剪贴板");
-    }).catch(function (err) {
-      console.error(err);
-      showToast("复制失败，请改用下载", true);
-    });
+    copyCanvasPng(out, "拼接图");
   }
 
   /* —— 编辑态 —— */
@@ -2246,38 +2374,27 @@
 
   function enterEdit() {
     if (!images.length) return;
-    var full = stitchToCanvas(getSettings(), 0);
-    if (!full) return;
-    // 过大保护：边长超过 8000 再缩小
-    var edge = Math.max(full.width, full.height);
-    if (edge > 8000) {
-      var scaled = document.createElement("canvas");
-      var s = 8000 / edge;
-      scaled.width = Math.round(full.width * s);
-      scaled.height = Math.round(full.height * s);
-      scaled.getContext("2d").drawImage(full, 0, 0, scaled.width, scaled.height);
-      full = scaled;
-      showToast("图片过大，已缩放到边长 8000 以内再编辑");
-    }
-    baseBitmap = full;
+    const settings = getSettings();
+    const size = exportSize(settings);
+    // 直接按封顶尺寸绘制，避免先画出超过浏览器上限的原尺寸画布
+    baseBitmap = stitchToCanvas(settings, EXPORT_MAX_EDGE);
     shapes = [];
     history = [];
     historyIndex = -1;
     pushHistory();
     document.body.classList.add("is-edit");
     // 触屏默认「拖动」，避免长图一划就变成标注
-    var preferPan =
+    const preferPan =
       (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
       window.innerWidth < 900;
     setTool(preferPan ? "pan" : "rect");
     syncEditCanvasSize();
     redrawEdit();
-    requestAnimationFrame(function () {
-      fitEditToView();
-    });
-    showToast(preferPan
-      ? "双指或按钮缩放，拖动可看细节；选下方工具后再标注"
-      : "滚轮缩放、拖动可看细节；空格拖动画布");
+    requestAnimationFrame(() => fitEditToView());
+    const gestureTip = preferPan
+      ? "双指或按钮缩放，拖动看细节；选下方工具后再标注"
+      : "已选中矩形，直接拖动就能画框；滚轮缩放，按住空格拖动画布，Esc 返回拼接";
+    showToast(size.capped ? "成图太大，已等比缩到 " + size.w + " × " + size.h + " 再标注。" + gestureTip : gestureTip, size.capped);
   }
 
   function leaveEdit() {
@@ -2998,92 +3115,148 @@
     });
   }
 
-  function downloadPng() {
-    var out = exportCanvas(true);
-    canvasToBlob(out).then(function (blob) {
-      var a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "stitch-" + formatStamp() + ".png";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
-      showToast("已开始下载");
-    }).catch(function () {
-      showToast("下载失败", true);
+  /** 生成 PNG 并触发下载；提示里带文件名和尺寸，方便去下载目录里找 */
+  function saveCanvasPng(canvas) {
+    const fileName = "stitch-" + formatStamp() + ".png";
+    canvasToBlob(canvas).then((blob) => {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+      showToast("已开始下载 " + fileName + "（" + canvas.width + " × " + canvas.height + "）");
+    }).catch((err) => {
+      console.error("生成 PNG 失败", err);
+      showToast("下载失败：浏览器没能生成 PNG，多半是图太大，少拼几张再试", true);
     });
+  }
+
+  /** 先转成 PNG 再写剪贴板；浏览器不支持写图片或拒绝写入时，引导改用下载 */
+  function copyCanvasPng(canvas, label) {
+    if (!navigator.clipboard || !window.ClipboardItem) {
+      showToast("这个浏览器不支持复制图片，请改用下载保存", true);
+      return;
+    }
+    canvasToBlob(canvas)
+      .then((blob) => navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]))
+      .then(() => {
+        showToast("已复制" + label + "（" + canvas.width + " × " + canvas.height + "），可直接粘贴到聊天或文档");
+      })
+      .catch((err) => {
+        console.error("复制图片失败", err);
+        showToast("复制失败：浏览器没允许写入剪贴板，请改用下载保存", true);
+      });
+  }
+
+  function downloadPng() {
+    saveCanvasPng(exportCanvas(true));
   }
 
   function copyPng() {
-    var out = exportCanvas(true);
-    if (!navigator.clipboard || !window.ClipboardItem) {
-      showToast("当前浏览器不支持复制图片，请改用下载", true);
-      return;
-    }
-    canvasToBlob(out).then(function (blob) {
-      return navigator.clipboard.write([
-        new ClipboardItem({ "image/png": blob })
-      ]);
-    }).then(function () {
-      showToast("已复制到剪贴板");
-    }).catch(function (err) {
-      console.error(err);
-      showToast("复制失败，请改用下载", true);
-    });
+    copyCanvasPng(exportCanvas(true), "标注后的图片");
   }
 
   function formatStamp() {
-    var d = new Date();
-    function p(n) { return n < 10 ? "0" + n : String(n); }
-    return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes());
+    const now = new Date();
+    const pad = (value) => (value < 10 ? "0" : "") + value;
+    return now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + "-" + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
   }
 
   /* —— 事件绑定 —— */
 
-  els.dropzone.addEventListener("click", function () { els.fileInput.click(); });
-  els.fileInput.addEventListener("change", function () {
+  function hasDraggedFiles(event) {
+    const types = event.dataTransfer && event.dataTransfer.types;
+    return Boolean(types) && Array.from(types).indexOf("Files") >= 0;
+  }
+
+  /** 方向、对齐方式会改变每张图的拼接尺寸，所以缩略图说明和预览一起刷新 */
+  function onSettingsChange() {
+    renderThumbs();
+    schedulePreview();
+  }
+
+  els.dropzone.addEventListener("click", () => els.fileInput.click());
+  els.dropzone.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    els.fileInput.click();
+  });
+  els.fileInput.addEventListener("change", () => {
     addFiles(els.fileInput.files);
     els.fileInput.value = "";
   });
 
-  ["dragenter", "dragover"].forEach(function (name) {
-    els.dropzone.addEventListener(name, function (event) {
-      event.preventDefault();
-      els.dropzone.classList.add("is-drag");
-    });
+  // 整页任意位置都能拖入图片，拖动期间高亮投放区；缩略图之间的排序拖动不带文件，不走这里
+  document.addEventListener("dragenter", (event) => {
+    if (!hasDraggedFiles(event)) return;
+    event.preventDefault();
+    fileDragDepth += 1;
+    els.dropzone.classList.add("is-drag");
   });
-  ["dragleave", "drop"].forEach(function (name) {
-    els.dropzone.addEventListener(name, function (event) {
-      event.preventDefault();
-      if (name === "drop") addFiles(event.dataTransfer.files);
-      els.dropzone.classList.remove("is-drag");
-    });
+  document.addEventListener("dragover", (event) => {
+    if (!hasDraggedFiles(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  });
+  document.addEventListener("dragleave", (event) => {
+    if (!hasDraggedFiles(event)) return;
+    fileDragDepth = Math.max(0, fileDragDepth - 1);
+    if (!fileDragDepth) els.dropzone.classList.remove("is-drag");
+  });
+  document.addEventListener("drop", (event) => {
+    if (!hasDraggedFiles(event)) return;
+    event.preventDefault();
+    fileDragDepth = 0;
+    els.dropzone.classList.remove("is-drag");
+    if (document.body.classList.contains("is-edit")) {
+      showToast("标注时不能加图：先点工具栏的 ✕ 回到拼接页，再拖进来", true);
+      return;
+    }
+    addFiles(event.dataTransfer.files);
   });
 
-  window.addEventListener("paste", function (event) {
+  window.addEventListener("paste", (event) => {
     if (document.body.classList.contains("is-edit")) return;
     if (addClipboardItems(event.clipboardData)) {
       event.preventDefault();
+      return;
     }
+    const target = event.target;
+    const inField = target && target.closest && target.closest("input, textarea, [contenteditable]");
+    const text = event.clipboardData ? event.clipboardData.getData("text/plain") : "";
+    if (!inField && text) showToast("剪贴板里是文字，没有图片：先截图或复制一张图片再粘贴", true);
   });
 
-  ["change", "input"].forEach(function (name) {
-    onRadioGroup(els.direction, name, schedulePreview);
-    onRadioGroup(els.scaleMode, name, schedulePreview);
-    els.gap.addEventListener(name, schedulePreview);
-    els.bgColor.addEventListener(name, schedulePreview);
+  onRadioGroup(els.direction, "change", onSettingsChange);
+  onRadioGroup(els.scaleMode, "change", onSettingsChange);
+  els.gap.addEventListener("input", schedulePreview);
+  els.gap.addEventListener("change", () => {
+    const typed = parseInt(els.gap.value, 10);
+    const normalized = String(getSettings().gap);
+    if (els.gap.value === normalized) return;
+    els.gap.value = normalized;
+    if (!isNaN(typed)) showToast("间距只能填 0 ~ " + GAP_MAX + "，已改成 " + normalized, true);
   });
+  els.bgColor.addEventListener("input", schedulePreview);
 
   els.btnClearAll.addEventListener("click", clearAll);
   els.btnEnterEdit.addEventListener("click", enterEdit);
-  els.btnCopyStitch.addEventListener("click", copyStitchPng);
-  els.btnDownloadStitch.addEventListener("click", downloadStitchPng);
   els.btnCopyStitchDock.addEventListener("click", copyStitchPng);
   els.btnDownloadStitchDock.addEventListener("click", downloadStitchPng);
-  els.previewCanvas.addEventListener("click", function () {
-    if (!images.length) return;
-    previewStitchLarge();
+  els.previewCanvas.addEventListener("click", () => {
+    if (images.length) previewStitchLarge();
   });
+  els.toast.addEventListener("mouseenter", () => {
+    toastState.hovering = true;
+    clearTimeout(toastState.timer);
+  });
+  els.toast.addEventListener("mouseleave", () => {
+    toastState.hovering = false;
+    scheduleToastHide();
+  });
+  renderPreview();
   els.btnLightboxClose.addEventListener("click", closeLightbox);
   els.btnLightboxReset.addEventListener("click", function () {
     resetLightboxView(true);

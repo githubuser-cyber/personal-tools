@@ -10,153 +10,264 @@
   <title>周报填写助手</title>
   <style>
     :root {
-      /* Element 风格 · 支付宝蓝 */
       --bg: #f5f7fa;
       --surface: #ffffff;
-      --text: #334155;
-      --muted: #64748b;
-      --border: #e4e7ed;
-      --accent: #1677FF;
-      --accent-hover: #0958D9;
-      --accent-soft: rgba(230, 244, 255, 0.78);
-      --accent-mid: #69B1FF;
-      --accent-light: #91CAFF;
-      --warn: #fb7185;
-      --warn-soft: rgba(255, 245, 246, 0.72);
-      --warn-border: rgba(254, 205, 211, 0.85);
-      --danger: #f43f5e;
-      --danger-soft: rgba(255, 241, 242, 0.75);
-      --ok: #1677FF;
-      --ok-soft: rgba(230, 244, 255, 0.75);
-      --ok-border: rgba(145, 202, 255, 0.85);
+      --fill: #f5f7fa;
+      --text: #303133;
+      --text-regular: #606266;
+      --muted: #909399;
+      --placeholder: #a8abb2;
+      --border: #dcdfe6;
+      --border-light: #e4e7ed;
+      --border-lighter: #ebeef5;
+      --primary: #1677FF;
+      --primary-hover: #4096FF;
+      --primary-active: #0958D9;
+      --primary-soft: #ecf5ff;
+      --primary-soft-border: #d9ecff;
+      --primary-border: #c6e2ff;
+      --success: #67c23a;
+      --success-text: #529b2e;
+      --success-soft: #f0f9eb;
+      --success-border: #e1f3d8;
+      --warning: #e6a23c;
+      --warning-text: #b88230;
+      --warning-soft: #fdf6ec;
+      --warning-border: #f5dab1;
+      --danger: #f56c6c;
+      --danger-soft: #fef0f0;
+      --danger-border: #fbc4c4;
       --radius: 8px;
-      --glass: #ffffff;
-      --glass-strong: #ffffff;
-      --glass-border: #e4e7ed;
-      --glass-blur: none;
-      --glass-inset: none;
-      --glass-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-      --btn-3d: none;
-      --shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      --radius-sm: 4px;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.14);
       --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-      --mono: "Cascadia Code", "Consolas", "SF Mono", monospace;
     }
 
     * { box-sizing: border-box; }
 
+    [hidden] { display: none !important; }
+
     body {
       margin: 0;
-      font-family: var(--font);
-      color: var(--text);
-      background: #f5f7fa;
-      line-height: 1.5;
       min-height: 100vh;
       min-height: 100dvh;
-      font-size: 16px;
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--text);
+      background: var(--bg);
       -webkit-text-size-adjust: 100%;
       -webkit-tap-highlight-color: transparent;
-      
-      
-      
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
     }
 
     .app {
       max-width: 1600px;
       margin: 0 auto;
-      padding: 28px 20px calc(96px + env(safe-area-inset-bottom));
+      padding: 24px 20px calc(112px + env(safe-area-inset-bottom));
       padding-left: max(20px, env(safe-area-inset-left));
       padding-right: max(20px, env(safe-area-inset-right));
     }
 
-    header {
+    html.in-shell .app { padding-top: 16px; }
+    html.in-shell .home-link { display: none !important; }
+
+    /* —— 页头 —— */
+    .page-head {
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-start;
+      align-items: flex-end;
       justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 18px;
+      gap: 12px 16px;
+      margin-bottom: 14px;
     }
 
     .home-link {
       display: inline-block;
-      margin: 0 0 8px;
-      font-size: 0.9rem;
-      font-weight: 650;
-      color: var(--accent-hover);
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: var(--primary);
       text-decoration: none;
     }
 
-    .home-link:hover {
-      text-decoration: underline;
-    }
+    .home-link:hover { text-decoration: underline; }
 
-    header h1 {
-      margin: 0 0 6px;
-      font-size: 1.75rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: #0f172a;
-    }
-
-    header .sub {
+    .page-head h1 {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
       margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .page-head .sub {
+      margin: 4px 0 0;
+      font-size: 13px;
       color: var(--muted);
-      font-size: 1rem;
+    }
+
+    .week-chip {
+      display: inline-flex;
+      align-items: center;
+      height: 24px;
+      padding: 0 8px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0;
+      color: var(--text-regular);
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+    }
+
+    .week-chip.is-stale {
+      color: var(--warning-text);
+      background: var(--warning-soft);
+      border-color: var(--warning-border);
+      cursor: help;
     }
 
     .header-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
+      gap: 8px;
     }
 
+    /* —— 按钮（Element 风格） —— */
+    .btn {
+      appearance: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 36px;
+      padding: 0 16px;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--text-regular);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      white-space: nowrap;
+      user-select: none;
+      transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+    }
+
+    .btn:hover {
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-color: var(--primary-border);
+    }
+
+    .btn:active {
+      color: var(--primary-active);
+      border-color: var(--primary);
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--primary-border);
+      outline-offset: 1px;
+    }
+
+    .btn-sm {
+      height: 30px;
+      padding: 0 12px;
+      font-size: 13px;
+    }
+
+    .btn-primary {
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+      color: #fff;
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .btn-primary:active {
+      color: #fff;
+      background: var(--primary-active);
+      border-color: var(--primary-active);
+    }
+
+    .btn-accent {
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-color: var(--primary-soft-border);
+    }
+
+    .btn-accent:hover {
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    /* —— 填写状态条 —— */
     .banner {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 12px;
-      padding: 12px 16px;
-      border-radius: 8px;
-      border: 1px solid #e4e7ed;
-      background: #fff;
+      gap: 4px 10px;
+      margin-bottom: 14px;
+      padding: 10px 14px;
       font-size: 14px;
-      font-weight: 600;
-      box-shadow: none;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      background: var(--surface);
     }
 
-    .banner.is-ok {
-      border-color: var(--ok-border);
-      background: var(--ok-soft);
-      color: var(--ok);
+    .banner-icon {
+      flex: 0 0 auto;
+      display: inline-grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      color: #fff;
+      border-radius: 50%;
+    }
+
+    .banner-main { font-weight: 600; }
+
+    .banner-detail {
+      margin-left: auto;
+      font-size: 13px;
+      opacity: 0.85;
     }
 
     .banner.is-warn {
-      border-color: var(--warn-border);
-      background: var(--warn-soft);
-      color: var(--warn);
+      color: var(--warning-text);
+      background: var(--warning-soft);
+      border-color: var(--warning-border);
     }
 
-    .banner.is-info {
-      border-color: var(--accent-light);
-      background: var(--accent-soft);
-      color: var(--accent);
+    .banner.is-warn .banner-icon { background: var(--warning); }
+
+    .banner.is-ok {
+      color: var(--primary-active);
+      background: var(--primary-soft);
+      border-color: var(--primary-soft-border);
     }
 
-    .banner .detail {
-      font-weight: 500;
-      font-size: 0.95rem;
-      opacity: 0.9;
-    }
+    .banner.is-ok .banner-icon { background: var(--primary); }
 
-    .banner-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
+    /* —— 布局 —— */
     .layout {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -169,795 +280,738 @@
       min-width: 0;
     }
 
-    @media (max-width: 960px) {
-      .layout { grid-template-columns: 1fr !important; }
-    }
-
     .panel {
-      background: #fff;
-      border: 1px solid #e4e7ed;
-      border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-      padding: 20px 18px 16px;
+      padding: 18px;
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
     }
 
-    .panel-head {
+    /* —— 项目标签 —— */
+    .tag-bar {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
+      gap: 8px 10px;
+      margin-bottom: 18px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-lighter);
     }
 
-    .panel-head h2 {
-      margin: 0;
-      font-size: 1.2rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .section-hint {
-      margin: 0 0 14px;
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-
-    .section-count {
-      display: inline-flex;
-      align-items: center;
-      margin-left: 8px;
-      padding: 2px 10px;
-      border-radius: 999px;
-      font-size: 0.85rem;
-      font-weight: 650;
-      background: var(--glass-strong);
-      border: 1px solid var(--glass-border);
-      color: var(--muted);
-      vertical-align: middle;
-      box-shadow: var(--glass-inset);
-    }
-
-    .section-count.has-gap {
-      background: var(--warn-soft);
-      color: var(--warn);
-      border-color: var(--warn-border);
-    }
-
-    .btn {
-      appearance: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      height: 36px;
-      padding: 0 16px;
-      font: inherit;
-      font-size: 14px;
-      font-weight: 500;
-      line-height: 1;
-      border-radius: 4px;
-      border: 1px solid #dcdfe6;
-      background: #fff;
-      color: #606266;
-      cursor: pointer;
-      box-shadow: none;
-      transform: none;
-      text-shadow: none;
-      transition: color 0.1s, background-color 0.1s, border-color 0.1s;
-    }
-
-    .btn:hover:not(:disabled) {
-      color: #1677FF;
-      border-color: #c6e2ff;
-      background: #ecf5ff;
-      transform: none;
-      filter: none;
-      box-shadow: none;
-    }
-
-    .btn:active:not(:disabled) {
-      color: #0958D9;
-      border-color: #1677FF;
-      background: #ecf5ff;
-      transform: none;
-      box-shadow: none;
-      filter: none;
-    }
-
-    .btn:disabled {
-      color: #c0c4cc;
-      background: #fff;
-      border-color: #ebeef5;
-      cursor: not-allowed;
-      opacity: 1;
-    }
-
-    .btn-primary {
-      color: #fff;
-      background: #1677FF;
-      border-color: #1677FF;
-      height: 40px;
-      font-size: 15px;
-      padding: 0 18px;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      color: #fff;
-      background: #4096FF;
-      border-color: #4096FF;
-    }
-
-    .btn-primary:active:not(:disabled) {
-      color: #fff;
-      background: #0958D9;
-      border-color: #0958D9;
-    }
-
-    .btn-primary:disabled {
-      color: #fff;
-      background: #a0cfff;
-      border-color: #a0cfff;
-    }
-
-    .btn-danger {
-      color: #f56c6c;
-      background: #fff;
-      border-color: #fbc4c4;
-    }
-
-    .btn-danger:hover:not(:disabled) {
-      color: #fff;
-      background: #f56c6c;
-      border-color: #f56c6c;
-    }
-
-    .btn-ghost {
-      color: #606266;
-      background: #fff;
-      border-color: #dcdfe6;
-    }
-
-    .btn-ghost:hover:not(:disabled) {
-      color: #1677FF;
-      border-color: #c6e2ff;
-      background: #ecf5ff;
-    }
-
-    .btn-sm {
-      height: 28px;
-      padding: 0 12px;
-      font-size: 12px;
-    }
-
-    .btn-accent {
-      color: #1677FF;
-      background: #ecf5ff;
-      border-color: #d9ecff;
-    }
-
-    .btn-accent:hover:not(:disabled) {
-      color: #fff;
-      background: #1677FF;
-      border-color: #1677FF;
-    }
-
-
-    .tag-bar {
-      margin-bottom: 20px;
-      padding: 14px;
-      background: #f5f7fa;
-      border-radius: 8px;
-      border: 1px solid #e4e7ed;
-      box-shadow: none;
-    }
-
-    .tag-bar .tag-label {
-      display: block;
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 10px;
+    .tag-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-regular);
     }
 
     .tag-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 12px;
-      min-height: 36px;
+      gap: 6px;
+      min-width: 0;
     }
 
     .tag-chip {
       display: inline-flex;
-      align-items: flex-start;
-      gap: 6px;
+      align-items: center;
+      gap: 2px;
       max-width: 100%;
-      padding: 6px 8px 6px 12px;
-      background: var(--glass-strong);
-      border: 1px solid var(--glass-border);
-      border-radius: 12px;
+      height: 28px;
+      padding: 0 4px 0 10px;
+      font-size: 13px;
       font-weight: 600;
-      font-size: 0.95rem;
-      color: var(--text);
-      box-shadow: var(--glass-inset);
+      color: var(--proj-text);
+      background: var(--proj-bg);
+      border: 1px solid var(--proj-border);
+      border-radius: var(--radius-sm);
     }
 
-    .tag-chip .tag-chip-text {
-      flex: 1;
-      min-width: 0;
-      white-space: normal;
-      overflow-wrap: anywhere;
-      word-break: break-word;
-      line-height: 1.35;
-      padding-top: 3px;
+    .tag-chip-text {
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .tag-chip button {
-      flex: 0 0 auto;
-      border: none;
-      background: #fff;
-      color: var(--muted);
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-weight: 700;
+      display: inline-grid;
+      place-items: center;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      font-size: 15px;
       line-height: 1;
-      font-size: 1rem;
-      box-shadow: 0 1px 0 rgba(255,255,255,0.8) inset, 0 2px 6px rgba(15,23,42,0.08);
+      color: inherit;
+      background: transparent;
+      border: none;
+      border-radius: 50%;
+      opacity: 0.55;
+      cursor: pointer;
     }
 
     .tag-chip button:hover {
-      background: var(--danger-soft);
-      color: var(--danger);
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.06);
     }
 
     .tag-add {
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
+      gap: 6px;
+      margin: 0 0 0 auto;
     }
 
     .tag-add input {
-      flex: 1;
-      min-width: 160px;
-      font: inherit;
-      font-size: 1rem;
-      padding: 10px 12px;
-      min-height: 44px;
-      border: 1px solid var(--glass-border);
-      border-radius: 12px;
-      background: #fff;
+      width: 180px;
+      height: 30px;
+      padding: 0 10px;
+      font-size: 13px;
       color: var(--text);
-      box-shadow: var(--glass-inset);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
     }
 
-    .col-labels {
-      display: grid;
-      grid-template-columns: 44px minmax(0, 1fr) auto auto;
-      gap: 10px;
-      margin-bottom: 8px;
-      padding: 0 2px;
-      font-size: 0.85rem;
-      font-weight: 650;
+    .tag-add input::placeholder,
+    .row-title::placeholder,
+    .progress-input::placeholder,
+    .import-dialog textarea::placeholder {
+      color: var(--placeholder);
+    }
+
+    .tag-add input:focus,
+    .row-title:focus,
+    .progress-input:focus,
+    .import-dialog textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 1px var(--primary) inset;
+    }
+
+    /* —— 分区 —— */
+    .section + .section {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-lighter);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .section-count {
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-regular);
+      background: var(--fill);
+      border: 1px solid var(--border-lighter);
+      border-radius: 11px;
+    }
+
+    .section-count.has-gap {
+      color: var(--warning-text);
+      background: var(--warning-soft);
+      border-color: var(--warning-border);
+    }
+
+    .section-hint {
+      margin: 0 0 14px;
+      font-size: 13px;
       color: var(--muted);
     }
 
-    .col-labels.next {
-      grid-template-columns: 44px minmax(0, 1fr) auto;
+    .section-empty {
+      margin-bottom: 12px;
+      padding: 12px;
+      font-size: 13px;
+      text-align: center;
+      color: var(--muted);
+      background: var(--fill);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
     }
 
-    @media (max-width: 700px) {
-      .col-labels { display: none; }
+    /* —— 项目分组 —— */
+    .group + .group { margin-top: 16px; }
+
+    .group-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
     }
 
-    .rows { display: flex; flex-direction: column; gap: 14px; }
+    .group-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--proj-text);
+    }
 
+    .group-name::before {
+      content: "";
+      flex: 0 0 auto;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      background: var(--proj-text);
+    }
+
+    .group-count {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .group-add {
+      margin-left: auto;
+      height: 26px;
+      padding: 0 10px;
+      font-size: 12px;
+      color: var(--text-regular);
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+    }
+
+    .group-add:hover {
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-color: var(--primary);
+    }
+
+    .group-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-left: 10px;
+      border-left: 2px solid var(--proj-border);
+    }
+
+    /* —— 事项行 —— */
     .row {
-      display: grid;
-      grid-template-columns: 44px minmax(0, 1fr) auto auto;
-      grid-template-areas:
-        "idx tag progress del"
-        "idx title title title";
-      gap: 8px 10px;
-      align-items: start;
-      padding: 14px 14px 14px 10px;
-      border-radius: 14px;
-      border: 1px solid var(--glass-border);
-      background: #fff;
-      box-shadow: var(--glass-shadow);
-      transition: border-color 0.15s, background 0.15s, opacity 0.15s, box-shadow 0.15s;
       position: relative;
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      grid-template-areas:
+        "idx title"
+        "idx tools"
+        "idx tip";
+      column-gap: 8px;
+      padding: 10px 12px 10px 6px;
+      background: var(--surface);
+      border: 1px solid var(--border-lighter);
+      border-radius: var(--radius);
+      scroll-margin: 80px 0 150px;
+      transition: border-color 0.15s, background-color 0.15s;
     }
 
-    .row:nth-child(even) {
-      background: #f5f7fa;
-      border-color: #e4e7ed;
-    }
+    .row:hover { border-color: var(--border); }
 
     .row.next {
-      grid-template-columns: 44px minmax(0, 1fr) auto;
+      grid-template-columns: 28px minmax(0, 1fr) auto;
       grid-template-areas:
-        "idx tag del"
-        "idx title title";
+        "idx title tools"
+        "idx tip tip";
     }
 
-    .row > .row-index { grid-area: idx; }
-    .row > .tag-select {
-      grid-area: tag;
-      max-width: 320px;
+    .row-index {
+      grid-area: idx;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 9px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      user-select: none;
     }
-    .row > textarea[data-field="title"] { grid-area: title; }
-    .row > .progress-wrap { grid-area: progress; }
-    .row > .btn-danger { grid-area: del; }
+
+    .row-index.is-draggable {
+      padding-top: 2px;
+      cursor: grab;
+    }
+    .row-index.is-draggable:active { cursor: grabbing; }
+
+    .row-index .grip {
+      font-size: 9px;
+      letter-spacing: 1px;
+      line-height: 1;
+      color: #c0c4cc;
+    }
+
+    .row-index.is-draggable:hover .grip { color: var(--primary); }
+
+    .row-title {
+      grid-area: title;
+      display: block;
+      width: 100%;
+      min-height: 38px;
+      padding: 8px 10px;
+      font-size: 15px;
+      line-height: 1.45;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      resize: none;
+      overflow: hidden;
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+    }
+
+    .row-title:hover { border-color: #c0c4cc; }
+
+    .row-tools {
+      grid-area: tools;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .row.next .row-tools {
+      margin-top: 4px;
+      margin-left: 8px;
+      flex-wrap: nowrap;
+    }
+
+    .row-tip {
+      grid-area: tip;
+      display: none;
+      margin-top: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--warning-text);
+    }
+
+    .row-tip::before { content: "! "; font-weight: 700; }
 
     .row.is-incomplete {
-      border-color: var(--warn-border);
-      background: var(--warn-soft);
-      box-shadow: var(--glass-inset), 0 0 0 1px rgba(245, 158, 11, 0.12), 0 8px 24px rgba(64, 150, 255, 0.08);
+      background: #fffcf6;
+      border-color: var(--warning-border);
     }
 
-    .row.is-incomplete input[data-field="title"],
-    .row.is-incomplete textarea[data-field="title"],
-    .row.is-incomplete .progress-wrap input[type="number"] {
-      border-color: var(--warn-border);
-      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+    .row.is-incomplete .row-tip { display: block; }
+
+    .row.is-incomplete .row-title.is-invalid,
+    .row.is-incomplete .progress-input.is-invalid {
+      border-color: var(--warning);
     }
 
-    .row.is-dragging {
-      opacity: 0.45;
-    }
+    .row.is-dragging { opacity: 0.45; }
 
     .row.drop-before::before,
     .row.drop-after::after {
       content: "";
       position: absolute;
-      left: 8px;
-      right: 8px;
-      height: 3px;
-      border-radius: 3px;
-      background: var(--accent);
+      left: 6px;
+      right: 6px;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--primary);
       pointer-events: none;
     }
 
-    .row.drop-before::before { top: -2px; }
-    .row.drop-after::after { bottom: -2px; }
+    .row.drop-before::before { top: -5px; }
+    .row.drop-after::after { bottom: -5px; }
 
-    .row-index {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 2px;
-      user-select: none;
-      cursor: grab;
-      color: var(--muted);
-      min-height: 46px;
-      border-radius: 10px;
-      margin-top: 2px;
-      padding: 4px 2px;
-      background: rgba(64, 150, 255, 0.18);
-      border: 1px solid #e4e7ed;
-      box-shadow: var(--glass-inset);
-    }
-
-    .row:nth-child(even) .row-index {
-      background: rgba(148, 163, 184, 0.16);
-    }
-
-    .row-index:active { cursor: grabbing; }
-
-    .row-index .grip {
-      font-size: 0.7rem;
-      letter-spacing: 1px;
-      line-height: 1;
-      color: #9ca3af;
-    }
-
-    .row-index .num {
-      font-size: 1.05rem;
-      font-weight: 800;
-      color: var(--accent);
-      line-height: 1.1;
-    }
-
-    .row-tip {
-      grid-column: 1 / -1;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--warn);
-      margin-top: -2px;
-      display: none;
-    }
-
-    .row.is-incomplete .row-tip { display: block; }
-
-    @media (max-width: 700px) {
-      .row,
-      .row.next {
-        grid-template-columns: 44px minmax(0, 1fr);
-        grid-template-areas:
-          "idx tag"
-          "idx title"
-          "idx progress"
-          "idx del";
+    @keyframes row-moved {
+      0% {
+        background-color: var(--primary-soft);
+        box-shadow: 0 0 0 2px var(--primary-border);
       }
-      .row > .tag-select { max-width: none; }
-      .row.next {
-        grid-template-areas:
-          "idx tag"
-          "idx title"
-          "idx del";
+      100% {
+        box-shadow: 0 0 0 2px rgba(198, 226, 255, 0);
       }
     }
 
-    .row textarea[data-field="title"],
-    .row input[type="number"] {
-      font: inherit;
-      font-size: 1rem;
-      width: 100%;
-      padding: 10px 12px;
-      min-height: 42px;
-      border: 1px solid var(--glass-border);
-      border-radius: 12px;
-      background: #fff;
-      color: var(--text);
-      box-shadow: var(--glass-inset);
-    }
+    .row.is-moved { animation: row-moved 1.2s ease-out; }
 
-    .row .progress-wrap,
-    .row .btn-danger,
-    .row .tag-select {
-      margin-top: 2px;
-    }
-
+    /* —— 换项目下拉 —— */
     .tag-select {
       position: relative;
-      width: 100%;
-      min-width: 0;
+      flex: 0 0 auto;
     }
 
     .tag-select-trigger {
-      width: 100%;
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 8px;
-      min-height: 46px;
-      padding: 10px 12px;
-      border: 1px solid #dcdfe6;
-      border-radius: 4px;
-      background: #fff;
-      color: var(--text);
-      font: inherit;
-      font-size: 0.98rem;
-      font-weight: 650;
-      text-align: left;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 30px;
+      padding: 0 10px;
+      font-size: 13px;
+      color: var(--text-regular);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
       cursor: pointer;
-      box-shadow: none;
-      transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+      white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s;
     }
 
-    .tag-select-trigger:hover {
-      border-color: var(--accent);
-      transform: translateY(-1px);
-    }
-
+    .tag-select-trigger:hover,
     .tag-select.open .tag-select-trigger {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-soft), var(--btn-3d);
-    }
-
-    .tag-select-label {
-      flex: 1;
-      min-width: 0;
-      white-space: normal;
-      overflow-wrap: anywhere;
-      word-break: break-word;
-      line-height: 1.35;
+      color: var(--primary);
+      border-color: var(--primary);
     }
 
     .tag-select-caret {
-      flex: 0 0 auto;
-      color: var(--accent);
-      font-size: 0.75rem;
-      line-height: 1.6;
+      font-size: 10px;
       transition: transform 0.15s;
     }
 
-    .tag-select.open .tag-select-caret {
-      transform: rotate(180deg);
-    }
+    .tag-select.open .tag-select-caret { transform: rotate(180deg); }
 
     .tag-select-menu {
       display: none;
       position: absolute;
       left: 0;
-      right: 0;
       top: calc(100% + 4px);
       z-index: 30;
+      min-width: 168px;
+      max-width: 280px;
       max-height: 240px;
       overflow: auto;
-      padding: 6px;
-      background: var(--glass-strong);
-      border: 1px solid var(--glass-border);
-      border-radius: 12px;
-      box-shadow: var(--glass-shadow);
+      padding: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-pop);
     }
 
-    .tag-select.open .tag-select-menu {
-      display: block;
-    }
+    .tag-select.open .tag-select-menu { display: block; }
 
     .tag-select-option {
-      display: block;
-      width: 100%;
-      border: none;
-      background: transparent;
-      text-align: left;
-      padding: 10px 12px;
-      border-radius: 8px;
-      font: inherit;
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--text);
-      cursor: pointer;
-      white-space: normal;
-      overflow-wrap: anywhere;
-      word-break: break-word;
-      line-height: 1.35;
-    }
-
-    .tag-select-option:hover,
-    .tag-select-option.is-active {
-      background: var(--accent-soft);
-      color: var(--accent);
-    }
-
-    .row textarea[data-field="title"] {
-      font-weight: 550;
-      resize: none;
-      line-height: 1.45;
-      min-height: 42px;
-      overflow: hidden;
-      white-space: pre-wrap;
-      overflow-wrap: break-word;
-      word-break: normal;
-    }
-
-    .row textarea:focus,
-    .row input:focus,
-    .tag-add input:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-soft), var(--glass-inset);
-    }
-
-    .progress-wrap {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+      width: 100%;
+      padding: 7px 10px;
+      font-size: 13px;
+      text-align: left;
+      color: var(--text-regular);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      overflow-wrap: anywhere;
     }
 
-    .progress-wrap input[type="number"] {
-      width: 58px;
-      padding: 8px 4px;
+    .tag-select-option::before {
+      content: "";
+      flex: 0 0 auto;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      background: var(--proj-text);
+    }
+
+    .tag-select-option:hover { background: var(--fill); }
+
+    .tag-select-option.is-active {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .tag-select-option.is-active::after {
+      content: "当前";
+      margin-left: auto;
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--muted);
+    }
+
+    /* —— 进度 —— */
+    .progress-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-step {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      font-size: 16px;
+    }
+
+    .progress-input {
+      width: 56px;
+      height: 30px;
+      padding: 0 4px;
+      font-size: 14px;
+      font-weight: 600;
       text-align: center;
-      font-weight: 700;
-      min-height: 36px;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+
+    .progress-input::-webkit-outer-spin-button,
+    .progress-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
     }
 
     .progress-wrap .unit {
-      font-size: 0.95rem;
-      font-weight: 650;
+      font-size: 13px;
       color: var(--muted);
     }
 
-    .progress-wrap .btn-step {
-      width: 36px;
-      min-height: 36px;
-      padding: 0;
-      font-size: 1.1rem;
-      font-weight: 700;
-      line-height: 1;
+    .btn-done {
+      height: 30px;
+      padding: 0 10px;
+      font-size: 13px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-color: var(--primary-soft-border);
     }
 
-    .progress-wrap .done-tag {
-      display: none;
-      font: inherit;
-      font-size: 0.95rem;
-      font-weight: 700;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--ok-border);
-      background: var(--ok-soft);
-      color: var(--ok);
-      white-space: nowrap;
-      cursor: pointer;
-      box-shadow: var(--glass-inset);
-    }
-
-    .progress-wrap .done-tag:hover {
-      background: rgba(209, 250, 229, 0.85);
-    }
-
-    .progress-wrap .btn-done {
-      min-height: 36px;
-      padding: 4px 10px;
-      font-size: 0.85rem;
-      font-weight: 500;
-      border-color: #d9ecff;
-      background: #ecf5ff;
-      color: #1677FF;
-      white-space: nowrap;
-      box-shadow: none;
-    }
-
-    .progress-wrap .btn-done:hover {
-      background: #1677FF;
-      border-color: #1677FF;
+    .btn-done:hover {
       color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
     }
 
-    /* 已完成：只留文字，不展示数字 */
-    .progress-wrap.is-done input[type="number"],
-    .progress-wrap.is-done .unit,
-    .progress-wrap.is-done .btn-step,
-    .progress-wrap.is-done .btn-done {
+    .done-tag {
       display: none;
-    }
-
-    .progress-wrap.is-done .done-tag {
-      display: inline-block;
-    }
-
-    .row.is-done:not(.is-incomplete) {
-      background: var(--ok-soft);
-      border-color: var(--ok-border);
-      box-shadow: var(--glass-inset), 0 0 0 1px rgba(16, 185, 129, 0.12), 0 8px 24px rgba(64, 150, 255, 0.08);
-    }
-
-    .row.is-done:not(.is-incomplete) .row-index {
-      background: rgba(16, 185, 129, 0.16);
-    }
-
-    .row.is-done:not(.is-incomplete) .row-index .num {
-      color: var(--ok);
-    }
-
-    .section + .section {
-      margin-top: 26px;
-      padding-top: 22px;
-      border-top: 1px solid #e4e7ed;
-    }
-
-    .empty {
-      color: var(--muted);
-      font-size: 1rem;
-      padding: 14px 8px;
-      border: 1px dashed rgba(148, 163, 184, 0.45);
-      border-radius: 10px;
-      text-align: center;
-      background: #f5f7fa;
-    }
-
-    .empty.is-warn {
-      border-color: var(--warn-border);
-      background: var(--warn-soft);
-      color: var(--warn);
+      align-items: center;
+      height: 30px;
+      padding: 0 10px;
+      font-size: 13px;
       font-weight: 600;
+      color: var(--success-text);
+      background: var(--success-soft);
+      border: 1px solid var(--success-border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      white-space: nowrap;
     }
 
+    .done-tag:hover { border-color: var(--success); }
+
+    .progress-wrap.is-done > * { display: none; }
+    .progress-wrap.is-done > .done-tag { display: inline-flex; }
+
+    .btn-remove {
+      height: 30px;
+      margin-left: auto;
+      padding: 0 10px;
+      font-size: 13px;
+      color: var(--muted);
+      background: transparent;
+      border-color: transparent;
+    }
+
+    .btn-remove:hover,
+    .btn-remove:active {
+      color: var(--danger);
+      background: var(--danger-soft);
+      border-color: var(--danger-border);
+    }
+
+    /* —— 预览 —— */
     .preview-col {
       position: sticky;
       top: 12px;
-      align-self: start;
       z-index: 5;
-      max-height: calc(100vh - 100px);
-      display: flex;
-      flex-direction: column;
+      align-self: start;
     }
 
     .preview-panel {
       display: flex;
       flex-direction: column;
-      min-height: 0;
-      max-height: calc(100vh - 100px);
+      max-height: calc(100vh - 110px);
     }
 
-    .preview-panel h2 {
-      font-size: 1.2rem;
-      color: var(--text);
-      flex: 0 0 auto;
+    .preview-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .preview-head h2 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .preview-note {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: var(--muted);
     }
 
     .preview-text {
-      margin: 0;
-      padding: 12px;
-      background: #f5f7fa;
-      border-radius: 12px;
-      border: 1px solid var(--glass-border);
-      min-height: 200px;
       flex: 1 1 auto;
-      overflow: auto;
-      color: var(--text);
-      max-height: calc(100vh - 180px);
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      box-shadow: var(--glass-inset);
+      gap: 6px;
+      min-height: 200px;
+      overflow: auto;
+      padding: 12px;
+      background: var(--fill);
+      border: 1px solid var(--border-lighter);
+      border-radius: var(--radius);
     }
 
     .preview-section-title {
-      margin: 4px 0 2px;
-      font-size: 1rem;
-      font-weight: 800;
+      font-size: 14px;
+      font-weight: 700;
       color: var(--text);
     }
 
-    .preview-section-title + .preview-section-title {
-      margin-top: 12px;
-    }
+    .preview-section-title:not(:first-child) { margin-top: 10px; }
 
     .preview-item {
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid var(--proj-border, var(--glass-border));
-      border-left: 4px solid var(--proj-text, var(--accent));
-      background: color-mix(in srgb, var(--proj-bg, #fff) 72%, transparent);
-      font-size: 0.95rem;
-      font-weight: 600;
+      padding: 7px 10px;
+      font-size: 14px;
       line-height: 1.55;
       white-space: nowrap;
       overflow: hidden;
-      text-overflow: clip;
-      box-shadow: var(--glass-inset);
+      background: var(--surface);
+      border: 1px solid var(--border-lighter);
+      border-left: 3px solid var(--proj-text, var(--primary));
+      border-radius: 6px;
     }
 
     .preview-item.is-wrap {
       white-space: normal;
       overflow: visible;
       overflow-wrap: anywhere;
-      word-break: break-word;
     }
 
-    .preview-item .preview-idx {
-      color: var(--proj-text, var(--accent));
-      font-weight: 800;
-      margin-right: 2px;
+    .preview-idx,
+    .preview-tag {
+      font-weight: 600;
+      color: var(--proj-text, var(--primary));
     }
 
-    .preview-item .preview-tag {
-      color: var(--proj-text, var(--accent));
-      font-weight: 750;
-    }
-
-    .preview-item .preview-progress {
+    .preview-progress {
+      font-weight: 600;
       color: var(--muted);
-      font-weight: 700;
       white-space: nowrap;
     }
 
     .preview-empty {
-      padding: 8px 12px;
+      padding: 4px 10px;
+      font-size: 14px;
       color: var(--muted);
-      font-size: 0.95rem;
     }
 
     footer.hint {
-      margin-top: 22px;
-      margin-bottom: 24px;
-      color: var(--muted);
-      font-size: 0.9rem;
+      margin: 20px 0 8px;
+      font-size: 13px;
       text-align: center;
+      color: var(--muted);
+    }
+
+    /* —— 底部操作栏 —— */
+    .dock {
+      position: fixed;
+      left: 50%;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      z-index: 40;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      max-width: calc(100vw - 24px);
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-pop);
+      transform: translateX(-50%);
+    }
+
+    .dock .btn { padding: 0 14px; }
+
+    .dock .ico {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    /* 功能色只用于区分底栏动作，其余界面保持主色 + 中性色 */
+    .dock .btn-dock-this {
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-color: var(--primary-soft-border);
+    }
+
+    .dock .btn-dock-this:hover {
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .dock .btn-dock-next {
+      color: var(--success-text);
+      background: var(--success-soft);
+      border-color: var(--success-border);
+    }
+
+    .dock .btn-dock-next:hover {
+      color: #fff;
+      background: var(--success);
+      border-color: var(--success);
+    }
+
+    .dock .btn-dock-carry {
+      color: var(--warning-text);
+      background: var(--warning-soft);
+      border-color: #faecd8;
+    }
+
+    .dock .btn-dock-carry:hover {
+      color: #fff;
+      background: var(--warning);
+      border-color: var(--warning);
+    }
+
+    .dock .btn-dock-copy {
+      padding: 0 18px;
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .dock .btn-dock-copy:hover {
+      color: #fff;
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
     }
 
     .scroll-jump {
       position: fixed;
-      right: max(12px, env(safe-area-inset-right));
-      bottom: calc(88px + env(safe-area-inset-bottom));
+      right: max(14px, env(safe-area-inset-right));
+      bottom: calc(96px + env(safe-area-inset-bottom));
       z-index: 45;
       display: flex;
       flex-direction: column;
@@ -965,359 +1019,15 @@
     }
 
     .scroll-jump .btn {
-      width: 44px;
-      height: 44px;
-      min-height: 44px;
+      width: 40px;
+      height: 40px;
       padding: 0;
-      border-radius: 12px;
-      font-size: 1.15rem;
-      font-weight: 800;
-      line-height: 1;
-      background: #fff;
-      border-color: #dcdfe6;
-      color: #606266;
-      box-shadow: none;
+      font-size: 16px;
+      border-radius: 50%;
+      box-shadow: var(--shadow);
     }
 
-    .scroll-jump .btn:hover {
-      background: #ecf5ff;
-      border-color: #c6e2ff;
-      color: #1677FF;
-    }
-
-    @media (max-width: 700px) {
-      .scroll-jump { display: none; }
-
-      .app {
-        padding: 14px 12px calc(88px + env(safe-area-inset-bottom));
-      }
-
-      header {
-        gap: 10px;
-        margin-bottom: 10px;
-      }
-
-      header h1 {
-        font-size: 1.35rem;
-        margin-bottom: 2px;
-      }
-
-      header .sub {
-        font-size: 0.85rem;
-      }
-
-      .header-actions {
-        width: 100%;
-        gap: 8px;
-      }
-
-      .header-actions .btn {
-        flex: 1;
-        min-height: 40px;
-        padding: 8px 10px;
-        font-size: 0.9rem;
-      }
-
-      .banner {
-        padding: 10px 12px;
-        margin-bottom: 10px;
-        font-size: 0.9rem;
-        gap: 4px;
-      }
-
-      .banner .detail {
-        font-size: 0.8rem;
-        width: 100%;
-      }
-
-      .panel {
-        padding: 14px 12px 12px;
-      }
-
-      .tag-bar {
-        padding: 10px;
-        margin-bottom: 14px;
-      }
-
-      .tag-add {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .tag-add .btn {
-        width: 100%;
-      }
-
-      .section-hint {
-        display: none;
-      }
-
-      .section + .section {
-        margin-top: 18px;
-        padding-top: 16px;
-      }
-
-      .panel-head h2 {
-        font-size: 1.05rem;
-      }
-
-      .row,
-      .row.next {
-        grid-template-columns: 36px minmax(0, 1fr);
-        grid-template-areas:
-          "idx tag"
-          "idx title"
-          "idx progress"
-          "idx del";
-        gap: 8px;
-        padding: 10px;
-      }
-
-      .row > .tag-select { max-width: none; }
-
-      .row.next {
-        grid-template-areas:
-          "idx tag"
-          "idx title"
-          "idx del";
-      }
-
-      .row > .btn-danger {
-        justify-self: start;
-      }
-
-      .progress-wrap {
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-
-      .progress-wrap input[type="number"] {
-        width: 64px;
-      }
-
-      .preview-col {
-        position: static;
-        max-height: none;
-        margin-top: 12px;
-      }
-
-      .preview-panel,
-      .preview-text {
-        max-height: none;
-      }
-
-      .dock {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 40;
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      flex-wrap: wrap;
-      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
-      background: #fff;
-      border-top: 1px solid #e4e7ed;
-      box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.04);
-    }
-
-      .dock-main {
-        display: flex;
-        gap: 6px;
-        width: 100%;
-      }
-
-      .dock-main > .btn {
-        flex: 1;
-        min-width: 0;
-        min-height: 42px;
-        padding: 8px 4px;
-        font-size: 0.82rem;
-        gap: 2px;
-      }
-
-      .dock .btn[data-action="toggle-dock-more"] {
-        display: inline-flex;
-      }
-
-      .dock-main > .btn .ico {
-        font-size: 0.95rem;
-      }
-
-      .dock-more {
-        display: none;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 6px;
-        margin-top: 8px;
-        padding-top: 8px;
-        border-top: 1px solid var(--border);
-      }
-
-      .dock.is-more-open .dock-more {
-        display: grid;
-      }
-
-      .dock-more > .btn {
-        min-height: 40px;
-        padding: 8px 4px;
-        font-size: 0.78rem;
-      }
-
-      .label-full { display: none; }
-      .label-short { display: inline; }
-
-      .toast {
-        bottom: calc(96px + env(safe-area-inset-bottom));
-        left: 12px;
-        right: 12px;
-        transform: translateY(12px);
-        max-width: none;
-        border-radius: 14px;
-      }
-
-      .toast.show {
-        transform: translateY(0);
-      }
-
-      footer.hint {
-        font-size: 0.8rem;
-        margin-top: 16px;
-        padding: 0 4px;
-      }
-    }
-
-    .dock {
-      position: fixed;
-      left: 50%;
-      bottom: max(16px, env(safe-area-inset-bottom));
-      transform: translateX(-50%);
-      z-index: 40;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 8px;
-      padding: 10px 12px;
-      background: #fff;
-      border: 1px solid #e4e7ed;
-      border-radius: 8px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      max-width: calc(100vw - 24px);
-    }
-
-    .dock-main {
-      display: contents;
-    }
-
-    .dock-more {
-      display: contents;
-    }
-
-    .label-short { display: none; }
-
-    .dock .btn[data-action="toggle-dock-more"] {
-      display: none;
-    }
-
-    .dock .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      height: 36px;
-      min-height: 36px;
-      padding: 0 14px;
-      border-radius: 4px;
-      font-size: 14px;
-      white-space: nowrap;
-      box-shadow: none;
-      text-shadow: none;
-    }
-
-    .dock .btn .ico {
-      font-size: 1.05rem;
-      line-height: 1;
-      font-weight: 700;
-    }
-
-    /* Element 功能色：一眼区分底栏操作 */
-    .dock .btn-dock-this {
-      color: #1677FF;
-      background: #ecf5ff;
-      border-color: #d9ecff;
-    }
-
-    .dock .btn-dock-this:hover {
-      color: #fff;
-      background: #1677FF;
-      border-color: #1677FF;
-    }
-
-    .dock .btn-dock-next {
-      color: #67c23a;
-      background: #f0f9eb;
-      border-color: #e1f3d8;
-    }
-
-    .dock .btn-dock-next:hover {
-      color: #fff;
-      background: #67c23a;
-      border-color: #67c23a;
-    }
-
-    .dock .btn-dock-import {
-      color: #606266;
-      background: #fff;
-      border-color: #dcdfe6;
-    }
-
-    .dock .btn-dock-import:hover {
-      color: #1677FF;
-      border-color: #c6e2ff;
-      background: #ecf5ff;
-    }
-
-    .dock .btn-dock-carry {
-      color: #e6a23c;
-      background: #fdf6ec;
-      border-color: #faecd8;
-    }
-
-    .dock .btn-dock-carry:hover {
-      color: #fff;
-      background: #e6a23c;
-      border-color: #e6a23c;
-    }
-
-    .dock .btn-dock-group {
-      color: #909399;
-      background: #f4f4f5;
-      border-color: #e9e9eb;
-    }
-
-    .dock .btn-dock-group:hover {
-      color: #fff;
-      background: #909399;
-      border-color: #909399;
-    }
-
-    .dock .btn-dock-copy {
-      color: #fff;
-      background: #1677FF;
-      border-color: #1677FF;
-      font-size: 14px;
-      padding: 0 18px;
-      box-shadow: none;
-      text-shadow: none;
-    }
-
-    .dock .btn-dock-copy:hover {
-      color: #fff;
-      background: #4096FF;
-      border-color: #4096FF;
-      box-shadow: none;
-    }
-
+    /* —— 导入弹窗 —— */
     .import-overlay {
       display: none;
       position: fixed;
@@ -1326,935 +1036,1132 @@
       align-items: center;
       justify-content: center;
       padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-      background: rgba(15, 23, 42, 0.35);
+      background: rgba(0, 0, 0, 0.45);
     }
 
-    .import-overlay.show {
-      display: flex;
-    }
+    .import-overlay.show { display: flex; }
 
     .import-dialog {
       width: min(560px, 100%);
-      background: var(--glass-strong);
-      border-radius: 16px;
-      border: 1px solid var(--glass-border);
-      box-shadow: var(--glass-shadow);
-      padding: 18px 16px 14px;
+      padding: 20px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-pop);
     }
 
     .import-dialog h3 {
-      margin: 0 0 8px;
-      font-size: 1.15rem;
-      color: #0f172a;
+      margin: 0 0 6px;
+      font-size: 17px;
     }
 
     .import-dialog p {
       margin: 0 0 12px;
+      font-size: 13px;
       color: var(--muted);
-      font-size: 0.95rem;
     }
 
     .import-dialog textarea {
       width: 100%;
       min-height: 220px;
-      resize: vertical;
-      font: inherit;
-      font-size: 0.95rem;
+      padding: 10px 12px;
+      font-size: 14px;
       line-height: 1.55;
-      padding: 12px;
-      border: 1px solid var(--glass-border);
-      border-radius: 12px;
-      background: #fff;
       color: var(--text);
-      box-shadow: var(--glass-inset);
-    }
-
-    .import-dialog textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-soft), var(--glass-inset);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      resize: vertical;
     }
 
     .import-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
       justify-content: flex-end;
-      margin-top: 12px;
+      gap: 8px;
+      margin-top: 14px;
     }
 
+    /* —— 提示 —— */
     .toast {
       position: fixed;
-      bottom: 88px;
       left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: rgba(15, 23, 42, 0.82);
-      color: #ffffff;
-      padding: 12px 18px;
-      border-radius: 999px;
-      font-size: 1rem;
-      font-weight: 600;
+      bottom: calc(92px + env(safe-area-inset-bottom));
+      z-index: 70;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: min(92vw, 560px);
+      padding: 10px 16px;
+      font-size: 14px;
+      line-height: 1.45;
+      color: #fff;
+      background: #303133;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-pop);
       opacity: 0;
       pointer-events: none;
+      transform: translate(-50%, 12px);
       transition: opacity 0.2s, transform 0.2s;
-      z-index: 50;
-      max-width: min(90vw, 520px);
-      text-align: center;
-      line-height: 1.4;
-      cursor: default;
-      border: 1px solid #e4e7ed;
-      box-shadow: var(--glass-inset), 0 8px 24px rgba(15, 23, 42, 0.22);
     }
 
     .toast.show {
       opacity: 1;
-      transform: translateX(-50%) translateY(0);
       pointer-events: auto;
+      transform: translate(-50%, 0);
     }
 
-    .toast.is-warn {
-      background: rgba(225, 29, 72, 0.88);
-      color: #ffffff;
+    .toast-icon {
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      border-radius: 50%;
+      background: var(--primary);
     }
 
-    /* 移动端必须放在最后，避免被桌面样式覆盖 */
+    .toast.is-warn .toast-icon { background: var(--warning); }
+
+    .toast-action {
+      flex: 0 0 auto;
+      height: 26px;
+      padding: 0 10px;
+      font-size: 13px;
+      color: #fff;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+
+    .toast-action:hover { background: rgba(255, 255, 255, 0.14); }
+
+    /* —— 响应式 —— */
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr !important; }
+
+      .preview-col { position: static; }
+
+      .preview-panel { max-height: none; }
+    }
+
     @media (max-width: 700px) {
-      .scroll-jump {
-        display: none !important;
+      .app { padding: 12px 12px calc(140px + env(safe-area-inset-bottom)); }
+
+      .page-head h1 { font-size: 19px; }
+
+      .page-head .sub,
+      .section-hint,
+      .banner-detail,
+      .scroll-jump { display: none; }
+
+      .header-actions { width: 100%; }
+
+      .header-actions .btn { flex: 1; }
+
+      .panel { padding: 14px 12px; }
+
+      .tag-add {
+        width: 100%;
+        margin-left: 0;
       }
 
-      .app {
-        padding: 12px 12px calc(168px + env(safe-area-inset-bottom)) !important;
+      .tag-add input { flex: 1; }
+
+      .group-rows { padding-left: 4px; }
+
+      /* 窄屏下一行放下「换项目、进度、完成、删除」，不让删除单独掉到第三行 */
+      .row,
+      .row.next {
+        grid-template-columns: 22px minmax(0, 1fr);
+        column-gap: 6px;
+        padding: 10px 8px 10px 4px;
       }
 
-      header h1 {
-        font-size: 1.3rem;
+      .row.next {
+        grid-template-areas:
+          "idx title"
+          "idx tools"
+          "idx tip";
       }
 
-      header .sub {
-        display: none;
+      .row-tools { gap: 6px; }
+
+      .tag-select-trigger { padding: 0 8px; }
+
+      .progress-wrap { gap: 3px; }
+
+      .btn-step { width: 28px; }
+
+      .progress-input { width: 46px; }
+
+      .progress-wrap .unit { display: none; }
+
+      .btn-done,
+      .done-tag { padding: 0 8px; }
+
+      .btn-remove { padding: 0 6px; }
+
+      .row.next .row-tools {
+        margin: 8px 0 0;
+        flex-wrap: wrap;
       }
 
-      .banner {
-        padding: 10px 12px;
-        font-size: 0.88rem;
-      }
-
-      .banner .detail {
-        display: none;
-      }
-
-      .section-hint {
-        display: none !important;
+      /* iOS 输入框小于 16px 会自动放大页面 */
+      .row-title,
+      .progress-input,
+      .tag-add input,
+      .import-dialog textarea {
+        font-size: 16px;
       }
 
       .dock {
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        transform: none !important;
-        width: 100% !important;
-        max-width: none !important;
-        flex-direction: column !important;
-        flex-wrap: nowrap !important;
-        align-items: stretch !important;
-        gap: 0 !important;
-        padding: 10px 10px calc(10px + env(safe-area-inset-bottom)) !important;
-        border-radius: 16px 16px 0 0 !important;
-        border-left: none !important;
-        border-right: none !important;
-        border-bottom: none !important;
-        box-shadow: 0 -8px 28px rgba(15, 23, 42, 0.12) !important;
-      }
-
-      .dock-main,
-      .dock-more {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: 8px !important;
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: none !important;
-      }
-
-      .dock-more {
-        margin-top: 8px !important;
-      }
-
-      .dock .btn[data-action="toggle-dock-more"] {
-        display: none !important;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+        max-width: none;
+        padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+        border-width: 1px 0 0;
+        border-radius: 12px 12px 0 0;
+        transform: none;
       }
 
       .dock .btn {
-        display: flex !important;
-        width: 100% !important;
-        min-height: 44px !important;
-        padding: 10px 8px !important;
-        font-size: 0.92rem !important;
-        font-weight: 700 !important;
-        white-space: nowrap !important;
-        overflow: visible !important;
+        width: 100%;
+        height: 42px;
+        padding: 0 4px;
+        font-size: 13px;
       }
 
-      .dock .btn .ico {
-        display: none !important;
-      }
+      .dock .ico { display: none; }
 
-      .dock .label-full {
-        display: inline !important;
-      }
-
-      .dock .label-short {
-        display: none !important;
-      }
+      .dock .btn-dock-copy { grid-column: span 2; }
 
       .toast {
-        bottom: calc(160px + env(safe-area-inset-bottom)) !important;
-        left: 12px !important;
-        right: 12px !important;
-        transform: translateY(8px) !important;
-        max-width: none !important;
-        border-radius: 12px !important;
+        left: 12px;
+        right: 12px;
+        bottom: calc(134px + env(safe-area-inset-bottom));
+        max-width: none;
+        transform: translateY(12px);
       }
 
-      .toast.show {
-        transform: translateY(0) !important;
-      }
+      .toast.show { transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .row.is-moved { animation: none; }
     }
   </style>
+  <script>
+    if (window.self !== window.top) document.documentElement.classList.add("in-shell");
+  </script>
 </head>
 <body>
   <div class="app">
-    <header>
+    <header class="page-head">
       <div>
         <a class="home-link" href="../../">← 工具箱</a>
-        <h1>周报填写助手</h1>
-        <p class="sub">离线单文件 · 草稿自动保存在本机 · 断网可用</p>
+        <h1>周报填写助手 <span class="week-chip" id="weekChip"></span></h1>
+        <p class="sub">草稿自动保存在本机，断网也能用 · 边填边按项目、进度自动整理</p>
       </div>
       <div class="header-actions">
-        <button type="button" class="btn btn-accent" id="btnPromote">下周转本周</button>
-        <button type="button" class="btn btn-ghost" id="btnClear">清空</button>
+        <button type="button" class="btn btn-accent" id="btnPromote" title="新的一周用：把「下周计划」转成本周事项，同名事项带回进度">下周转本周</button>
+        <button type="button" class="btn" id="btnClear" title="清空本周和下周的全部内容">清空</button>
       </div>
     </header>
 
-    <div class="banner is-warn" id="fillBanner">
-      <span id="fillBannerMain">请先填写工作事项</span>
-      <span class="detail" id="fillBannerDetail"></span>
+    <div class="banner is-warn" id="fillBanner" role="status">
+      <span class="banner-icon" id="fillBannerIcon" aria-hidden="true">!</span>
+      <span class="banner-main" id="fillBannerMain">请先填写工作事项</span>
+      <span class="banner-detail" id="fillBannerDetail"></span>
     </div>
 
-    <div class="layout">
+    <div class="layout" id="layout">
       <div class="editor-col">
         <div class="panel">
           <div class="tag-bar">
-            <span class="tag-label">项目标签（可添加 / 删除）</span>
+            <span class="tag-label">项目</span>
             <div class="tag-chips" id="tagChips"></div>
-            <div class="tag-add">
-              <input type="text" id="newTag" placeholder="新增标签，如 广东MSB" maxlength="80" />
-              <button type="button" class="btn" id="btnAddTag">添加标签</button>
-            </div>
+            <form class="tag-add" id="tagAddForm">
+              <input type="text" id="newTag" placeholder="新项目名称，如 广东MSB" maxlength="80" aria-label="新项目名称" />
+              <button type="submit" class="btn btn-sm">添加项目</button>
+            </form>
           </div>
 
           <section class="section">
-            <div class="panel-head">
-              <h2>本周工作重点 <span class="section-count" id="thisCount">0 项</span></h2>
+            <div class="section-head">
+              <h2>本周工作重点</h2>
+              <span class="section-count" id="thisCount">0 项</span>
             </div>
-            <p class="section-hint">进度默认留空，请手输或用 − / +（每次 5%）；完成点「完成」。底部可添加事项、整理与复制。</p>
-            <div class="col-labels">
-              <span>#</span>
-              <span>项目 / 事项内容</span>
-              <span>进度</span>
-              <span></span>
-            </div>
+            <p class="section-hint">进度填 1–100，− / + 每次 5%，做完点「完成」；回车新增下一条。同项目内按进度从低到高自动排好。</p>
             <div class="rows" id="thisWeekRows"></div>
           </section>
 
           <section class="section">
-            <div class="panel-head">
-              <h2>下周工作计划 <span class="section-count" id="nextCount">0 项</span></h2>
+            <div class="section-head">
+              <h2>下周工作计划</h2>
+              <span class="section-count" id="nextCount">0 项</span>
             </div>
-            <p class="section-hint">底部「未完成写入下周」可把本周没做完的事项复制到下周；顶部可把下周转入本周。按住左侧序号可拖拽排序。</p>
-            <div class="col-labels next">
-              <span>#</span>
-              <span>项目 / 计划事项</span>
-              <span></span>
-            </div>
+            <p class="section-hint">底部「未完成写入下周」可一键带入本周没做完的事项；按住序号拖动可调整同项目内的先后。</p>
             <div class="rows" id="nextWeekRows"></div>
           </section>
         </div>
       </div>
 
       <div class="preview-col">
-        <div class="panel preview-panel">
-          <div class="panel-head">
-            <h2>预览</h2>
+        <div class="panel preview-panel" id="previewPanel">
+          <div class="preview-head">
+            <div>
+              <h2>预览</h2>
+              <p class="preview-note">按项目分组、同项目按进度从低到高，复制出去就是这样</p>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" data-action="copy-report">复制报告</button>
           </div>
           <div class="preview-text" id="preview"></div>
         </div>
       </div>
     </div>
 
-    <footer class="hint">草稿仅存本机 · 跨设备：一端「复制报告」发微信/备忘录 → 另一端「导入成稿」粘贴</footer>
+    <footer class="hint">换设备继续写：一端「复制报告」发到微信 / 备忘录，另一端「导入成稿」粘贴即可</footer>
   </div>
 
   <div class="scroll-jump" id="scrollJump">
-    <button type="button" class="btn" data-action="scroll-top" title="回到顶部">↑</button>
-    <button type="button" class="btn" data-action="scroll-bottom" title="去到底部">↓</button>
+    <button type="button" class="btn" data-action="scroll-top" title="回到顶部" aria-label="回到顶部">↑</button>
+    <button type="button" class="btn" data-action="scroll-bottom" title="去到底部" aria-label="去到底部">↓</button>
   </div>
 
   <div class="dock" id="actionDock">
-    <div class="dock-main">
-      <button type="button" class="btn btn-dock-this" data-action="add-this" title="新增本周工作事项">
-        <span class="ico">＋</span><span class="label-full">本周事项</span><span class="label-short">本周</span>
-      </button>
-      <button type="button" class="btn btn-dock-next" data-action="add-next" title="新增下周工作计划">
-        <span class="ico">＋</span><span class="label-full">下周计划</span><span class="label-short">下周</span>
-      </button>
-      <button type="button" class="btn btn-dock-copy" data-action="copy-report" title="按项目整理后复制">
-        <span class="ico">⧉</span><span class="label-full">复制报告</span><span class="label-short">复制</span>
-      </button>
-      <button type="button" class="btn btn-dock-import" data-action="import-report" title="导入成稿">
-        <span class="ico">⇩</span><span class="label-full">导入成稿</span><span class="label-short">导入</span>
-      </button>
-    </div>
-    <div class="dock-more" id="dockMore">
-      <button type="button" class="btn btn-dock-carry" data-action="carry-incomplete" title="把本周未完成的事项复制到下周计划">
-        <span class="ico">⤵</span><span class="label-full">未完成写入下周</span><span class="label-short">写下周</span>
-      </button>
-      <button type="button" class="btn btn-dock-group" data-action="group-by-project" title="按项目整理">
-        <span class="ico">☰</span><span class="label-full">按项目整理</span><span class="label-short">整理</span>
-      </button>
-    </div>
+    <button type="button" class="btn btn-dock-this" data-action="add-this" title="新增一条本周事项（项目沿用上次选择）">
+      <span class="ico">＋</span><span>本周事项</span>
+    </button>
+    <button type="button" class="btn btn-dock-next" data-action="add-next" title="新增一条下周计划（项目沿用上次选择）">
+      <span class="ico">＋</span><span>下周计划</span>
+    </button>
+    <button type="button" class="btn btn-dock-carry" data-action="carry-incomplete" title="把本周进度未到 100% 的事项复制到下周计划，已有的不重复添加">
+      <span class="ico">⤵</span><span>未完成写入下周</span>
+    </button>
+    <button type="button" class="btn btn-dock-import" data-action="import-report" title="粘贴另一台设备复制的周报全文，还原成可编辑的草稿">
+      <span class="ico">⇩</span><span>导入成稿</span>
+    </button>
+    <button type="button" class="btn btn-dock-copy" data-action="copy-report" title="复制预览里的周报全文">
+      <span class="ico">⧉</span><span>复制报告</span>
+    </button>
   </div>
 
   <div class="import-overlay" id="importOverlay" aria-hidden="true">
-    <div class="import-dialog" role="dialog" aria-labelledby="importTitle">
+    <div class="import-dialog" role="dialog" aria-modal="true" aria-labelledby="importTitle">
       <h3 id="importTitle">导入成稿</h3>
-      <p>粘贴另一端「复制报告」得到的全文。导入会替换当前本周/下周内容。</p>
+      <p>粘贴另一端「复制报告」得到的全文，会替换当前的本周和下周内容。Ctrl + Enter 可直接确认。</p>
       <textarea id="importText" placeholder="本周工作重点：&#10;1、【广东MSB】……（80%）&#10;&#10;下周工作计划：&#10;1、【广东MSB】……"></textarea>
       <div class="import-actions">
-        <button type="button" class="btn btn-ghost" id="btnImportCancel">取消</button>
+        <button type="button" class="btn" id="btnImportCancel">取消</button>
         <button type="button" class="btn btn-primary" id="btnImportConfirm">确认导入</button>
       </div>
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite">
+    <span class="toast-icon" id="toastIcon" aria-hidden="true">✓</span>
+    <span id="toastText"></span>
+    <button type="button" class="toast-action" id="toastAction" hidden>撤销</button>
+  </div>
 
   <script>
-(function () {
+(() => {
   "use strict";
 
-  var STORAGE_KEY = "msb-weekly-report-v2";
-  var DEFAULT_TAGS = ["广东MSB", "香港MSB"];
-  var MIN_PROGRESS = 1;
-  var PROJECT_COLORS = [
+  const STORAGE_KEY = "msb-weekly-report-v2";
+  const LEGACY_STORAGE_KEY = "msb-weekly-report-v1";
+  const DEFAULT_TAGS = ["广东MSB", "香港MSB"];
+  const MIN_PROGRESS = 1;
+  const MAX_PROGRESS = 100;
+  const UNDONE_PROGRESS = 80;
+  // 进度变化后不立刻重排：等鼠标离开该行、输入框失焦后再整理，避免行在指针下跳走
+  const ORGANIZE_DELAY_MS = 1200;
+  const ORGANIZE_RETRY_MS = 500;
+  const ROW_MOTION_MS = 280;
+  const TOAST_MS = 4500;
+  const TOAST_WITH_ACTION_MS = 7000;
+  const SINGLE_COLUMN_MAX_WIDTH = 960;
+  const TITLE_MIN_HEIGHT = 38;
+  // 前两个项目颜色差异要大，保证广东 / 香港一眼区分
+  const PROJECT_COLORS = [
     { bg: "#E6F4FF", border: "#91CAFF", text: "#0958D9" },
-    { bg: "#F0F5FF", border: "#ADC6FF", text: "#2F54EB" },
-    { bg: "#FFF1F0", border: "#FFA39E", text: "#CF1322" },
-    { bg: "#FFF7E6", border: "#FFD591", text: "#D46B08" },
     { bg: "#F9F0FF", border: "#D3ADF7", text: "#531DAB" },
-    { bg: "#FEFFE6", border: "#FFFB8F", text: "#D4B106" },
-    { bg: "#F5F5F5", border: "#D9D9D9", text: "#595959" },
-    { bg: "#E6FFFB", border: "#87E8DE", text: "#08979C" }
+    { bg: "#E6FFFB", border: "#87E8DE", text: "#08979C" },
+    { bg: "#FFF0F6", border: "#FFADD2", text: "#C41D7F" },
+    { bg: "#FFF7E6", border: "#FFD591", text: "#D46B08" },
+    { bg: "#F0F5FF", border: "#ADC6FF", text: "#1D39C4" },
+    { bg: "#FCFFE6", border: "#D3F261", text: "#5B8C00" },
+    { bg: "#F5F5F5", border: "#D9D9D9", text: "#595959" }
   ];
 
-  var state = {
+  const state = {
     weekKey: "",
     tags: DEFAULT_TAGS.slice(),
+    lastTag: "",
     thisWeek: [],
     nextWeek: []
   };
 
-  var els = {
+  const els = {
+    layout: document.getElementById("layout"),
     thisWeekRows: document.getElementById("thisWeekRows"),
     nextWeekRows: document.getElementById("nextWeekRows"),
     preview: document.getElementById("preview"),
-    newTag: document.getElementById("newTag"),
+    previewPanel: document.getElementById("previewPanel"),
     tagChips: document.getElementById("tagChips"),
-    toast: document.getElementById("toast"),
+    tagAddForm: document.getElementById("tagAddForm"),
+    newTag: document.getElementById("newTag"),
+    weekChip: document.getElementById("weekChip"),
     fillBanner: document.getElementById("fillBanner"),
+    fillBannerIcon: document.getElementById("fillBannerIcon"),
     fillBannerMain: document.getElementById("fillBannerMain"),
     fillBannerDetail: document.getElementById("fillBannerDetail"),
     thisCount: document.getElementById("thisCount"),
-    nextCount: document.getElementById("nextCount")
+    nextCount: document.getElementById("nextCount"),
+    dock: document.getElementById("actionDock"),
+    scrollJump: document.getElementById("scrollJump"),
+    importOverlay: document.getElementById("importOverlay"),
+    importText: document.getElementById("importText"),
+    toast: document.getElementById("toast"),
+    toastIcon: document.getElementById("toastIcon"),
+    toastText: document.getElementById("toastText"),
+    toastAction: document.getElementById("toastAction")
   };
+
+  const organizeQueue = { timer: 0, rowId: "" };
+  const dragState = { id: "", tag: "" };
+  const toastState = { timer: 0, hovering: false, onAction: null };
+  let composing = false;
+  let pointerDown = false;
+
+  /* —— 基础工具 —— */
 
   function pad(n) {
     return n < 10 ? "0" + n : String(n);
   }
 
-  function isoWeekInfo(d) {
-    var date = new Date(d.getTime());
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() + 3 - ((date.getDay() + 6) % 7));
-    var week1 = new Date(date.getFullYear(), 0, 4);
-    var week =
-      1 +
-      Math.round(
-        ((date.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
-      );
-    return { year: date.getFullYear(), week: week };
+  function isoWeekInfo(date) {
+    const target = new Date(date.getTime());
+    target.setHours(0, 0, 0, 0);
+    target.setDate(target.getDate() + 3 - ((target.getDay() + 6) % 7));
+    const week1 = new Date(target.getFullYear(), 0, 4);
+    const week = 1 + Math.round(
+      ((target.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7
+    );
+    return { year: target.getFullYear(), week: week };
   }
 
   function currentWeekKey() {
-    var info = isoWeekInfo(new Date());
+    const info = isoWeekInfo(new Date());
     return info.year + "-W" + pad(info.week);
+  }
+
+  function weekNumberOf(weekKey) {
+    const matched = /^\d{4}-W(\d{2})$/.exec(String(weekKey || ""));
+    return matched ? Number(matched[1]) : 0;
+  }
+
+  function currentWeekRangeText() {
+    const now = new Date();
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+    return (monday.getMonth() + 1) + "/" + monday.getDate() + " – " + (sunday.getMonth() + 1) + "/" + sunday.getDate();
   }
 
   function uid() {
     return "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
 
-  function defaultTag() {
-    return state.tags[0] || "广东MSB";
-  }
-
-  function emptyThisItem() {
-    return {
-      id: uid(),
-      tag: defaultTag(),
-      title: "",
-      progress: ""
-    };
-  }
-
-  function emptyNextItem() {
-    return {
-      id: uid(),
-      tag: defaultTag(),
-      title: ""
-    };
-  }
-
-  function isBlankTitle(item) {
-    return !String(item.title || "").trim();
-  }
-
-  function normalizeTitle(title) {
-    return String(title || "").trim().replace(/\s+/g, " ");
-  }
-
-  /** 同一列表内，同项目下事项内容是否与其他行重复 */
-  function isDuplicateTitle(item, kind) {
-    var title = normalizeTitle(item.title);
-    if (!title) return false;
-    var list = kind === "this" ? state.thisWeek : state.nextWeek;
-    var count = 0;
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].tag === item.tag && normalizeTitle(list[i].title) === title) {
-        count += 1;
-        if (count > 1) return true;
-      }
-    }
-    return false;
-  }
-
-  function clampProgress(value) {
-    var n = Number(value);
-    if (isNaN(n)) n = MIN_PROGRESS;
-    return Math.max(MIN_PROGRESS, Math.min(100, Math.round(n)));
-  }
-
-  function isBadProgress(item) {
-    var n = Number(item.progress);
-    if (isNaN(n)) return true;
-    return n < MIN_PROGRESS || n > 100;
-  }
-
-  function isRowIncomplete(item, kind) {
-    if (isBlankTitle(item)) return true;
-    if (kind === "this" && isBadProgress(item)) return true;
-    if (isDuplicateTitle(item, kind)) return true;
-    return false;
-  }
-
-  function rowTipText(item, kind) {
-    if (isBlankTitle(item)) {
-      return kind === "this" ? "事项内容还没填" : "计划事项还没填";
-    }
-    if (isDuplicateTitle(item, kind)) {
-      return "同一项目下事项内容不能重复";
-    }
-    if (kind === "this" && isBadProgress(item)) {
-      return "进度还没填，请填 1～100";
-    }
-    return "";
-  }
-
-  function countDuplicates(list) {
-    var seen = {};
-    var dup = 0;
-    list.forEach(function (item) {
-      var title = normalizeTitle(item.title);
-      if (!title) return;
-      var key = String(item.tag || "") + "\0" + title;
-      if (seen[key]) {
-        if (seen[key] === 1) dup += 1;
-        dup += 1;
-        seen[key] += 1;
-      } else {
-        seen[key] = 1;
-      }
-    });
-    return dup;
-  }
-
-  function getFillStatus() {
-    var thisEmpty = state.thisWeek.filter(isBlankTitle).length;
-    var thisBadProgress = state.thisWeek.filter(function (item) {
-      return !isBlankTitle(item) && isBadProgress(item);
-    }).length;
-    var thisDup = countDuplicates(state.thisWeek);
-    var nextDup = countDuplicates(state.nextWeek);
-    var nextEmpty = state.nextWeek.filter(isBlankTitle).length;
-    var thisFilled = state.thisWeek.length - thisEmpty;
-    var nextFilled = state.nextWeek.length - nextEmpty;
-    var complete =
-      thisFilled > 0 &&
-      nextFilled > 0 &&
-      thisEmpty === 0 &&
-      nextEmpty === 0 &&
-      thisBadProgress === 0 &&
-      thisDup === 0 &&
-      nextDup === 0;
-    return {
-      thisEmpty: thisEmpty,
-      thisBadProgress: thisBadProgress,
-      thisDup: thisDup,
-      nextDup: nextDup,
-      nextEmpty: nextEmpty,
-      thisFilled: thisFilled,
-      nextFilled: nextFilled,
-      complete: complete
-    };
-  }
-
-  function showToast(msg, isWarn) {
-    els.toast.textContent = msg;
-    els.toast.classList.toggle("is-warn", !!isWarn);
-    els.toast.classList.add("show");
-    clearTimeout(showToast._t);
-    showToast._hovering = false;
-    scheduleToastHide(4500);
-  }
-
-  function scheduleToastHide(delayMs) {
-    clearTimeout(showToast._t);
-    showToast._t = setTimeout(function () {
-      if (showToast._hovering) return;
-      els.toast.classList.remove("show");
-    }, delayMs);
-  }
-
-  function hideToastSoon() {
-    scheduleToastHide(1200);
-  }
-
-  function migrateOldStorage() {
-    try {
-      var oldRaw = localStorage.getItem("msb-weekly-report-v1");
-      if (!oldRaw || localStorage.getItem(STORAGE_KEY)) return;
-      var old = JSON.parse(oldRaw);
-      if (!old || typeof old !== "object") return;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        weekKey: currentWeekKey(),
-        tags: Array.isArray(old.tags) && old.tags.length ? old.tags : DEFAULT_TAGS.slice(),
-        thisWeek: Array.isArray(old.thisWeek) ? old.thisWeek : [],
-        nextWeek: Array.isArray(old.nextWeek) ? old.nextWeek : []
-      }));
-    } catch (err) { /* ignore */ }
-  }
-
-  function loadState() {
-    migrateOldStorage();
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return false;
-      var data = JSON.parse(raw);
-      if (!data || typeof data !== "object") return false;
-      state.weekKey = data.weekKey || currentWeekKey();
-      state.tags = Array.isArray(data.tags) && data.tags.length ? data.tags : DEFAULT_TAGS.slice();
-      state.thisWeek = Array.isArray(data.thisWeek) ? data.thisWeek : [];
-      state.nextWeek = Array.isArray(data.nextWeek) ? data.nextWeek : [];
-      state.thisWeek.forEach(function (item) {
-        if (item.progress === 0 || item.progress === "0") item.progress = "";
-      });
-      return true;
-    } catch (err) {
-      return false;
-    }
-  }
-
-  function saveState() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        weekKey: state.weekKey,
-        tags: state.tags,
-        thisWeek: state.thisWeek,
-        nextWeek: state.nextWeek
-      }));
-    } catch (err) {
-      showToast("本地保存失败", true);
-    }
-  }
-
-  function groupByProject(items) {
-    var tagOrder = [];
-    var buckets = {};
-    items.forEach(function (item) {
-      var tag = String(item.tag || "").trim() || defaultTag();
-      if (!buckets[tag]) {
-        buckets[tag] = [];
-        tagOrder.push(tag);
-      }
-      buckets[tag].push(item);
-    });
-    var grouped = [];
-    tagOrder.forEach(function (tag) {
-      // 同项目内按进度正序（小到大）
-      buckets[tag].sort(function (left, right) {
-        var leftProgress = Number(left.progress);
-        var rightProgress = Number(right.progress);
-        if (isNaN(leftProgress)) leftProgress = 0;
-        if (isNaN(rightProgress)) rightProgress = 0;
-        return leftProgress - rightProgress;
-      });
-      for (var i = 0; i < buckets[tag].length; i++) {
-        grouped.push(buckets[tag][i]);
-      }
-    });
-    return grouped;
-  }
-
-  function projectColor(tag) {
-    var name = String(tag || "").trim() || defaultTag();
-    var idx = state.tags.indexOf(name);
-    if (idx < 0) {
-      var hash = 0;
-      for (var i = 0; i < name.length; i++) {
-        hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
-      }
-      idx = Math.abs(hash) % PROJECT_COLORS.length;
-    } else {
-      idx = idx % PROJECT_COLORS.length;
-    }
-    return PROJECT_COLORS[idx];
-  }
-
-  function projectColorStyle(tag) {
-    var color = projectColor(tag);
-    return (
-      "--proj-bg:" + color.bg + ";" +
-      "--proj-border:" + color.border + ";" +
-      "--proj-text:" + color.text
-    );
-  }
-
-  function buildReportText(itemsThis, itemsNext) {
-    var lines = ["本周工作重点："];
-    var thisItems = (itemsThis || state.thisWeek).filter(function (item) {
-      return !isBlankTitle(item);
-    });
-    if (thisItems.length === 0) {
-      lines.push("（暂无）");
-    } else {
-      thisItems.forEach(function (item, index) {
-        var progress = clampProgress(item.progress);
-        lines.push(
-          (index + 1) + "、【" + String(item.tag || "").trim() + "】" +
-          normalizeTitle(item.title) +
-          (isBadProgress(item) ? "" : "（" + progress + "%）")
-        );
-      });
-    }
-    lines.push("");
-    lines.push("下周工作计划：");
-    var nextItems = (itemsNext || state.nextWeek).filter(function (item) {
-      return !isBlankTitle(item);
-    });
-    if (nextItems.length === 0) {
-      lines.push("（暂无）");
-    } else {
-      nextItems.forEach(function (item, index) {
-        lines.push(
-          (index + 1) + "、【" + String(item.tag || "").trim() + "】" +
-          normalizeTitle(item.title)
-        );
-      });
-    }
-    return lines.join("\n");
-  }
-
-  function buildPreviewHtml() {
-    var html = [];
-    html.push("<div class=\"preview-section-title\">本周工作重点：</div>");
-    var thisItems = state.thisWeek.filter(function (item) {
-      return !isBlankTitle(item);
-    });
-    if (thisItems.length === 0) {
-      html.push("<div class=\"preview-empty\">（暂无）</div>");
-    } else {
-      thisItems.forEach(function (item, index) {
-        var progress = clampProgress(item.progress);
-        var tag = String(item.tag || "").trim();
-        html.push(
-          "<div class=\"preview-item\" style=\"" + projectColorStyle(tag) + "\">" +
-            "<span class=\"preview-idx\">" + (index + 1) + "、</span>" +
-            "<span class=\"preview-tag\">【" + escapeHtml(tag) + "】</span>" +
-            escapeHtml(normalizeTitle(item.title)) +
-            (isBadProgress(item) ? "" : "<span class=\"preview-progress\">（" + progress + "%）</span>") +
-          "</div>"
-        );
-      });
-    }
-    html.push("<div class=\"preview-section-title\">下周工作计划：</div>");
-    var nextItems = state.nextWeek.filter(function (item) {
-      return !isBlankTitle(item);
-    });
-    if (nextItems.length === 0) {
-      html.push("<div class=\"preview-empty\">（暂无）</div>");
-    } else {
-      nextItems.forEach(function (item, index) {
-        var tag = String(item.tag || "").trim();
-        html.push(
-          "<div class=\"preview-item\" style=\"" + projectColorStyle(tag) + "\">" +
-            "<span class=\"preview-idx\">" + (index + 1) + "、</span>" +
-            "<span class=\"preview-tag\">【" + escapeHtml(tag) + "】</span>" +
-            escapeHtml(normalizeTitle(item.title)) +
-          "</div>"
-        );
-      });
-    }
-    return html.join("");
-  }
-
-  function applyOrganizeByProject() {
-    var beforeThis = state.thisWeek.map(function (item) { return item.id; }).join(",");
-    var beforeNext = state.nextWeek.map(function (item) { return item.id; }).join(",");
-    state.thisWeek = groupByProject(state.thisWeek);
-    state.nextWeek = groupByProject(state.nextWeek);
-    var changed =
-      beforeThis !== state.thisWeek.map(function (item) { return item.id; }).join(",") ||
-      beforeNext !== state.nextWeek.map(function (item) { return item.id; }).join(",");
-    if (changed) {
-      saveState();
-      renderAll();
-    }
-    return changed;
-  }
-
-  function organizeByProject() {
-    var changed = applyOrganizeByProject();
-    showToast(changed ? "列表已按项目整理（预览同步为当前列表顺序）" : "已经是整理后的顺序");
-  }
-
-  function tagSelectHtml(selected) {
-    var current = selected || defaultTag();
-    var options = [];
-    if (selected && state.tags.indexOf(selected) < 0) {
-      options.push(
-        "<button type=\"button\" class=\"tag-select-option is-active\" data-value=\"" +
-          escapeAttr(selected) + "\">" + escapeHtml(selected) + "（已删除）</button>"
-      );
-    }
-    state.tags.forEach(function (tag) {
-      var active = tag === current ? " is-active" : "";
-      options.push(
-        "<button type=\"button\" class=\"tag-select-option" + active + "\" data-value=\"" +
-          escapeAttr(tag) + "\">" + escapeHtml(tag) + "</button>"
-      );
-    });
-    return (
-      "<div class=\"tag-select\" data-field=\"tag\">" +
-        "<button type=\"button\" class=\"tag-select-trigger\" title=\"" + escapeAttr(current) + "\">" +
-          "<span class=\"tag-select-label\">" + escapeHtml(current) + "</span>" +
-          "<span class=\"tag-select-caret\">▾</span>" +
-        "</button>" +
-        "<div class=\"tag-select-menu\">" + options.join("") + "</div>" +
-      "</div>"
-    );
-  }
-
-  function escapeHtml(str) {
-    return String(str)
+  function escapeHtml(value) {
+    return String(value)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
   }
 
-  function escapeAttr(str) {
-    return escapeHtml(str);
+  function cssEscape(value) {
+    if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(value);
+    return String(value).replace(/["\\]/g, "\\$&");
   }
 
-  function renderTags() {
-    if (!state.tags.length) {
-      els.tagChips.innerHTML = "<span class=\"empty\" style=\"border:none;padding:4px 0;\">还没有标签，请先添加</span>";
+  function shorten(text, maxLength) {
+    return text.length > maxLength ? text.slice(0, maxLength) + "…" : text;
+  }
+
+  function prefersReducedMotion() {
+    return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  /* —— 数据口径 —— */
+
+  function listOf(kind) {
+    return kind === "this" ? state.thisWeek : state.nextWeek;
+  }
+
+  function containerOf(kind) {
+    return kind === "this" ? els.thisWeekRows : els.nextWeekRows;
+  }
+
+  function primaryTag() {
+    return state.tags[0] || DEFAULT_TAGS[0];
+  }
+
+  function preferredNewTag() {
+    return state.tags.indexOf(state.lastTag) >= 0 ? state.lastTag : primaryTag();
+  }
+
+  function tagOf(item) {
+    return String(item.tag || "").trim() || primaryTag();
+  }
+
+  function normalizeTitle(title) {
+    return String(title || "").trim().replace(/\s+/g, " ");
+  }
+
+  function isBlankTitle(item) {
+    return !normalizeTitle(item.title);
+  }
+
+  function isFilled(item) {
+    return !isBlankTitle(item);
+  }
+
+  function isEmptyProgress(item) {
+    return item.progress === "" || item.progress === null || item.progress === undefined;
+  }
+
+  function clampProgress(value) {
+    let n = Number(value);
+    if (isNaN(n)) n = MIN_PROGRESS;
+    return Math.max(MIN_PROGRESS, Math.min(MAX_PROGRESS, Math.round(n)));
+  }
+
+  function isBadProgress(item) {
+    if (isEmptyProgress(item)) return true;
+    const n = Number(item.progress);
+    return isNaN(n) || n < MIN_PROGRESS || n > MAX_PROGRESS;
+  }
+
+  function isDone(item) {
+    return !isBadProgress(item) && Number(item.progress) >= MAX_PROGRESS;
+  }
+
+  function emptyItem(kind, tag) {
+    if (kind === "this") return { id: uid(), tag: tag, title: "", progress: "" };
+    return { id: uid(), tag: tag, title: "" };
+  }
+
+  function findItem(kind, id) {
+    return listOf(kind).find((item) => item.id === id) || null;
+  }
+
+  /** 序号只数已填内容的行，与预览、复制出去的编号一一对应 */
+  function displayNumbers(list) {
+    const numbers = new Map();
+    let counter = 0;
+    list.forEach((item) => {
+      if (isBlankTitle(item)) return;
+      counter += 1;
+      numbers.set(item.id, counter);
+    });
+    return numbers;
+  }
+
+  /** 同一列表、同一项目下内容相同的另一行；没有返回 null */
+  function duplicatePeer(item, list) {
+    const title = normalizeTitle(item.title);
+    if (!title) return null;
+    const tag = tagOf(item);
+    return list.find((other) => other !== item && tagOf(other) === tag && normalizeTitle(other.title) === title) || null;
+  }
+
+  /** 行内提示：一次只报最需要先补的那一项 */
+  function rowTipText(item, kind, numbers) {
+    if (isBlankTitle(item)) return kind === "this" ? "请填写事项内容" : "请填写计划内容";
+    const peer = duplicatePeer(item, listOf(kind));
+    if (peer) return "和第 " + numbers.get(peer.id) + " 项内容重复，请合并或改写";
+    if (kind === "this" && isEmptyProgress(item)) return "请填写进度（1–100），做完可直接点「完成」";
+    if (kind === "this" && isBadProgress(item)) return "进度需在 1–100 之间";
+    return "";
+  }
+
+  /** 重复条数：同项目同内容出现 n 次计 n 条 */
+  function countDuplicates(list) {
+    const counts = new Map();
+    list.forEach((item) => {
+      const title = normalizeTitle(item.title);
+      if (!title) return;
+      const key = tagOf(item) + "\u0000" + title;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    let duplicated = 0;
+    counts.forEach((count) => {
+      if (count > 1) duplicated += count;
+    });
+    return duplicated;
+  }
+
+  function getFillStatus() {
+    const filledThis = state.thisWeek.filter(isFilled);
+    const thisNoProgress = filledThis.filter(isEmptyProgress).length;
+    const thisBadRange = filledThis.filter((item) => !isEmptyProgress(item) && isBadProgress(item)).length;
+    const status = {
+      thisFilled: filledThis.length,
+      nextFilled: state.nextWeek.filter(isFilled).length,
+      thisEmpty: state.thisWeek.length - filledThis.length,
+      nextEmpty: state.nextWeek.filter(isBlankTitle).length,
+      thisNoProgress: thisNoProgress,
+      thisBadRange: thisBadRange,
+      thisDup: countDuplicates(state.thisWeek),
+      nextDup: countDuplicates(state.nextWeek)
+    };
+    status.complete =
+      status.thisFilled > 0 &&
+      status.nextFilled > 0 &&
+      status.thisEmpty === 0 &&
+      status.nextEmpty === 0 &&
+      thisNoProgress === 0 &&
+      thisBadRange === 0 &&
+      status.thisDup === 0 &&
+      status.nextDup === 0;
+    return status;
+  }
+
+  /** 未填完整的原因清单；完整时返回空数组 */
+  function fillProblems(status) {
+    const problems = [];
+    if (status.thisFilled === 0) problems.push("本周工作重点还没写");
+    else if (status.thisEmpty) problems.push("本周有 " + status.thisEmpty + " 行空白");
+    if (status.thisNoProgress) problems.push(status.thisNoProgress + " 项没填进度");
+    if (status.thisBadRange) problems.push(status.thisBadRange + " 项进度不在 1–100");
+    if (status.thisDup) problems.push("本周有重复事项");
+    if (status.nextFilled === 0) problems.push("下周工作计划还没写");
+    else if (status.nextEmpty) problems.push("下周有 " + status.nextEmpty + " 行空白");
+    if (status.nextDup) problems.push("下周有重复事项");
+    return problems;
+  }
+
+  /* —— 提示条 —— */
+
+  /**
+   * 底部提示；带 onAction 时显示操作按钮（如撤销），停留更久。
+   * 鼠标悬停时不自动消失，方便看完长提示。
+   */
+  function showToast(message, options) {
+    const opts = options || {};
+    els.toastText.textContent = message;
+    els.toast.classList.toggle("is-warn", Boolean(opts.warn));
+    els.toastIcon.textContent = opts.warn ? "!" : "✓";
+    toastState.onAction = typeof opts.onAction === "function" ? opts.onAction : null;
+    els.toastAction.hidden = !toastState.onAction;
+    els.toastAction.textContent = opts.actionLabel || "撤销";
+    els.toast.classList.add("show");
+    toastState.hovering = false;
+    scheduleToastHide(toastState.onAction ? TOAST_WITH_ACTION_MS : TOAST_MS);
+  }
+
+  function scheduleToastHide(delayMs) {
+    clearTimeout(toastState.timer);
+    toastState.timer = setTimeout(() => {
+      if (!toastState.hovering) hideToast();
+    }, delayMs);
+  }
+
+  function hideToast() {
+    clearTimeout(toastState.timer);
+    els.toast.classList.remove("show");
+    toastState.onAction = null;
+  }
+
+  /* —— 本地存储 —— */
+
+  function migrateLegacyStorage() {
+    try {
+      const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (!legacyRaw || localStorage.getItem(STORAGE_KEY)) return;
+      const legacy = JSON.parse(legacyRaw);
+      if (!legacy || typeof legacy !== "object") return;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        weekKey: currentWeekKey(),
+        tags: legacy.tags,
+        thisWeek: legacy.thisWeek,
+        nextWeek: legacy.nextWeek
+      }));
+    } catch (err) {
+      console.error("旧版周报草稿迁移失败", err);
+    }
+  }
+
+  function sanitizeTags(rawTags) {
+    const tags = [];
+    (Array.isArray(rawTags) ? rawTags : []).forEach((tag) => {
+      const name = String(tag || "").trim();
+      if (name && tags.indexOf(name) < 0) tags.push(name);
+    });
+    return tags.length ? tags : DEFAULT_TAGS.slice();
+  }
+
+  /** 清洗存储里的事项：补 id、去重 id，进度 0 / 非数字视为未填 */
+  function sanitizeItems(rawItems, withProgress) {
+    if (!Array.isArray(rawItems)) return [];
+    const seenIds = new Set();
+    return rawItems
+      .filter((raw) => raw && typeof raw === "object")
+      .map((raw) => {
+        let id = typeof raw.id === "string" && raw.id ? raw.id : uid();
+        if (seenIds.has(id)) id = uid();
+        seenIds.add(id);
+        const item = { id: id, tag: String(raw.tag || "").trim(), title: String(raw.title || "") };
+        if (withProgress) {
+          const n = Number(raw.progress);
+          const empty = raw.progress === "" || raw.progress === null || raw.progress === undefined;
+          item.progress = empty || isNaN(n) || n === 0 ? "" : Math.round(n);
+        }
+        return item;
+      });
+  }
+
+  /** 读取草稿；没有草稿或数据损坏返回 false */
+  function loadState() {
+    migrateLegacyStorage();
+    let data = null;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
+      data = JSON.parse(raw);
+    } catch (err) {
+      console.error("读取周报草稿失败", err);
+      return false;
+    }
+    if (!data || typeof data !== "object") return false;
+    state.weekKey = typeof data.weekKey === "string" ? data.weekKey : currentWeekKey();
+    state.tags = sanitizeTags(data.tags);
+    state.thisWeek = sanitizeItems(data.thisWeek, true);
+    state.nextWeek = sanitizeItems(data.nextWeek, false);
+    // 事项里用到但不在项目列表的标签补回列表，保证每个分组都能选、能加
+    state.thisWeek.concat(state.nextWeek).forEach((item) => {
+      if (!item.tag) item.tag = primaryTag();
+      if (state.tags.indexOf(item.tag) < 0) state.tags.push(item.tag);
+    });
+    state.lastTag = state.tags.indexOf(data.lastTag) >= 0 ? data.lastTag : "";
+    return true;
+  }
+
+  function persist() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        weekKey: state.weekKey,
+        tags: state.tags,
+        lastTag: state.lastTag,
+        thisWeek: state.thisWeek,
+        nextWeek: state.nextWeek
+      }));
+    } catch (err) {
+      console.error("保存周报草稿失败", err);
+      showToast("本机保存失败：浏览器存储可能已满或被禁用，请先复制报告备份", { warn: true });
+    }
+  }
+
+  /** 用户编辑后保存：顺带把草稿归到当前周，「旧周草稿」提示随之消失 */
+  function commitEdit() {
+    state.weekKey = currentWeekKey();
+    persist();
+  }
+
+  /* —— 实时整理：项目顺序 → 本周按进度从低到高；下周保持填写先后 —— */
+
+  function groupOrderOf(list) {
+    const order = state.tags.slice();
+    list.forEach((item) => {
+      const tag = tagOf(item);
+      if (order.indexOf(tag) < 0) order.push(tag);
+    });
+    return order;
+  }
+
+  /** 进度未填 / 非法的排在本组最后，新加的空行自然落在组尾 */
+  function progressSortKey(item) {
+    return isBadProgress(item) ? Number.POSITIVE_INFINITY : clampProgress(item.progress);
+  }
+
+  function organizedCopy(list, kind) {
+    const order = groupOrderOf(list);
+    return list
+      .map((item, index) => ({ item: item, index: index, group: order.indexOf(tagOf(item)) }))
+      .sort((left, right) => {
+        if (left.group !== right.group) return left.group - right.group;
+        if (kind === "this") {
+          const leftKey = progressSortKey(left.item);
+          const rightKey = progressSortKey(right.item);
+          if (leftKey !== rightKey) return leftKey < rightKey ? -1 : 1;
+        }
+        return left.index - right.index;
+      })
+      .map((entry) => entry.item);
+  }
+
+  function sameOrder(left, right) {
+    if (left.length !== right.length) return false;
+    for (let i = 0; i < left.length; i++) {
+      if (left[i] !== right[i]) return false;
+    }
+    return true;
+  }
+
+  function isOrganized() {
+    return sameOrder(organizedCopy(state.thisWeek, "this"), state.thisWeek) &&
+      sameOrder(organizedCopy(state.nextWeek, "next"), state.nextWeek);
+  }
+
+  function organizeLists() {
+    state.thisWeek = organizedCopy(state.thisWeek, "this");
+    state.nextWeek = organizedCopy(state.nextWeek, "next");
+  }
+
+  function scheduleOrganize(rowId) {
+    if (rowId) organizeQueue.rowId = rowId;
+    clearTimeout(organizeQueue.timer);
+    organizeQueue.timer = setTimeout(runScheduledOrganize, ORGANIZE_DELAY_MS);
+  }
+
+  function clearScheduledOrganize() {
+    clearTimeout(organizeQueue.timer);
+    organizeQueue.timer = 0;
+    organizeQueue.rowId = "";
+  }
+
+  /**
+   * 正在操作时先不重排：输入法组字、按住鼠标、拖拽、下拉展开、
+   * 光标在行内输入框、鼠标还停在刚改进度的那一行。
+   */
+  function isOrganizeBlocked() {
+    if (composing || pointerDown || dragState.id) return true;
+    if (document.querySelector(".tag-select.open")) return true;
+    const active = document.activeElement;
+    if (active && active.closest && active.closest(".rows") && active.hasAttribute("data-field")) return true;
+    const row = findRowElement(organizeQueue.rowId);
+    return Boolean(row && row.matches(":hover"));
+  }
+
+  function runScheduledOrganize() {
+    organizeQueue.timer = 0;
+    if (isOrganizeBlocked()) {
+      organizeQueue.timer = setTimeout(runScheduledOrganize, ORGANIZE_RETRY_MS);
       return;
     }
-    els.tagChips.innerHTML = state.tags.map(function (tag) {
-      return (
-        "<span class=\"tag-chip\" title=\"" + escapeAttr(tag) + "\">" +
-          "<span class=\"tag-chip-text\">" + escapeHtml(tag) + "</span>" +
-          "<button type=\"button\" data-action=\"del-tag\" data-tag=\"" + escapeAttr(tag) +
-          "\" title=\"删除标签\">×</button>" +
-        "</span>"
-      );
+    flushOrganize();
+  }
+
+  /** 立刻执行挂起的整理（复制前等场景）；顺序本来就对时只清掉挂起状态 */
+  function flushOrganize() {
+    const rowId = organizeQueue.rowId;
+    clearScheduledOrganize();
+    if (isOrganized()) return;
+    renderAll({ animate: true, highlightId: rowId });
+    persist();
+  }
+
+  /* —— 颜色与文本 —— */
+
+  function projectColor(tag) {
+    const name = String(tag || "").trim() || primaryTag();
+    let index = state.tags.indexOf(name);
+    if (index < 0) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0;
+      }
+      index = Math.abs(hash);
+    }
+    return PROJECT_COLORS[index % PROJECT_COLORS.length];
+  }
+
+  function projectColorStyle(tag) {
+    const color = projectColor(tag);
+    return "--proj-bg:" + color.bg + ";--proj-border:" + color.border + ";--proj-text:" + color.text;
+  }
+
+  function reportLines(kind) {
+    return listOf(kind).filter(isFilled).map((item, index) => {
+      const head = (index + 1) + "、【" + tagOf(item) + "】" + normalizeTitle(item.title);
+      if (kind !== "this" || isBadProgress(item)) return head;
+      return head + "（" + clampProgress(item.progress) + "%）";
+    });
+  }
+
+  /** 复制出去的纯文本，格式需与 parseReportText 保持一致 */
+  function buildReportText() {
+    const thisLines = reportLines("this");
+    const nextLines = reportLines("next");
+    return ["本周工作重点："]
+      .concat(thisLines.length ? thisLines : ["（暂无）"])
+      .concat(["", "下周工作计划："])
+      .concat(nextLines.length ? nextLines : ["（暂无）"])
+      .join("\n");
+  }
+
+  function previewSectionHtml(kind, title) {
+    const items = listOf(kind).filter(isFilled);
+    const body = items.length
+      ? items.map((item, index) => {
+        const tag = tagOf(item);
+        const progress = kind === "this" && !isBadProgress(item)
+          ? `<span class="preview-progress">（${clampProgress(item.progress)}%）</span>`
+          : "";
+        return `<div class="preview-item" style="${projectColorStyle(tag)}">` +
+          `<span class="preview-idx">${index + 1}、</span>` +
+          `<span class="preview-tag">【${escapeHtml(tag)}】</span>` +
+          escapeHtml(normalizeTitle(item.title)) + progress +
+          "</div>";
+      }).join("")
+      : '<div class="preview-empty">（暂无）</div>';
+    return `<div class="preview-section-title">${title}</div>${body}`;
+  }
+
+  /* —— 渲染 —— */
+
+  function renderTags() {
+    els.tagChips.innerHTML = state.tags.map((tag) => {
+      const safeTag = escapeHtml(tag);
+      return `<span class="tag-chip" style="${projectColorStyle(tag)}" title="${safeTag}">` +
+        `<span class="tag-chip-text">${safeTag}</span>` +
+        `<button type="button" data-action="del-tag" data-tag="${safeTag}" title="删除项目「${safeTag}」" aria-label="删除项目 ${safeTag}">×</button>` +
+        "</span>";
     }).join("");
   }
 
-  function indexCellHtml(index) {
-    return (
-      "<div class=\"row-index\" data-drag-handle title=\"按住拖拽排序\">" +
-        "<span class=\"grip\">⋮⋮</span>" +
-        "<span class=\"num\">" + (index + 1) + "</span>" +
-      "</div>"
-    );
+  /** 只有一个项目时不显示「换项目」 */
+  function tagSelectHtml(item) {
+    if (state.tags.length <= 1) return "";
+    const current = tagOf(item);
+    const options = state.tags.map((tag) => {
+      const safeTag = escapeHtml(tag);
+      const active = tag === current ? " is-active" : "";
+      return `<button type="button" class="tag-select-option${active}" data-value="${safeTag}" style="${projectColorStyle(tag)}" role="option">${safeTag}</button>`;
+    }).join("");
+    return '<div class="tag-select">' +
+      '<button type="button" class="tag-select-trigger" title="把这一条移到其他项目" aria-haspopup="listbox">换项目<span class="tag-select-caret">▾</span></button>' +
+      `<div class="tag-select-menu" role="listbox">${options}</div>` +
+      "</div>";
   }
 
-  function renderRows() {
-    if (state.thisWeek.length === 0) {
-      els.thisWeekRows.innerHTML =
-        "<div class=\"empty is-warn\">本周还没有事项。点底部「本周事项」添加。</div>";
-    } else {
-      els.thisWeekRows.innerHTML = state.thisWeek.map(function (item, index) {
-        var incomplete = isRowIncomplete(item, "this") ? " is-incomplete" : "";
-        var progressEmpty = isBadProgress(item);
-        var progress = progressEmpty ? "" : clampProgress(item.progress);
-        var done = !incomplete && progress !== "" && Number(progress) >= 100;
-        var doneClass = done ? " is-done" : "";
-        return (
-          "<div class=\"row" + incomplete + doneClass + "\" data-id=\"" + item.id + "\" data-kind=\"this\">" +
-            indexCellHtml(index) +
-            tagSelectHtml(item.tag) +
-            "<textarea data-field=\"title\" rows=\"1\" placeholder=\"必填：写清楚做了什么\">" +
-              escapeHtml(item.title || "") + "</textarea>" +
-            "<div class=\"progress-wrap" + (done ? " is-done" : "") + "\">" +
-              "<button type=\"button\" class=\"btn btn-step\" data-action=\"step-progress\" data-delta=\"-5\" title=\"减少 5%\">−</button>" +
-              "<input type=\"number\" data-field=\"progressNum\" min=\"" + MIN_PROGRESS +
-                "\" max=\"100\" step=\"1\" placeholder=\"进度\" value=\"" + progress + "\" />" +
-              "<span class=\"unit\">%</span>" +
-              "<button type=\"button\" class=\"btn btn-step\" data-action=\"step-progress\" data-delta=\"5\" title=\"增加 5%\">+</button>" +
-              "<button type=\"button\" class=\"btn btn-done\" data-action=\"done\" title=\"一键设为完成\">完成</button>" +
-              "<button type=\"button\" class=\"done-tag\" data-action=\"undone\" title=\"点击可改回进行中\">已完成</button>" +
-            "</div>" +
-            "<button type=\"button\" class=\"btn btn-danger\" data-action=\"remove\">删除</button>" +
-            "<div class=\"row-tip\">" + escapeHtml(rowTipText(item, "this")) + "</div>" +
-          "</div>"
-        );
-      }).join("");
+  function indexHtml(number, draggable) {
+    const label = number ? String(number) : "–";
+    if (!draggable) {
+      return `<div class="row-index" title="序号与预览、复制结果一致"><span class="num">${label}</span></div>`;
     }
-
-    if (state.nextWeek.length === 0) {
-      els.nextWeekRows.innerHTML =
-        "<div class=\"empty is-warn\">下周计划还是空的。点底部「下周计划」或「未完成写入下周」。</div>";
-    } else {
-      els.nextWeekRows.innerHTML = state.nextWeek.map(function (item, index) {
-        var incomplete = isRowIncomplete(item, "next") ? " is-incomplete" : "";
-        return (
-          "<div class=\"row next" + incomplete + "\" data-id=\"" + item.id + "\" data-kind=\"next\">" +
-            indexCellHtml(index) +
-            tagSelectHtml(item.tag) +
-            "<textarea data-field=\"title\" rows=\"1\" placeholder=\"必填：下周要做什么\">" +
-              escapeHtml(item.title || "") + "</textarea>" +
-            "<button type=\"button\" class=\"btn btn-danger\" data-action=\"remove\">删除</button>" +
-            "<div class=\"row-tip\">" + escapeHtml(rowTipText(item, "next")) + "</div>" +
-          "</div>"
-        );
-      }).join("");
-    }
-    autoGrowAllTitles();
+    return '<div class="row-index is-draggable" data-drag-handle title="按住拖动，调整同项目内的先后">' +
+      `<span class="grip" aria-hidden="true">⋮⋮</span><span class="num">${label}</span></div>`;
   }
 
-  function autoGrowTitle(el) {
-    if (!el) return;
-    el.style.height = "0px";
-    el.style.height = Math.max(el.scrollHeight, 42) + "px";
+  function thisRowHtml(item, numbers) {
+    const tip = rowTipText(item, "this", numbers);
+    const done = !tip && isDone(item);
+    const titleInvalid = isBlankTitle(item) || Boolean(duplicatePeer(item, state.thisWeek));
+    const progressInvalid = isFilled(item) && isBadProgress(item);
+    const progressValue = isEmptyProgress(item) ? "" : escapeHtml(String(item.progress));
+    return `<div class="row${tip ? " is-incomplete" : ""}${done ? " is-done" : ""}" data-id="${escapeHtml(item.id)}" data-kind="this" data-tag="${escapeHtml(tagOf(item))}">` +
+      indexHtml(numbers.get(item.id), false) +
+      `<textarea class="row-title${titleInvalid ? " is-invalid" : ""}" data-field="title" rows="1" placeholder="做了什么（必填）" aria-label="本周事项内容">${escapeHtml(item.title || "")}</textarea>` +
+      '<div class="row-tools">' +
+        tagSelectHtml(item) +
+        `<div class="progress-wrap${done ? " is-done" : ""}">` +
+          '<button type="button" class="btn btn-step" data-action="step-progress" data-delta="-5" aria-label="进度减 5%">−</button>' +
+          `<input type="number" class="progress-input${progressInvalid ? " is-invalid" : ""}" data-field="progressNum" min="${MIN_PROGRESS}" max="${MAX_PROGRESS}" step="1" inputmode="numeric" placeholder="进度" value="${progressValue}" aria-label="进度百分比" />` +
+          '<span class="unit">%</span>' +
+          '<button type="button" class="btn btn-step" data-action="step-progress" data-delta="5" aria-label="进度加 5%">+</button>' +
+          '<button type="button" class="btn btn-done" data-action="done" title="进度设为 100%">完成</button>' +
+          `<button type="button" class="done-tag" data-action="undone" title="点击改回进行中（${UNDONE_PROGRESS}%）">✓ 已完成</button>` +
+        "</div>" +
+        '<button type="button" class="btn btn-remove" data-action="remove" title="删除这一条（可撤销）">删除</button>' +
+      "</div>" +
+      `<div class="row-tip">${escapeHtml(tip)}</div>` +
+      "</div>";
+  }
+
+  function nextRowHtml(item, numbers) {
+    const tip = rowTipText(item, "next", numbers);
+    const titleInvalid = isBlankTitle(item) || Boolean(duplicatePeer(item, state.nextWeek));
+    return `<div class="row next${tip ? " is-incomplete" : ""}" data-id="${escapeHtml(item.id)}" data-kind="next" data-tag="${escapeHtml(tagOf(item))}">` +
+      indexHtml(numbers.get(item.id), true) +
+      `<textarea class="row-title${titleInvalid ? " is-invalid" : ""}" data-field="title" rows="1" placeholder="下周要做什么（必填）" aria-label="下周计划内容">${escapeHtml(item.title || "")}</textarea>` +
+      '<div class="row-tools">' +
+        tagSelectHtml(item) +
+        '<button type="button" class="btn btn-remove" data-action="remove" title="删除这一条（可撤销）">删除</button>' +
+      "</div>" +
+      `<div class="row-tip">${escapeHtml(tip)}</div>` +
+      "</div>";
+  }
+
+  /** 每个项目一组（含暂无事项的项目），组头可直接在该项目下新增 */
+  function sectionHtml(kind) {
+    const list = listOf(kind);
+    const numbers = displayNumbers(list);
+    const rowHtml = kind === "this" ? thisRowHtml : nextRowHtml;
+    const kindLabel = kind === "this" ? "本周事项" : "下周计划";
+    const parts = [];
+    if (!list.length) {
+      parts.push(kind === "this"
+        ? '<div class="section-empty">本周还没有事项，点项目右侧「＋ 添加」开始填写</div>'
+        : '<div class="section-empty">还没有下周计划：点项目右侧「＋ 添加」，或用底部「未完成写入下周」</div>');
+    }
+    groupOrderOf(list).forEach((tag) => {
+      const items = list.filter((item) => tagOf(item) === tag);
+      const safeTag = escapeHtml(tag);
+      parts.push(
+        `<div class="group" style="${projectColorStyle(tag)}">` +
+          '<div class="group-head">' +
+            `<span class="group-name">${safeTag}</span>` +
+            `<span class="group-count">${items.length ? items.length + " 项" : "暂无"}</span>` +
+            `<button type="button" class="group-add" data-action="add-in-group" data-kind="${kind}" data-tag="${safeTag}" title="在「${safeTag}」下新增一条${kindLabel}">＋ 添加</button>` +
+          "</div>" +
+          (items.length ? `<div class="group-rows">${items.map((item) => rowHtml(item, numbers)).join("")}</div>` : "") +
+        "</div>"
+      );
+    });
+    return parts.join("");
+  }
+
+  function autoGrowTitle(field) {
+    field.style.height = "0px";
+    field.style.height = Math.max(field.scrollHeight + 2, TITLE_MIN_HEIGHT) + "px";
   }
 
   function autoGrowAllTitles() {
-    var run = function () {
-      var areas = document.querySelectorAll("textarea[data-field=\"title\"]");
-      for (var i = 0; i < areas.length; i++) {
-        autoGrowTitle(areas[i]);
-      }
+    const grow = () => {
+      document.querySelectorAll(".rows .row-title").forEach(autoGrowTitle);
     };
-    run();
-    requestAnimationFrame(run);
+    grow();
+    requestAnimationFrame(grow);
+  }
+
+  function renderRows() {
+    els.thisWeekRows.innerHTML = sectionHtml("this");
+    els.nextWeekRows.innerHTML = sectionHtml("next");
+    autoGrowAllTitles();
+  }
+
+  /** 输入时就地刷新行状态（提示、序号、高亮），不重建 DOM，保证光标与输入法不受影响 */
+  function syncRowState(row, item, kind, numbers) {
+    const tip = rowTipText(item, kind, numbers);
+    row.classList.toggle("is-incomplete", Boolean(tip));
+    row.querySelector(".row-tip").textContent = tip;
+    row.querySelector(".num").textContent = numbers.get(item.id) ? String(numbers.get(item.id)) : "–";
+    row.querySelector(".row-title").classList.toggle(
+      "is-invalid",
+      isBlankTitle(item) || Boolean(duplicatePeer(item, listOf(kind)))
+    );
+    if (kind !== "this") return;
+    const done = !tip && isDone(item);
+    row.classList.toggle("is-done", done);
+    row.querySelector(".progress-wrap").classList.toggle("is-done", done);
+    row.querySelector(".progress-input").classList.toggle("is-invalid", isFilled(item) && isBadProgress(item));
+  }
+
+  function syncSectionRows(kind) {
+    const list = listOf(kind);
+    const numbers = displayNumbers(list);
+    const container = containerOf(kind);
+    list.forEach((item) => {
+      const row = container.querySelector(`.row[data-id="${cssEscape(item.id)}"]`);
+      if (row) syncRowState(row, item, kind, numbers);
+    });
   }
 
   function updateFillBanner() {
-    var status = getFillStatus();
-    els.thisCount.textContent = status.thisFilled + " / " + state.thisWeek.length + " 项";
-    els.nextCount.textContent = status.nextFilled + " / " + state.nextWeek.length + " 项";
+    const status = getFillStatus();
+    els.thisCount.textContent = status.thisFilled + " 项";
+    els.nextCount.textContent = status.nextFilled + " 项";
     els.thisCount.classList.toggle(
       "has-gap",
-      status.thisEmpty > 0 || status.thisBadProgress > 0 || status.thisDup > 0 || status.thisFilled === 0
+      status.thisFilled === 0 || status.thisEmpty > 0 || status.thisNoProgress > 0 || status.thisBadRange > 0 || status.thisDup > 0
     );
-    els.nextCount.classList.toggle(
-      "has-gap",
-      status.nextEmpty > 0 || status.nextDup > 0 || status.nextFilled === 0
-    );
+    els.nextCount.classList.toggle("has-gap", status.nextFilled === 0 || status.nextEmpty > 0 || status.nextDup > 0);
 
     if (status.complete) {
       els.fillBanner.className = "banner is-ok";
-      els.fillBannerMain.textContent = "填写完整，可以复制发出去了";
-      els.fillBannerDetail.textContent =
-        "本周 " + status.thisFilled + " 项 · 下周 " + status.nextFilled + " 项";
+      els.fillBannerIcon.textContent = "✓";
+      els.fillBannerMain.textContent = "填写完整，可以复制发出了";
+      els.fillBannerDetail.textContent = "本周 " + status.thisFilled + " 项 · 下周 " + status.nextFilled + " 项";
       return;
     }
-
     els.fillBanner.className = "banner is-warn";
-    var parts = [];
-    if (status.thisFilled === 0) parts.push("本周工作重点还没写");
-    else if (status.thisEmpty > 0) parts.push("本周有 " + status.thisEmpty + " 行没填事项");
-    if (status.thisBadProgress > 0) parts.push("有 " + status.thisBadProgress + " 项进度还没填（需 1～100）");
-    if (status.thisDup > 0) parts.push("本周有重复事项");
-    if (status.nextFilled === 0) parts.push("下周工作计划还没写");
-    else if (status.nextEmpty > 0) parts.push("下周有 " + status.nextEmpty + " 行没填事项");
-    if (status.nextDup > 0) parts.push("下周有重复事项");
-    els.fillBannerMain.textContent = parts.join("；") || "请继续填写";
-    els.fillBannerDetail.textContent = "橙色高亮的是未填完整或重复的行";
+    els.fillBannerIcon.textContent = "!";
+    els.fillBannerMain.textContent = fillProblems(status).join("；");
+    const flagged = countFlaggedRows();
+    els.fillBannerDetail.textContent = flagged ? "橙色标出的 " + flagged + " 行需要补全" : "";
   }
 
-  function syncLayoutSplit() {
-    var layout = document.querySelector(".layout");
-    if (!layout) return;
+  function countFlaggedRows() {
+    let flagged = 0;
+    ["this", "next"].forEach((kind) => {
+      const list = listOf(kind);
+      const numbers = displayNumbers(list);
+      list.forEach((item) => {
+        if (rowTipText(item, kind, numbers)) flagged += 1;
+      });
+    });
+    return flagged;
+  }
 
-    var items = els.preview ? els.preview.querySelectorAll(".preview-item") : [];
-    if (window.innerWidth <= 960) {
+  /** 页头周次；草稿停在旧周且有内容时提示用「下周转本周」开新周 */
+  function updateWeekChip() {
+    const current = currentWeekKey();
+    const hasContent = state.thisWeek.some(isFilled) || state.nextWeek.some(isFilled);
+    const stale = Boolean(state.weekKey) && state.weekKey !== current && hasContent;
+    els.weekChip.classList.toggle("is-stale", stale);
+    if (stale) {
+      els.weekChip.textContent = "草稿停在第 " + weekNumberOf(state.weekKey) + " 周";
+      els.weekChip.title = "现在是第 " + weekNumberOf(current) + " 周。开始写新的一周可点右侧「下周转本周」；直接修改草稿后此提示会消失";
+      return;
+    }
+    els.weekChip.textContent = "第 " + weekNumberOf(current) + " 周 · " + currentWeekRangeText();
+    els.weekChip.title = "";
+  }
+
+  /** 桌面端按预览内容宽度动态分配左右栏，尽量让每条预览单行显示 */
+  function syncLayoutSplit() {
+    const layout = els.layout;
+    const items = els.preview.querySelectorAll(".preview-item");
+    if (window.innerWidth <= SINGLE_COLUMN_MAX_WIDTH) {
       layout.style.gridTemplateColumns = "";
-      for (var mobileIdx = 0; mobileIdx < items.length; mobileIdx++) {
-        items[mobileIdx].classList.add("is-wrap");
-      }
+      items.forEach((item) => item.classList.add("is-wrap"));
       return;
     }
 
-    var gap = 16;
-    var total = layout.clientWidth;
+    const gap = 16;
+    const total = layout.clientWidth;
     if (total < 640) return;
 
-    var editorMin = 400;
-    var previewChrome = 64;
-    var previewNeed = 280;
-    var itemIdx;
-    for (itemIdx = 0; itemIdx < items.length; itemIdx++) {
-      items[itemIdx].classList.remove("is-wrap");
-      previewNeed = Math.max(previewNeed, items[itemIdx].scrollWidth + previewChrome);
-    }
+    const editorMin = 440;
+    const previewChrome = 72;
+    let previewNeed = 300;
+    items.forEach((item) => {
+      item.classList.remove("is-wrap");
+      previewNeed = Math.max(previewNeed, item.scrollWidth + previewChrome);
+    });
 
-    var rowCount = state.thisWeek.length + state.nextWeek.length;
-    var editorNeed = rowCount <= 2 ? 440 : 520;
+    const rowCount = state.thisWeek.length + state.nextWeek.length;
+    let editorNeed = rowCount <= 2 ? 460 : 520;
     if (rowCount >= 8) editorNeed = 560;
 
-    var available = total - gap;
-    var previewW = Math.min(previewNeed, available - editorMin);
-    var editorW = available - previewW;
+    const available = total - gap;
+    let previewW = Math.min(previewNeed, available - editorMin);
+    let editorW = available - previewW;
 
     // 预览内容短：预览收窄，多留给填写区
     if (previewNeed < available * 0.38) {
-      previewW = Math.max(280, Math.min(previewNeed + 24, Math.floor(available * 0.4)));
+      previewW = Math.max(300, Math.min(previewNeed + 24, Math.floor(available * 0.4)));
       editorW = available - previewW;
     }
 
@@ -2263,7 +2170,7 @@
       previewW = Math.min(previewNeed, available - editorMin);
       editorW = available - previewW;
       if (editorW > editorNeed + 80) {
-        var give = Math.min(editorW - editorNeed, previewNeed - previewW);
+        const give = Math.min(editorW - editorNeed, previewNeed - previewW);
         if (give > 0) {
           editorW -= give;
           previewW += give;
@@ -2272,709 +2179,783 @@
     }
 
     // 填写区事项很少时进一步收窄左侧
-    if (rowCount <= 2 && editorW > 480 && previewW < previewNeed) {
-      var shift = Math.min(editorW - 440, previewNeed - previewW);
+    if (rowCount <= 2 && editorW > 500 && previewW < previewNeed) {
+      const shift = Math.min(editorW - 460, previewNeed - previewW);
       editorW -= shift;
       previewW += shift;
     }
 
-    layout.style.gridTemplateColumns =
-      Math.floor(editorW) + "px " + Math.floor(previewW) + "px";
+    layout.style.gridTemplateColumns = Math.floor(editorW) + "px " + Math.floor(previewW) + "px";
 
-    var fitWidth = Math.floor(previewW) - previewChrome;
-    for (itemIdx = 0; itemIdx < items.length; itemIdx++) {
-      items[itemIdx].classList.remove("is-wrap");
-      if (items[itemIdx].scrollWidth > fitWidth) {
-        items[itemIdx].classList.add("is-wrap");
-      }
-    }
+    const fitWidth = Math.floor(previewW) - previewChrome;
+    items.forEach((item) => {
+      item.classList.remove("is-wrap");
+      if (item.scrollWidth > fitWidth) item.classList.add("is-wrap");
+    });
   }
 
   function refreshPreview() {
-    els.preview.innerHTML = buildPreviewHtml();
+    els.preview.innerHTML = previewSectionHtml("this", "本周工作重点：") + previewSectionHtml("next", "下周工作计划：");
     updateFillBanner();
-    requestAnimationFrame(function () {
-      syncLayoutSplit();
+    updateWeekChip();
+    requestAnimationFrame(syncLayoutSplit);
+  }
+
+  function findRowElement(id) {
+    return id ? document.querySelector(`.rows .row[data-id="${cssEscape(id)}"]`) : null;
+  }
+
+  function captureFocus() {
+    const active = document.activeElement;
+    if (!active || !active.closest) return null;
+    const row = active.closest(".row");
+    const field = active.getAttribute("data-field");
+    if (!row || !field) return null;
+    const isTitle = field === "title";
+    return {
+      id: row.getAttribute("data-id"),
+      field: field,
+      start: isTitle ? active.selectionStart : null,
+      end: isTitle ? active.selectionEnd : null
+    };
+  }
+
+  function restoreFocus(snapshot) {
+    if (!snapshot) return;
+    const row = findRowElement(snapshot.id);
+    const field = row && row.querySelector(`[data-field="${snapshot.field}"]`);
+    if (!field || document.activeElement === field) return;
+    field.focus({ preventScroll: true });
+    if (snapshot.start !== null) field.setSelectionRange(snapshot.start, snapshot.end);
+  }
+
+  function focusRowTitle(id) {
+    const row = findRowElement(id);
+    if (!row) return;
+    row.querySelector(".row-title").focus({ preventScroll: true });
+    row.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  }
+
+  function captureRowTops() {
+    const tops = new Map();
+    document.querySelectorAll(".rows .row").forEach((row) => {
+      tops.set(row.getAttribute("data-id"), row.getBoundingClientRect().top);
+    });
+    return tops;
+  }
+
+  /** FLIP：重排后各行从旧位置滑到新位置，看得出谁挪去了哪 */
+  function playRowMotion(beforeTops) {
+    const moved = [];
+    document.querySelectorAll(".rows .row").forEach((row) => {
+      const before = beforeTops.get(row.getAttribute("data-id"));
+      if (before === undefined) return;
+      const delta = before - row.getBoundingClientRect().top;
+      if (Math.abs(delta) < 1) return;
+      row.style.transition = "none";
+      row.style.transform = "translateY(" + delta + "px)";
+      moved.push(row);
+    });
+    if (!moved.length) return;
+    void document.body.offsetHeight;
+    moved.forEach((row) => {
+      row.style.transition = "transform " + ROW_MOTION_MS + "ms cubic-bezier(0.2, 0.8, 0.2, 1)";
+      row.style.transform = "";
+      row.addEventListener("transitionend", () => {
+        row.style.transition = "";
+      }, { once: true });
     });
   }
 
-  function renderAll() {
+  function highlightRow(id, reveal) {
+    const row = findRowElement(id);
+    if (!row) return;
+    row.classList.remove("is-moved");
+    void row.offsetWidth;
+    row.classList.add("is-moved");
+    row.addEventListener("animationend", () => row.classList.remove("is-moved"), { once: true });
+    if (reveal) row.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  }
+
+  /**
+   * 整理并整体重绘；保留光标位置。
+   * animate：重排有滑动动画；highlightId：闪一下该行；reveal：把该行滚进视野。
+   */
+  function renderAll(options) {
+    const opts = options || {};
+    const beforeTops = opts.animate && !prefersReducedMotion() ? captureRowTops() : null;
+    const focus = captureFocus();
+    clearScheduledOrganize();
+    organizeLists();
     renderTags();
     renderRows();
     refreshPreview();
+    restoreFocus(focus);
+    if (beforeTops) playRowMotion(beforeTops);
+    if (opts.highlightId) highlightRow(opts.highlightId, Boolean(opts.reveal));
   }
 
-  function findItem(kind, id) {
-    var list = kind === "this" ? state.thisWeek : state.nextWeek;
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].id === id) return list[i];
-    }
-    return null;
-  }
-
-  function syncRowIncomplete(row, item, kind) {
-    var incomplete = isRowIncomplete(item, kind);
-    row.classList.toggle("is-incomplete", incomplete);
-    var tip = row.querySelector(".row-tip");
-    if (tip) tip.textContent = rowTipText(item, kind);
-    if (kind === "this") {
-      var done = !incomplete && Number(item.progress) >= 100;
-      row.classList.toggle("is-done", done);
-      var wrap = row.querySelector(".progress-wrap");
-      if (wrap) wrap.classList.toggle("is-done", done);
-    }
-  }
-
-  function syncAllRowHighlights(kind) {
-    var container = kind === "this" ? els.thisWeekRows : els.nextWeekRows;
-    var list = kind === "this" ? state.thisWeek : state.nextWeek;
-    list.forEach(function (item) {
-      var row = container.querySelector(".row[data-id=\"" + item.id + "\"]");
-      if (row) syncRowIncomplete(row, item, kind);
-    });
-  }
+  /* —— 行内交互 —— */
 
   function onRowsInput(event) {
-    var target = event.target;
-    var row = target.closest(".row");
-    if (!row) return;
-    var id = row.getAttribute("data-id");
-    var kind = row.getAttribute("data-kind");
-    var item = findItem(kind, id);
+    const target = event.target;
+    const field = target.getAttribute("data-field");
+    const row = target.closest(".row");
+    if (!field || !row) return;
+    const kind = row.getAttribute("data-kind");
+    const item = findItem(kind, row.getAttribute("data-id"));
     if (!item) return;
 
-    var field = target.getAttribute("data-field");
     if (field === "title") {
       item.title = target.value;
-      if (target.tagName === "TEXTAREA") autoGrowTitle(target);
-      saveState();
-      syncAllRowHighlights(kind);
+      autoGrowTitle(target);
+      commitEdit();
+      syncSectionRows(kind);
       refreshPreview();
       return;
-    } else if (field === "progressNum") {
-      var raw = String(target.value).trim();
+    }
+
+    if (field === "progressNum") {
+      const raw = String(target.value).trim();
       if (raw === "") {
         item.progress = "";
-        syncRowIncomplete(row, item, kind);
-        saveState();
-        refreshPreview();
-        return;
+      } else {
+        const typed = Number(raw);
+        if (isNaN(typed)) return;
+        item.progress = Math.round(typed);
       }
-      var typed = Number(raw);
-      if (isNaN(typed)) return;
-      item.progress = Math.round(typed);
-      syncRowIncomplete(row, item, kind);
-    } else {
+      commitEdit();
+      syncSectionRows("this");
+      refreshPreview();
+      scheduleOrganize(item.id);
+    }
+  }
+
+  /** 标题里回车 = 在同项目下紧接着新增一条；进度框回车 = 确认 */
+  function onRowsKeydown(event) {
+    if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return;
+    const target = event.target;
+    const field = target.getAttribute("data-field");
+    if (field === "progressNum") {
+      event.preventDefault();
+      target.blur();
       return;
     }
-    saveState();
-    refreshPreview();
+    if (field !== "title" || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return;
+    event.preventDefault();
+    const row = target.closest(".row");
+    const kind = row.getAttribute("data-kind");
+    const item = findItem(kind, row.getAttribute("data-id"));
+    if (!item || isBlankTitle(item)) return;
+    addItem(kind, tagOf(item), item.id);
   }
 
   function applyProgress(row, item, progress) {
-    var wasDone = Number(item.progress) >= 100;
     item.progress = clampProgress(progress);
-    var num = row.querySelector("[data-field=\"progressNum\"]");
-    if (num) num.value = item.progress;
-    syncRowIncomplete(row, item, "this");
-    saveState();
-    var nowDone = item.progress >= 100;
-    if (wasDone !== nowDone) {
-      renderAll();
-    } else {
-      refreshPreview();
-    }
+    const input = row.querySelector(".progress-input");
+    if (input) input.value = item.progress;
+    commitEdit();
+    syncSectionRows("this");
+    refreshPreview();
+    scheduleOrganize(item.id);
   }
 
-  function onProgressNumBlur(event) {
-    var target = event.target;
-    if (!target || target.getAttribute("data-field") !== "progressNum") return;
-    var row = target.closest(".row");
-    if (!row) return;
-    var item = findItem(row.getAttribute("data-kind"), row.getAttribute("data-id"));
+  /** 进度框失焦：空值保持未填，越界值收进 1–100 */
+  function onRowsFocusOut(event) {
+    const target = event.target;
+    if (target.getAttribute("data-field") !== "progressNum") return;
+    const row = target.closest(".row");
+    const item = row && findItem("this", row.getAttribute("data-id"));
     if (!item) return;
     if (String(target.value).trim() === "") {
-      item.progress = "";
-      if (target) target.value = "";
-      syncRowIncomplete(row, item, "this");
-      saveState();
-      refreshPreview();
+      if (!isEmptyProgress(item)) {
+        item.progress = "";
+        commitEdit();
+        syncSectionRows("this");
+        refreshPreview();
+      }
       return;
     }
-    applyProgress(row, item, target.value);
+    const clamped = clampProgress(target.value);
+    if (clamped !== item.progress || String(clamped) !== target.value) applyProgress(row, item, clamped);
   }
 
   function closeAllTagSelects(except) {
-    var opens = document.querySelectorAll(".tag-select.open");
-    for (var i = 0; i < opens.length; i++) {
-      if (except && opens[i] === except) continue;
-      opens[i].classList.remove("open");
-    }
+    document.querySelectorAll(".tag-select.open").forEach((select) => {
+      if (select !== except) select.classList.remove("open");
+    });
+  }
+
+  /** 换项目：立即移到新项目分组并滚过去，空白行顺手把光标放进内容框 */
+  function changeItemTag(row, nextTag) {
+    closeAllTagSelects();
+    if (!row) return;
+    const kind = row.getAttribute("data-kind");
+    const item = findItem(kind, row.getAttribute("data-id"));
+    const tag = String(nextTag || "").trim() || primaryTag();
+    if (!item || tagOf(item) === tag) return;
+    item.tag = tag;
+    state.lastTag = tag;
+    commitEdit();
+    renderAll({ animate: true, highlightId: item.id, reveal: true });
+    if (isBlankTitle(item)) focusRowTitle(item.id);
   }
 
   function onRowsClick(event) {
-    var tagSelect = event.target.closest(".tag-select");
-    if (tagSelect) {
-      var row = tagSelect.closest(".row");
-      var trigger = event.target.closest(".tag-select-trigger");
-      var option = event.target.closest(".tag-select-option");
-      if (trigger) {
-        var willOpen = !tagSelect.classList.contains("open");
-        closeAllTagSelects();
-        if (willOpen) tagSelect.classList.add("open");
-        return;
-      }
-      if (option && row) {
-        var kind = row.getAttribute("data-kind");
-        var item = findItem(kind, row.getAttribute("data-id"));
-        if (item) {
-          item.tag = option.getAttribute("data-value") || defaultTag();
-          saveState();
-          renderAll();
-        }
-        return;
-      }
+    const target = event.target;
+    const trigger = target.closest(".tag-select-trigger");
+    if (trigger) {
+      const select = trigger.closest(".tag-select");
+      const willOpen = !select.classList.contains("open");
+      closeAllTagSelects();
+      select.classList.toggle("open", willOpen);
+      return;
+    }
+    const option = target.closest(".tag-select-option");
+    if (option) {
+      changeItemTag(option.closest(".row"), option.getAttribute("data-value"));
+      return;
     }
 
-    var stepBtn = event.target.closest("[data-action=\"step-progress\"]");
-    if (stepBtn) {
-      var stepRow = stepBtn.closest(".row");
-      if (!stepRow) return;
-      var stepItem = findItem(stepRow.getAttribute("data-kind"), stepRow.getAttribute("data-id"));
-      if (!stepItem) return;
-      var delta = Number(stepBtn.getAttribute("data-delta")) || 0;
-      var current = Number(stepItem.progress);
-      if (isNaN(current)) current = 0;
-      applyProgress(stepRow, stepItem, current + delta);
+    const actionEl = target.closest("[data-action]");
+    if (!actionEl) return;
+    const action = actionEl.getAttribute("data-action");
+    if (action === "add-in-group") {
+      addItem(actionEl.getAttribute("data-kind"), actionEl.getAttribute("data-tag"));
       return;
     }
-    var doneBtn = event.target.closest("[data-action=\"done\"]");
-    if (doneBtn) {
-      var doneRow = doneBtn.closest(".row");
-      if (!doneRow) return;
-      var doneItem = findItem(doneRow.getAttribute("data-kind"), doneRow.getAttribute("data-id"));
-      if (!doneItem) return;
-      applyProgress(doneRow, doneItem, 100);
-      return;
-    }
-    var undoneBtn = event.target.closest("[data-action=\"undone\"]");
-    if (undoneBtn) {
-      var undoneRow = undoneBtn.closest(".row");
-      if (!undoneRow) return;
-      var undoneItem = findItem(undoneRow.getAttribute("data-kind"), undoneRow.getAttribute("data-id"));
-      if (!undoneItem) return;
-      applyProgress(undoneRow, undoneItem, 80);
-      return;
-    }
-    var btn = event.target.closest("[data-action=\"remove\"]");
-    if (!btn) return;
-    var row = btn.closest(".row");
+
+    const row = actionEl.closest(".row");
     if (!row) return;
-    var id = row.getAttribute("data-id");
-    var kind = row.getAttribute("data-kind");
-    if (kind === "this") {
-      state.thisWeek = state.thisWeek.filter(function (item) { return item.id !== id; });
-    } else {
-      state.nextWeek = state.nextWeek.filter(function (item) { return item.id !== id; });
+    const kind = row.getAttribute("data-kind");
+    const item = findItem(kind, row.getAttribute("data-id"));
+    if (!item) return;
+    if (action === "step-progress") {
+      let current = Number(item.progress);
+      if (isNaN(current)) current = 0;
+      applyProgress(row, item, current + (Number(actionEl.getAttribute("data-delta")) || 0));
+    } else if (action === "done") {
+      applyProgress(row, item, MAX_PROGRESS);
+    } else if (action === "undone") {
+      applyProgress(row, item, UNDONE_PROGRESS);
+    } else if (action === "remove") {
+      removeItem(kind, item.id);
     }
-    saveState();
-    renderAll();
   }
 
-  var dragState = { id: null, kind: null };
+  /* —— 下周计划拖拽：只在同一项目内调整先后 —— */
 
   function clearDropMarkers(container) {
-    var marked = container.querySelectorAll(".row.drop-before, .row.drop-after");
-    for (var i = 0; i < marked.length; i++) {
-      marked[i].classList.remove("drop-before", "drop-after");
-    }
+    container.querySelectorAll(".row.drop-before, .row.drop-after").forEach((row) => {
+      row.classList.remove("drop-before", "drop-after");
+    });
   }
 
-  function moveItem(kind, fromId, toId, placeAfter) {
-    var list = kind === "this" ? state.thisWeek : state.nextWeek;
-    var fromIndex = -1;
-    var toIndex = -1;
-    for (var i = 0; i < list.length; i++) {
-      if (list[i].id === fromId) fromIndex = i;
-      if (list[i].id === toId) toIndex = i;
-    }
-    if (fromIndex < 0 || toIndex < 0 || fromId === toId) return false;
-    var moved = list.splice(fromIndex, 1)[0];
-    toIndex = -1;
-    for (var j = 0; j < list.length; j++) {
-      if (list[j].id === toId) {
-        toIndex = j;
-        break;
-      }
-    }
+  function resetDrag() {
+    dragState.id = "";
+    dragState.tag = "";
+  }
+
+  function moveNextItem(fromId, toId, placeAfter) {
+    const list = state.nextWeek;
+    const fromIndex = list.findIndex((item) => item.id === fromId);
+    if (fromIndex < 0 || fromId === toId) return false;
+    const moved = list.splice(fromIndex, 1)[0];
+    const toIndex = list.findIndex((item) => item.id === toId);
     if (toIndex < 0) {
-      list.push(moved);
-    } else if (placeAfter) {
-      list.splice(toIndex + 1, 0, moved);
-    } else {
-      list.splice(toIndex, 0, moved);
+      list.splice(fromIndex, 0, moved);
+      return false;
     }
+    list.splice(placeAfter ? toIndex + 1 : toIndex, 0, moved);
     return true;
   }
 
-  function bindDrag(container) {
-    container.addEventListener("mousedown", function (event) {
-      var handle = event.target.closest("[data-drag-handle]");
-      if (!handle) return;
-      var row = handle.closest(".row");
-      if (!row) return;
-      row.setAttribute("draggable", "true");
+  function bindNextWeekDrag() {
+    const container = els.nextWeekRows;
+
+    container.addEventListener("mousedown", (event) => {
+      const handle = event.target.closest("[data-drag-handle]");
+      const row = handle && handle.closest(".row");
+      if (row) row.setAttribute("draggable", "true");
     });
 
-    container.addEventListener("dragstart", function (event) {
-      var row = event.target.closest(".row");
+    container.addEventListener("mouseup", (event) => {
+      const row = event.target.closest(".row");
+      if (row && !dragState.id) row.removeAttribute("draggable");
+    });
+
+    container.addEventListener("dragstart", (event) => {
+      const row = event.target.closest && event.target.closest(".row");
       if (!row || row.getAttribute("draggable") !== "true") {
         event.preventDefault();
         return;
       }
       dragState.id = row.getAttribute("data-id");
-      dragState.kind = row.getAttribute("data-kind");
+      dragState.tag = row.getAttribute("data-tag");
       row.classList.add("is-dragging");
       event.dataTransfer.effectAllowed = "move";
-      try {
-        event.dataTransfer.setData("text/plain", dragState.id);
-      } catch (err) { /* ignore */ }
+      event.dataTransfer.setData("text/plain", dragState.id);
     });
 
-    container.addEventListener("dragover", function (event) {
+    container.addEventListener("dragover", (event) => {
       if (!dragState.id) return;
-      var row = event.target.closest(".row");
-      if (!row || row.getAttribute("data-kind") !== dragState.kind) return;
-      if (row.getAttribute("data-id") === dragState.id) return;
+      const row = event.target.closest(".row");
+      if (!row || row.getAttribute("data-tag") !== dragState.tag || row.getAttribute("data-id") === dragState.id) return;
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
       clearDropMarkers(container);
-      var rect = row.getBoundingClientRect();
-      var before = event.clientY < rect.top + rect.height / 2;
-      row.classList.add(before ? "drop-before" : "drop-after");
+      const rect = row.getBoundingClientRect();
+      row.classList.add(event.clientY < rect.top + rect.height / 2 ? "drop-before" : "drop-after");
     });
 
-    container.addEventListener("dragleave", function (event) {
-      var row = event.target.closest(".row");
-      if (!row) return;
-      if (row.contains(event.relatedTarget)) return;
-      row.classList.remove("drop-before", "drop-after");
+    container.addEventListener("dragleave", (event) => {
+      const row = event.target.closest(".row");
+      if (row && !row.contains(event.relatedTarget)) row.classList.remove("drop-before", "drop-after");
     });
 
-    container.addEventListener("drop", function (event) {
+    container.addEventListener("drop", (event) => {
       if (!dragState.id) return;
-      var row = event.target.closest(".row");
-      if (!row || row.getAttribute("data-kind") !== dragState.kind) return;
+      const row = event.target.closest(".row");
+      if (!row || row.getAttribute("data-tag") !== dragState.tag) return;
       event.preventDefault();
-      var toId = row.getAttribute("data-id");
-      var placeAfter = row.classList.contains("drop-after");
+      const placeAfter = row.classList.contains("drop-after");
+      const fromId = dragState.id;
       clearDropMarkers(container);
-      if (moveItem(dragState.kind, dragState.id, toId, placeAfter)) {
-        saveState();
+      resetDrag();
+      if (moveNextItem(fromId, row.getAttribute("data-id"), placeAfter)) {
+        commitEdit();
         renderAll();
       }
-      dragState.id = null;
-      dragState.kind = null;
     });
 
-    container.addEventListener("dragend", function (event) {
-      var row = event.target.closest(".row");
+    container.addEventListener("dragend", (event) => {
+      const row = event.target.closest && event.target.closest(".row");
       if (row) {
         row.removeAttribute("draggable");
         row.classList.remove("is-dragging");
       }
       clearDropMarkers(container);
-      dragState.id = null;
-      dragState.kind = null;
+      resetDrag();
     });
   }
 
+  /* —— 项目 —— */
+
   function addTag() {
-    var tag = String(els.newTag.value || "").trim();
+    const tag = String(els.newTag.value || "").trim();
     if (!tag) {
-      showToast("请输入标签名", true);
+      showToast("请先输入项目名称", { warn: true });
+      els.newTag.focus();
       return;
     }
     if (state.tags.indexOf(tag) >= 0) {
-      showToast("标签已存在", true);
+      showToast("项目「" + tag + "」已经有了", { warn: true });
       return;
     }
     state.tags.push(tag);
     els.newTag.value = "";
-    saveState();
+    commitEdit();
     renderAll();
-    showToast("已添加标签");
+    showToast("已添加项目「" + tag + "」，可在它右侧「＋ 添加」事项");
   }
 
+  /** 删除项目：至少留一个；正在用它的事项改到剩下的第一个项目 */
   function deleteTag(tag) {
     if (state.tags.length <= 1) {
-      showToast("至少保留一个标签", true);
+      showToast("至少要保留一个项目", { warn: true });
       return;
     }
-    if (!window.confirm("删除标签「" + tag + "」？已用该标签的事项会保留文字，可再改选。")) {
-      return;
-    }
-    state.tags = state.tags.filter(function (item) { return item !== tag; });
-    var fallback = defaultTag();
-    state.thisWeek.forEach(function (item) {
-      if (item.tag === tag) item.tag = fallback;
+    const fallback = state.tags.find((name) => name !== tag);
+    const usedCount = state.thisWeek.concat(state.nextWeek).filter((item) => tagOf(item) === tag).length;
+    const message = usedCount
+      ? "删除项目「" + tag + "」？\n\n有 " + usedCount + " 条事项在用它，会改到「" + fallback + "」下。"
+      : "删除项目「" + tag + "」？";
+    if (!window.confirm(message)) return;
+    state.tags = state.tags.filter((name) => name !== tag);
+    state.thisWeek.concat(state.nextWeek).forEach((item) => {
+      if (tagOf(item) === tag) item.tag = fallback;
     });
-    state.nextWeek.forEach(function (item) {
-      if (item.tag === tag) item.tag = fallback;
-    });
-    saveState();
+    if (state.lastTag === tag) state.lastTag = "";
+    commitEdit();
     renderAll();
-    showToast("已删除标签");
+    showToast(usedCount
+      ? "已删除项目「" + tag + "」，" + usedCount + " 条事项改到「" + fallback + "」"
+      : "已删除项目「" + tag + "」");
   }
 
-  function carryIncomplete() {
-    var incomplete = state.thisWeek.filter(function (item) {
-      return !isBlankTitle(item) && clampProgress(item.progress) < 100;
-    });
-    if (incomplete.length === 0) {
-      showToast("没有未完成项可带入", true);
-      return;
-    }
-    var added = 0;
-    incomplete.forEach(function (item) {
-      var title = String(item.title).trim();
-      var tag = item.tag;
-      var exists = state.nextWeek.some(function (nextItem) {
-        return normalizeTitle(nextItem.title) === title && nextItem.tag === tag;
-      });
-      if (!exists) {
-        state.nextWeek.push({ id: uid(), tag: tag, title: title });
-        added += 1;
+  /* —— 事项增删与整批操作 —— */
+
+  /** 新增空白行并把光标放进去；afterId 有值时紧跟在该行后面 */
+  function addItem(kind, tag, afterId) {
+    const projectTag = state.tags.indexOf(tag) >= 0 ? tag : preferredNewTag();
+    const item = emptyItem(kind, projectTag);
+    const list = listOf(kind);
+    const afterIndex = afterId ? list.findIndex((entry) => entry.id === afterId) : -1;
+    if (afterIndex >= 0) list.splice(afterIndex + 1, 0, item);
+    else list.push(item);
+    state.lastTag = projectTag;
+    commitEdit();
+    renderAll();
+    focusRowTitle(item.id);
+  }
+
+  /** 删除一行；有内容的行给 7 秒撤销 */
+  function removeItem(kind, id) {
+    const list = listOf(kind);
+    const index = list.findIndex((item) => item.id === id);
+    if (index < 0) return;
+    const removed = list.splice(index, 1)[0];
+    commitEdit();
+    renderAll();
+    if (isBlankTitle(removed)) return;
+    showToast("已删除「" + shorten(normalizeTitle(removed.title), 18) + "」", {
+      actionLabel: "撤销",
+      onAction: () => {
+        const target = listOf(kind);
+        target.splice(Math.min(index, target.length), 0, removed);
+        commitEdit();
+        renderAll({ highlightId: removed.id, reveal: true });
+        showToast("已恢复");
       }
     });
-    saveState();
+  }
+
+  /** 本周进度未到 100% 的事项复制到下周；同项目同内容已存在则跳过 */
+  function carryIncomplete() {
+    const filled = state.thisWeek.filter(isFilled);
+    const candidates = filled.filter((item) => !isDone(item));
+    if (!candidates.length) {
+      showToast(filled.length ? "本周事项都已完成，没有要写入下周的" : "本周还没有事项", { warn: true });
+      return;
+    }
+    const additions = [];
+    let skipped = 0;
+    candidates.forEach((item) => {
+      const tag = tagOf(item);
+      const title = normalizeTitle(item.title);
+      const exists = state.nextWeek.concat(additions).some((next) => tagOf(next) === tag && normalizeTitle(next.title) === title);
+      if (exists) {
+        skipped += 1;
+        return;
+      }
+      additions.push({ id: uid(), tag: tag, title: String(item.title).trim() });
+    });
+    if (!additions.length) {
+      showToast("这 " + skipped + " 项未完成事项下周计划里已经有了");
+      return;
+    }
+    // 写入时顺手去掉下周的空白占位行，免得被提示「有空行」
+    state.nextWeek = state.nextWeek.filter(isFilled).concat(additions);
+    commitEdit();
     renderAll();
-    showToast(added ? "已带入 " + added + " 项" : "下周已包含这些项");
+    showToast("已写入下周 " + additions.length + " 项" + (skipped ? "（" + skipped + " 项下周已有，未重复添加）" : ""));
   }
 
   function findThisWeekProgress(tag, title) {
-    var norm = normalizeTitle(title);
-    for (var i = 0; i < state.thisWeek.length; i++) {
-      var item = state.thisWeek[i];
-      if (item.tag !== tag) continue;
-      if (normalizeTitle(item.title) !== norm) continue;
-      // 有有效进度才带回，避免把空进度盖成默认最小值
-      if (isBadProgress(item)) return "";
-      return clampProgress(item.progress);
-    }
-    return "";
+    const norm = normalizeTitle(title);
+    const matched = state.thisWeek.find((item) => tagOf(item) === tag && normalizeTitle(item.title) === norm);
+    // 有有效进度才带回，避免把空进度盖成最小值
+    return matched && !isBadProgress(matched) ? clampProgress(matched.progress) : "";
   }
 
+  /** 新一周：下周计划转成本周事项，同项目同名事项带回本周进度，下周清空 */
   function promoteNextToThis() {
-    var plans = state.nextWeek.filter(function (item) { return !isBlankTitle(item); });
-    if (plans.length === 0) {
-      showToast("下周计划是空的，没法转入", true);
+    const plans = state.nextWeek.filter(isFilled);
+    if (!plans.length) {
+      showToast("下周计划还是空的，没有可转入的内容", { warn: true });
       return;
     }
-    var hasThis = state.thisWeek.some(function (item) { return !isBlankTitle(item); });
-    var msg = hasThis
-      ? "把「下周计划」转成「本周工作」？当前本周内容会被替换；同事项会带上上周进度，下周计划会清空。"
-      : "把「下周计划」转成「本周工作」？转入后进度先空着（当前本周没有可对照的进度），下周计划会清空。";
-    if (!window.confirm(msg)) return;
+    const hasThis = state.thisWeek.some(isFilled);
+    const message = hasThis
+      ? "把下周计划的 " + plans.length + " 项转成本周事项？\n\n· 当前本周内容会被替换\n· 与本周同项目、同内容的事项会带回进度\n· 下周计划会清空"
+      : "把下周计划的 " + plans.length + " 项转成本周事项？\n\n· 进度先留空，填写时补上\n· 下周计划会清空";
+    if (!window.confirm(message)) return;
 
-    // 先按本周同项目同标题取进度，再替换本周列表
-    state.thisWeek = plans.map(function (item) {
-      var tag = item.tag || defaultTag();
-      var title = String(item.title).trim();
-      return {
-        id: uid(),
-        tag: tag,
-        title: title,
-        progress: findThisWeekProgress(tag, title)
-      };
+    const seen = new Set();
+    const promoted = [];
+    let carried = 0;
+    plans.forEach((item) => {
+      const tag = tagOf(item);
+      const title = String(item.title).trim();
+      const key = tag + "\u0000" + normalizeTitle(title);
+      if (seen.has(key)) return;
+      seen.add(key);
+      const progress = findThisWeekProgress(tag, title);
+      if (progress !== "") carried += 1;
+      promoted.push({ id: uid(), tag: tag, title: title, progress: progress });
     });
-    // 同项目同事项去重，保留首次出现（及其已带回的进度）
-    var seen = {};
-    state.thisWeek = state.thisWeek.filter(function (item) {
-      var key = String(item.tag || "") + "\0" + normalizeTitle(item.title);
-      if (seen[key]) return false;
-      seen[key] = true;
-      return true;
-    });
+    state.thisWeek = promoted;
     state.nextWeek = [];
-    state.weekKey = currentWeekKey();
-    saveState();
-    renderAll();
-    showToast("已转入本周，同事项已带上上周进度，请核对并补下周计划");
-  }
-
-  function clearAll() {
-    if (!window.confirm("清空本周和下周全部内容？")) return;
-    state.weekKey = currentWeekKey();
-    state.thisWeek = [emptyThisItem()];
-    state.nextWeek = [];
-    saveState();
-    renderAll();
-    showToast("已清空");
-  }
-
-  function incompleteHint() {
-    var status = getFillStatus();
-    if (status.complete) return "";
-    var msg = [];
-    if (status.thisFilled === 0) msg.push("本周还没写");
-    else if (status.thisEmpty > 0) msg.push("本周有空行");
-    if (status.thisBadProgress > 0) msg.push("进度未填");
-    if (status.thisDup > 0 || status.nextDup > 0) msg.push("有重复事项");
-    if (status.nextFilled === 0) msg.push("下周还没写");
-    else if (status.nextEmpty > 0) msg.push("下周有空行");
-    return msg.join("、");
-  }
-
-  function doneToast(okMsg) {
-    var gap = incompleteHint();
-    if (gap) showToast(okMsg + "（注意：还没填完整 — " + gap + "）", true);
-    else showToast(okMsg);
-  }
-
-  function ensureTagExists(tag) {
-    var name = String(tag || "").trim();
-    if (!name) return defaultTag();
-    if (state.tags.indexOf(name) < 0) state.tags.push(name);
-    return name;
-  }
-
-  function parseItemLine(line, withProgress) {
-    var text = String(line || "").trim();
-    if (!text || text === "（暂无）" || text === "(暂无)") return null;
-    var matched = text.match(/^\d+[、\.．]\s*【([^】]*)】(.*)$/);
-    if (!matched) return null;
-    var tag = ensureTagExists(matched[1]);
-    var rest = String(matched[2] || "").trim();
-    var progress = "";
-    if (withProgress) {
-      var progressMatch = rest.match(/（\s*(\d+)\s*%\s*）\s*$/);
-      if (progressMatch) {
-        progress = clampProgress(progressMatch[1]);
-        rest = rest.slice(0, progressMatch.index).trim();
-      } else if (/（\s*已完成\s*）\s*$/.test(rest)) {
-        progress = 100;
-        rest = rest.replace(/（\s*已完成\s*）\s*$/, "").trim();
-      }
-    }
-    if (!rest) return null;
-    if (withProgress) {
-      return { id: uid(), tag: tag, title: rest, progress: progress };
-    }
-    return { id: uid(), tag: tag, title: rest };
-  }
-
-  function parseReportText(raw) {
-    var lines = String(raw || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-    var section = "";
-    var thisWeek = [];
-    var nextWeek = [];
-    for (var i = 0; i < lines.length; i++) {
-      var line = String(lines[i] || "").trim();
-      if (!line) continue;
-      if (line.indexOf("本周工作重点") === 0) {
-        section = "this";
-        continue;
-      }
-      if (line.indexOf("下周工作计划") === 0) {
-        section = "next";
-        continue;
-      }
-      if (section === "this") {
-        var thisItem = parseItemLine(line, true);
-        if (thisItem) thisWeek.push(thisItem);
-      } else if (section === "next") {
-        var nextItem = parseItemLine(line, false);
-        if (nextItem) nextWeek.push(nextItem);
-      }
-    }
-    return { thisWeek: thisWeek, nextWeek: nextWeek };
-  }
-
-  function openImportModal() {
-    var dock = document.getElementById("actionDock");
-    if (dock) dock.classList.remove("is-more-open");
-    var overlay = document.getElementById("importOverlay");
-    var area = document.getElementById("importText");
-    if (!overlay || !area) return;
-    area.value = "";
-    overlay.classList.add("show");
-    overlay.setAttribute("aria-hidden", "false");
-    setTimeout(function () { area.focus(); }, 0);
-  }
-
-  function closeImportModal() {
-    var overlay = document.getElementById("importOverlay");
-    if (!overlay) return;
-    overlay.classList.remove("show");
-    overlay.setAttribute("aria-hidden", "true");
-  }
-
-  function confirmImportReport() {
-    var area = document.getElementById("importText");
-    var raw = area ? area.value : "";
-    if (!String(raw).trim()) {
-      showToast("请先粘贴周报全文", true);
-      return;
-    }
-    var parsed = parseReportText(raw);
-    if (!parsed.thisWeek.length && !parsed.nextWeek.length) {
-      showToast("没识别到事项，请检查格式是否与「复制报告」一致", true);
-      return;
-    }
-    var hasLocal =
-      state.thisWeek.some(function (item) { return !isBlankTitle(item); }) ||
-      state.nextWeek.some(function (item) { return !isBlankTitle(item); });
-    if (hasLocal && !window.confirm("导入会替换当前本周/下周内容，确定继续？")) return;
-
-    state.thisWeek = parsed.thisWeek.length ? parsed.thisWeek : [emptyThisItem()];
-    state.nextWeek = parsed.nextWeek;
-    state.weekKey = currentWeekKey();
-    saveState();
-    closeImportModal();
+    commitEdit();
     renderAll();
     showToast(
-      "已导入：本周 " + parsed.thisWeek.length + " 项 · 下周 " + parsed.nextWeek.length + " 项"
+      "已转入本周 " + promoted.length + " 项" +
+      (carried ? "，其中 " + carried + " 项带回了进度" : "") +
+      "；请补填进度和下周计划"
     );
   }
 
-  function copyReport() {
-    var organized = applyOrganizeByProject();
-    var text = buildReportText();
-    var okMsg = organized
-      ? "已整理并复制，可粘贴到微信/备忘录"
-      : "已复制，可粘贴到微信/备忘录";
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () {
-        doneToast(okMsg);
-      }).catch(function () {
-        fallbackCopy(text, okMsg);
+  function clearAll() {
+    if (!window.confirm("清空本周和下周的全部内容？清空后不能撤销。")) return;
+    state.thisWeek = [emptyItem("this", primaryTag())];
+    state.nextWeek = [];
+    commitEdit();
+    renderAll();
+    showToast("已清空，可以开始写新的一周");
+  }
+
+  /* —— 复制 —— */
+
+  function legacyCopy(text) {
+    return new Promise((resolve, reject) => {
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.left = "-9999px";
+      document.body.appendChild(area);
+      area.select();
+      try {
+        if (document.execCommand("copy")) resolve();
+        else reject(new Error("execCommand copy 返回 false"));
+      } catch (err) {
+        reject(err);
+      } finally {
+        document.body.removeChild(area);
+      }
+    });
+  }
+
+  /** 文档未聚焦时异步剪贴板接口必定拒绝，此时直接在点击回调内同步走兼容复制，才不会丢失用户手势 */
+  function writeClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText && document.hasFocus()) {
+      return navigator.clipboard.writeText(text).catch((err) => {
+        console.warn("剪贴板接口不可用，改用兼容复制", err);
+        return legacyCopy(text);
       });
-    } else {
-      fallbackCopy(text, okMsg);
     }
+    return legacyCopy(text);
   }
 
-  function fallbackCopy(text, okMsg) {
-    var area = document.createElement("textarea");
-    area.value = text;
-    area.setAttribute("readonly", "");
-    area.style.position = "fixed";
-    area.style.left = "-9999px";
-    document.body.appendChild(area);
-    area.select();
-    try {
-      document.execCommand("copy");
-      doneToast(okMsg || "已复制到剪贴板");
-    } catch (err) {
-      showToast("复制失败，请手动选中预览文本", true);
+  /** 复制前先落实挂起的整理，保证复制结果与预览一致 */
+  function copyReport() {
+    flushOrganize();
+    const status = getFillStatus();
+    const summary = "本周 " + status.thisFilled + " 项 · 下周 " + status.nextFilled + " 项";
+    writeClipboard(buildReportText()).then(() => {
+      const problems = fillProblems(status);
+      if (problems.length) showToast("已复制（" + summary + "），注意：" + problems.join("；"), { warn: true });
+      else showToast("已复制周报（" + summary + "），可直接粘贴");
+    }).catch((err) => {
+      console.error("复制周报失败", err);
+      showToast("复制失败：请在预览里手动选中文字复制", { warn: true });
+    });
+  }
+
+  /* —— 导入成稿 —— */
+
+  function parseItemLine(line, withProgress) {
+    const text = String(line || "").trim();
+    if (!text || /^[（(]\s*暂无\s*[）)]$/.test(text)) return null;
+    const matched = text.match(/^\d+\s*[、.．]\s*【([^】]*)】(.*)$/);
+    if (!matched) return null;
+    const tag = String(matched[1] || "").trim();
+    let rest = String(matched[2] || "").trim();
+    let progress = "";
+    if (withProgress) {
+      const progressMatch = rest.match(/[（(]\s*(\d+)\s*%\s*[）)]\s*$/);
+      if (progressMatch) {
+        progress = clampProgress(progressMatch[1]);
+        rest = rest.slice(0, progressMatch.index).trim();
+      } else if (/[（(]\s*已完成\s*[）)]\s*$/.test(rest)) {
+        progress = MAX_PROGRESS;
+        rest = rest.replace(/[（(]\s*已完成\s*[）)]\s*$/, "").trim();
+      }
     }
-    document.body.removeChild(area);
+    if (!rest) return null;
+    return withProgress
+      ? { id: uid(), tag: tag, title: rest, progress: progress }
+      : { id: uid(), tag: tag, title: rest };
   }
 
-  function addThisItem() {
-    state.thisWeek.push(emptyThisItem());
-    saveState();
-    renderAll();
+  function parseReportText(raw) {
+    const lines = String(raw || "").replace(/\r\n?/g, "\n").split("\n");
+    const parsed = { thisWeek: [], nextWeek: [] };
+    let section = "";
+    lines.forEach((rawLine) => {
+      const line = rawLine.trim();
+      if (!line) return;
+      if (line.indexOf("本周工作重点") === 0) {
+        section = "this";
+        return;
+      }
+      if (line.indexOf("下周工作计划") === 0) {
+        section = "next";
+        return;
+      }
+      if (!section) return;
+      const item = parseItemLine(line, section === "this");
+      if (item) (section === "this" ? parsed.thisWeek : parsed.nextWeek).push(item);
+    });
+    return parsed;
   }
 
-  function addNextItem() {
-    state.nextWeek.push(emptyNextItem());
-    saveState();
-    renderAll();
+  function openImportModal() {
+    els.importText.value = "";
+    els.importOverlay.classList.add("show");
+    els.importOverlay.setAttribute("aria-hidden", "false");
+    setTimeout(() => els.importText.focus(), 0);
   }
+
+  function closeImportModal() {
+    els.importOverlay.classList.remove("show");
+    els.importOverlay.setAttribute("aria-hidden", "true");
+  }
+
+  /** 解析成功且用户确认后才改动数据（含新增项目） */
+  function confirmImportReport() {
+    const raw = els.importText.value;
+    if (!raw.trim()) {
+      showToast("请先粘贴周报全文", { warn: true });
+      els.importText.focus();
+      return;
+    }
+    const parsed = parseReportText(raw);
+    if (!parsed.thisWeek.length && !parsed.nextWeek.length) {
+      showToast("没识别到事项：请粘贴「复制报告」得到的完整内容（含「本周工作重点：」等标题）", { warn: true });
+      return;
+    }
+    const hasLocal = state.thisWeek.some(isFilled) || state.nextWeek.some(isFilled);
+    const counts = "本周 " + parsed.thisWeek.length + " 项 · 下周 " + parsed.nextWeek.length + " 项";
+    if (hasLocal && !window.confirm("识别到" + counts + "。\n导入会替换当前的本周和下周内容，确定继续？")) return;
+
+    const addedTags = [];
+    parsed.thisWeek.concat(parsed.nextWeek).forEach((item) => {
+      if (!item.tag) {
+        item.tag = primaryTag();
+        return;
+      }
+      if (state.tags.indexOf(item.tag) < 0) {
+        state.tags.push(item.tag);
+        addedTags.push(item.tag);
+      }
+    });
+    state.thisWeek = parsed.thisWeek.length ? parsed.thisWeek : [emptyItem("this", primaryTag())];
+    state.nextWeek = parsed.nextWeek;
+    commitEdit();
+    closeImportModal();
+    renderAll();
+    showToast("已导入：" + counts + (addedTags.length ? "，新增项目 " + addedTags.join("、") : ""));
+  }
+
+  /* —— 全局 —— */
 
   function onGlobalActionClick(event) {
-    var btn = event.target.closest("[data-action]");
-    if (!btn) return;
-    var action = btn.getAttribute("data-action");
-    if (action === "add-this") addThisItem();
-    else if (action === "add-next") addNextItem();
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    const action = button.getAttribute("data-action");
+    if (action === "add-this") addItem("this", preferredNewTag());
+    else if (action === "add-next") addItem("next", preferredNewTag());
     else if (action === "carry-incomplete") carryIncomplete();
-    else if (action === "group-by-project") organizeByProject();
     else if (action === "import-report") openImportModal();
     else if (action === "copy-report") copyReport();
-    else if (action === "toggle-dock-more") {
-      var dock = document.getElementById("actionDock");
-      if (dock) dock.classList.toggle("is-more-open");
-    } else if (action === "scroll-top") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } else if (action === "scroll-bottom") {
-      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
-    }
+    else if (action === "scroll-top") window.scrollTo({ top: 0, behavior: "smooth" });
+    else if (action === "scroll-bottom") window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
   }
 
-  function init() {
-    var loaded = loadState();
-    if (!loaded) {
-      state.weekKey = currentWeekKey();
-      state.tags = DEFAULT_TAGS.slice();
-      state.thisWeek = [emptyThisItem()];
-      state.nextWeek = [];
-    }
-    if (!state.thisWeek.length && !state.nextWeek.length) {
-      state.thisWeek = [emptyThisItem()];
-    }
-    if (!state.weekKey) state.weekKey = currentWeekKey();
-
-    document.getElementById("btnAddTag").addEventListener("click", addTag);
-    els.newTag.addEventListener("keydown", function (event) {
-      if (event.key === "Enter") addTag();
+  function bindEvents() {
+    els.tagAddForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      addTag();
     });
-    els.tagChips.addEventListener("click", function (event) {
-      var btn = event.target.closest("[data-action=\"del-tag\"]");
-      if (!btn) return;
-      deleteTag(btn.getAttribute("data-tag"));
+    els.tagChips.addEventListener("click", (event) => {
+      const button = event.target.closest('[data-action="del-tag"]');
+      if (button) deleteTag(button.getAttribute("data-tag"));
     });
 
     document.getElementById("btnPromote").addEventListener("click", promoteNextToThis);
     document.getElementById("btnClear").addEventListener("click", clearAll);
-    document.getElementById("actionDock").addEventListener("click", onGlobalActionClick);
-    document.getElementById("scrollJump").addEventListener("click", onGlobalActionClick);
+    els.dock.addEventListener("click", onGlobalActionClick);
+    els.scrollJump.addEventListener("click", onGlobalActionClick);
+    els.previewPanel.addEventListener("click", onGlobalActionClick);
+
     document.getElementById("btnImportCancel").addEventListener("click", closeImportModal);
     document.getElementById("btnImportConfirm").addEventListener("click", confirmImportReport);
-    document.getElementById("importOverlay").addEventListener("click", function (event) {
+    els.importOverlay.addEventListener("click", (event) => {
       if (event.target === event.currentTarget) closeImportModal();
     });
-
-    var resizeTimer = null;
-    window.addEventListener("resize", function () {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(syncLayoutSplit, 80);
-    });
-
-    document.addEventListener("click", function (event) {
-      if (event.target.closest(".tag-select")) return;
-      closeAllTagSelects();
-    });
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape") {
-        closeImportModal();
-        closeAllTagSelects();
+    els.importText.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        confirmImportReport();
       }
     });
 
-    els.toast.addEventListener("mouseenter", function () {
-      showToast._hovering = true;
-      clearTimeout(showToast._t);
+    [els.thisWeekRows, els.nextWeekRows].forEach((container) => {
+      container.addEventListener("input", onRowsInput);
+      container.addEventListener("keydown", onRowsKeydown);
+      container.addEventListener("click", onRowsClick);
+      container.addEventListener("compositionstart", () => {
+        composing = true;
+      });
+      container.addEventListener("compositionend", () => {
+        composing = false;
+      });
     });
-    els.toast.addEventListener("mouseleave", function () {
-      showToast._hovering = false;
-      hideToastSoon();
+    els.thisWeekRows.addEventListener("focusout", onRowsFocusOut);
+    bindNextWeekDrag();
+
+    document.addEventListener("pointerdown", () => {
+      pointerDown = true;
+    }, true);
+    ["pointerup", "pointercancel"].forEach((type) => {
+      document.addEventListener(type, () => {
+        pointerDown = false;
+      }, true);
+    });
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".tag-select")) closeAllTagSelects();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      closeImportModal();
+      closeAllTagSelects();
     });
 
-    els.thisWeekRows.addEventListener("input", onRowsInput);
-    els.thisWeekRows.addEventListener("change", onRowsInput);
-    els.thisWeekRows.addEventListener("blur", onProgressNumBlur, true);
-    els.thisWeekRows.addEventListener("click", onRowsClick);
-    els.nextWeekRows.addEventListener("input", onRowsInput);
-    els.nextWeekRows.addEventListener("change", onRowsInput);
-    els.nextWeekRows.addEventListener("click", onRowsClick);
-    bindDrag(els.thisWeekRows);
-    bindDrag(els.nextWeekRows);
+    els.toast.addEventListener("mouseenter", () => {
+      toastState.hovering = true;
+      clearTimeout(toastState.timer);
+    });
+    els.toast.addEventListener("mouseleave", () => {
+      toastState.hovering = false;
+      scheduleToastHide(1200);
+    });
+    els.toastAction.addEventListener("click", () => {
+      const handler = toastState.onAction;
+      hideToast();
+      if (handler) handler();
+    });
 
+    let resizeTimer = 0;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(syncLayoutSplit, 80);
+    });
+  }
+
+  function init() {
+    if (!loadState()) {
+      state.weekKey = currentWeekKey();
+      state.tags = DEFAULT_TAGS.slice();
+      state.thisWeek = [];
+      state.nextWeek = [];
+    }
+    if (!state.thisWeek.length && !state.nextWeek.length) {
+      state.thisWeek = [emptyItem("this", primaryTag())];
+    }
+    bindEvents();
     renderAll();
-    saveState();
+    persist();
   }
 
   init();
