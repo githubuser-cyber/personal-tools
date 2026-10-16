@@ -655,7 +655,7 @@
         <div class="card">
           <div class="history-head">
             <strong>最近同步</strong>
-            <button type="button" class="btn btn-danger" id="clearBtn">清空本机列表</button>
+            <button type="button" class="btn btn-danger" id="clearBtn" title="仅清空本机，不影响其他设备">清空本机列表</button>
           </div>
           <div class="clip-list" id="clipList">
             <div class="empty" id="emptyHint">还没有内容。进入房间后粘贴即可。</div>
@@ -1128,6 +1128,7 @@
               resendItem(item);
             });
             actions.appendChild(resendTextBtn);
+            appendDeleteButton(actions, item);
             el.appendChild(actions);
           } else {
             var fileRow = document.createElement("div");
@@ -1187,6 +1188,7 @@
               });
               fileActions.appendChild(resendFileBtn);
             }
+            appendDeleteButton(fileActions, item);
             fileRow.appendChild(fileActions);
             el.appendChild(fileRow);
 
@@ -1257,6 +1259,68 @@
         history.unshift(item);
         if (history.length > MAX_HISTORY) history.length = MAX_HISTORY;
         renderHistory(true);
+      }
+
+      /** 释放条目占用的对象 URL；仅本机清理，不发 MQTT */
+      function releaseHistoryItem(item) {
+        if (!item) return;
+        if (item.url && String(item.url).indexOf("blob:") === 0) {
+          try { URL.revokeObjectURL(item.url); } catch (e) { /* ignore */ }
+        }
+        if (item.id && pendingFiles[item.id]) {
+          clearReceiveWatch(pendingFiles[item.id]);
+          delete pendingFiles[item.id];
+        }
+      }
+
+      /** 从本机列表删除一条；不影响其他设备 */
+      function removeLocalItem(id) {
+        if (!id) return;
+        var idx = -1;
+        var i;
+        for (i = 0; i < history.length; i++) {
+          if (history[i].id === id) {
+            idx = i;
+            break;
+          }
+        }
+        if (idx < 0) return;
+        var item = history[idx];
+        // 若正在预览该图，先关灯箱，避免删后空白图还挂着
+        if (
+          !lightbox.hidden &&
+          item.url &&
+          lightboxImg &&
+          lightboxImg.getAttribute("src") === item.url
+        ) {
+          closeLightbox();
+        }
+        releaseHistoryItem(item);
+        history.splice(idx, 1);
+        renderHistory(false);
+        toast("已从本机删除");
+      }
+
+      function clearLocalHistory() {
+        history.forEach(function (item) {
+          releaseHistoryItem(item);
+        });
+        history = [];
+        renderHistory();
+        toast("已清空");
+      }
+
+      function appendDeleteButton(actions, item) {
+        if (!item || !item.id || !actions) return;
+        var delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "btn btn-danger";
+        delBtn.textContent = "删除";
+        delBtn.title = "仅从本机列表移除，不影响其他设备";
+        delBtn.addEventListener("click", function () {
+          removeLocalItem(item.id);
+        });
+        actions.appendChild(delBtn);
       }
 
       function patchLocal(id, patch, immediate) {
@@ -2247,11 +2311,7 @@
         sendFiles(fileInput.files);
         fileInput.value = "";
       });
-      clearBtn.addEventListener("click", function () {
-        history = [];
-        renderHistory();
-        toast("已清空");
-      });
+      clearBtn.addEventListener("click", clearLocalHistory);
 
       lightboxClose.addEventListener("click", function (ev) {
         ev.stopPropagation();
