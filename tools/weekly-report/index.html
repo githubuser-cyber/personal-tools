@@ -1548,7 +1548,7 @@
         <div class="panel preview-panel" id="previewPanel">
           <div class="preview-head">
             <div>
-              <h2>预览</h2>
+            <h2>预览</h2>
               <p class="preview-note">按项目分组、同项目按进度从低到高，复制出去就是这样</p>
             </div>
             <button type="button" class="btn btn-primary btn-sm" data-action="copy-report">复制报告</button>
@@ -2326,7 +2326,7 @@
           '<button type="button" class="btn btn-step" data-action="step-progress" data-delta="5" aria-label="进度加 5%">+</button>' +
           '<button type="button" class="btn btn-done" data-action="done" title="进度设为 100%">完成</button>' +
           `<button type="button" class="done-tag" data-action="undone" title="点击改回进行中（${UNDONE_PROGRESS}%）">✓ 已完成</button>` +
-        "</div>" +
+            "</div>" +
         '<button type="button" class="btn btn-remove" data-action="remove" title="删除这一条（可撤销）">删除</button>' +
       "</div>" +
       `<div class="row-tip">${escapeHtml(tip)}</div>` +
@@ -2370,8 +2370,8 @@
             `<button type="button" class="group-add" data-action="add-in-group" data-kind="${kind}" data-tag="${safeTag}" title="在「${safeTag}」下新增一条${kindLabel}">＋ 添加</button>` +
           "</div>" +
           (items.length ? `<div class="group-rows">${items.map((item) => rowHtml(item, numbers)).join("")}</div>` : "") +
-        "</div>"
-      );
+          "</div>"
+        );
     });
     return parts.join("");
   }
@@ -2665,12 +2665,12 @@
         item.progress = "";
       } else {
         const typed = Number(raw);
-        if (isNaN(typed)) return;
-        item.progress = Math.round(typed);
-      }
+      if (isNaN(typed)) return;
+      item.progress = Math.round(typed);
+    }
       commitEdit();
       syncSectionRows("this");
-      refreshPreview();
+    refreshPreview();
       scheduleOrganize(item.id);
     }
   }
@@ -2700,7 +2700,7 @@
     if (input) input.value = item.progress;
     commitEdit();
     syncSectionRows("this");
-    refreshPreview();
+      refreshPreview();
     scheduleOrganize(item.id);
   }
 
@@ -2713,10 +2713,10 @@
     if (!item) return;
     if (String(target.value).trim() === "") {
       if (!isEmptyProgress(item)) {
-        item.progress = "";
+      item.progress = "";
         commitEdit();
         syncSectionRows("this");
-        refreshPreview();
+      refreshPreview();
       }
       return;
     }
@@ -2748,17 +2748,17 @@
   function onRowsClick(event) {
     const target = event.target;
     const trigger = target.closest(".tag-select-trigger");
-    if (trigger) {
+      if (trigger) {
       const select = trigger.closest(".tag-select");
       const willOpen = !select.classList.contains("open");
-      closeAllTagSelects();
+        closeAllTagSelects();
       select.classList.toggle("open", willOpen);
-      return;
-    }
+        return;
+      }
     const option = target.closest(".tag-select-option");
     if (option) {
       changeItemTag(option.closest(".row"), option.getAttribute("data-value"));
-      return;
+        return;
     }
 
     const actionEl = target.closest("[data-action]");
@@ -2838,7 +2838,7 @@
       dragState.tag = row.getAttribute("data-tag");
       row.classList.add("is-dragging");
       event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("text/plain", dragState.id);
+        event.dataTransfer.setData("text/plain", dragState.id);
     });
 
     container.addEventListener("dragover", (event) => {
@@ -3123,9 +3123,9 @@
     }
     let progress = "";
     const progressMatch = rest.match(/(?:[（(]\s*(\d{1,3})\s*%\s*[）)]|\s(\d{1,3})\s*%)\s*$/);
-    if (progressMatch) {
+      if (progressMatch) {
       progress = clampProgress(progressMatch[1] || progressMatch[2]);
-      rest = rest.slice(0, progressMatch.index).trim();
+        rest = rest.slice(0, progressMatch.index).trim();
     } else if (/[（(]\s*已完成\s*[）)]\s*$/.test(rest)) {
       progress = MAX_PROGRESS;
       rest = rest.replace(/[（(]\s*已完成\s*[）)]\s*$/, "").trim();
@@ -3447,7 +3447,7 @@
       applyDraft(data.draft);
       if (!state.thisWeek.length && !state.nextWeek.length) state.thisWeek = [emptyItem("this", primaryTag())];
       persist();
-      renderAll();
+    renderAll();
       renderArchive();
       showToast("已导入备份：" + summary);
     }).catch((err) => {
@@ -3540,9 +3540,9 @@
     });
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
-      closeImportModal();
+        closeImportModal();
       closeArchive();
-      closeAllTagSelects();
+        closeAllTagSelects();
     });
 
     els.toast.addEventListener("mouseenter", () => {
