@@ -3,40 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#eef2fb" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="图片拼接" />
+  <link rel="manifest" href="../../manifest.webmanifest" />
+  <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png" />
   <title>图片拼接助手</title>
   <style>
     :root {
-      --bg: #f5f7fa;
-      --surface: #ffffff;
-      --fill: #fafafa;
-      --text: #303133;
-      --text-regular: #606266;
-      --muted: #909399;
-      --placeholder: #a8abb2;
-      --border: #dcdfe6;
-      --border-light: #e4e7ed;
-      --border-lighter: #ebeef5;
-      --primary: #1677FF;
-      --primary-hover: #4096FF;
-      --primary-active: #0958D9;
-      --primary-soft: #ecf5ff;
-      --primary-soft-border: #d9ecff;
-      --primary-border: #c6e2ff;
-      --warning: #e6a23c;
-      --warning-text: #b88230;
-      --warning-soft: #fdf6ec;
-      --warning-border: #f5dab1;
-      --danger: #f56c6c;
-      --danger-soft: #fef0f0;
-      --danger-border: #fbc4c4;
-      --accent: #1677FF;
-      --ok: #1677FF;
-      --radius: 8px;
-      --radius-sm: 4px;
-      --shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
-      --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.14);
+      --bg: #eef2fb;
+      --surface: rgba(255, 255, 255, 0.7);
+      --surface-strong: rgba(255, 255, 255, 0.88);
+      --fill: rgba(241, 245, 252, 0.75);
+      --text: #1e2533;
+      --text-regular: #4a5568;
+      --muted: #8790a3;
+      --placeholder: #a9b0c0;
+      --border: rgba(30, 41, 59, 0.14);
+      --border-light: rgba(30, 41, 59, 0.1);
+      --border-lighter: rgba(30, 41, 59, 0.07);
+      --glass-border: rgba(255, 255, 255, 0.8);
+      --primary: #1677ff;
+      --primary-hover: #3d8bff;
+      --primary-active: #0b5fe0;
+      --primary-soft: rgba(22, 119, 255, 0.09);
+      --primary-soft-border: rgba(22, 119, 255, 0.2);
+      --primary-border: rgba(22, 119, 255, 0.35);
+      --grad: linear-gradient(135deg, #1677ff 0%, #7c5cff 100%);
+      --grad-hover: linear-gradient(135deg, #3d8bff 0%, #8f74ff 100%);
+      --warning: #f59e0b;
+      --warning-text: #b45309;
+      --warning-soft: rgba(245, 158, 11, 0.1);
+      --warning-border: rgba(245, 158, 11, 0.3);
+      --danger: #ef4444;
+      --danger-soft: rgba(239, 68, 68, 0.08);
+      --danger-border: rgba(239, 68, 68, 0.28);
+      --accent: #1677ff;
+      --ok: #1677ff;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 30px rgba(30, 64, 175, 0.07);
+      --shadow-pop: 0 18px 48px rgba(30, 41, 90, 0.2);
+      --blur: saturate(170%) blur(18px);
       --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       --dock-h: 76px;
     }
@@ -51,15 +61,32 @@
       min-height: 100%;
     }
 
+    html { background: var(--bg); }
+
     body {
       font-family: var(--font);
       font-size: 14px;
       line-height: 1.5;
       color: var(--text);
-      background: var(--bg);
       -webkit-text-size-adjust: 100%;
       -webkit-tap-highlight-color: transparent;
     }
+
+    /* 静态渐变光晕；在工具箱里时由外层统一绘制，这里透明 */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(44vmax 44vmax at 6% -6%, rgba(22, 119, 255, 0.26), transparent 70%),
+        radial-gradient(40vmax 40vmax at 104% 8%, rgba(139, 92, 246, 0.22), transparent 70%),
+        radial-gradient(46vmax 46vmax at 62% 112%, rgba(6, 182, 212, 0.16), transparent 70%);
+    }
+
+    html.in-shell { background: transparent; }
+    html.in-shell body::before { display: none; }
 
     button, input, select { font: inherit; }
 
@@ -95,10 +122,15 @@
     }
 
     .page-head h1 {
+      width: fit-content;
       margin: 0;
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.01em;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(120deg, #1e2533 30%, #1677ff 75%, #7c5cff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
     .page-head .sub {
@@ -107,7 +139,7 @@
       color: var(--muted);
     }
 
-    /* —— 按钮（Element 风格） —— */
+    /* —— 按钮 —— */
     .btn {
       appearance: none;
       display: inline-flex;
@@ -120,72 +152,82 @@
       font-weight: 500;
       line-height: 1;
       color: var(--text-regular);
-      background: var(--surface);
-      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid var(--border-light);
       border-radius: var(--radius-sm);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       cursor: pointer;
       white-space: nowrap;
       user-select: none;
-      transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+      transition: color 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
     }
 
     .btn:hover:not(:disabled) {
       color: var(--primary);
-      background: var(--primary-soft);
+      background: #fff;
       border-color: var(--primary-border);
+      box-shadow: 0 4px 12px rgba(22, 119, 255, 0.12);
     }
 
-    .btn:active:not(:disabled) {
-      color: var(--primary-active);
-      border-color: var(--primary);
-    }
+    .btn:active:not(:disabled) { transform: translateY(1px); }
 
     .btn:focus-visible {
       outline: 2px solid var(--primary-border);
-      outline-offset: 1px;
+      outline-offset: 2px;
     }
 
     .btn:disabled {
-      color: #c0c4cc;
-      background: var(--surface);
+      color: #b8bfcc;
+      background: rgba(255, 255, 255, 0.6);
       border-color: var(--border-lighter);
+      box-shadow: none;
       cursor: not-allowed;
     }
 
+    .btn-icon {
+      flex: 0 0 auto;
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
     .btn-sm {
-      height: 28px;
-      padding: 0 10px;
+      height: 30px;
+      padding: 0 11px;
       font-size: 13px;
+      border-radius: 8px;
     }
 
     .btn-primary {
       color: #fff;
-      background: var(--primary);
-      border-color: var(--primary);
+      background: var(--grad);
+      border-color: transparent;
+      box-shadow: 0 6px 16px rgba(22, 119, 255, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
 
     .btn-primary:hover:not(:disabled) {
       color: #fff;
-      background: var(--primary-hover);
-      border-color: var(--primary-hover);
-    }
-
-    .btn-primary:active:not(:disabled) {
-      color: #fff;
-      background: var(--primary-active);
-      border-color: var(--primary-active);
+      background: var(--grad-hover);
+      border-color: transparent;
+      box-shadow: 0 8px 22px rgba(22, 119, 255, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
 
     .btn-primary:disabled {
       color: #fff;
-      background: #a0cfff;
-      border-color: #a0cfff;
+      background: var(--grad);
+      border-color: transparent;
+      opacity: 0.45;
     }
 
     .btn-accent {
       color: var(--primary);
       background: var(--primary-soft);
       border-color: var(--primary-soft-border);
+      box-shadow: none;
     }
 
     .btn-accent:hover:not(:disabled) {
@@ -198,6 +240,7 @@
       color: var(--muted);
       background: transparent;
       border-color: transparent;
+      box-shadow: none;
     }
 
     .btn-text-danger:hover:not(:disabled),
@@ -205,6 +248,7 @@
       color: var(--danger);
       background: var(--danger-soft);
       border-color: var(--danger-border);
+      box-shadow: none;
     }
 
     /* —— 面板 —— */
@@ -212,7 +256,7 @@
       margin-bottom: 14px;
       padding: 18px;
       background: var(--surface);
-      border: 1px solid var(--border-lighter);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
     }
@@ -227,19 +271,20 @@
     .panel-title .step {
       display: grid;
       place-items: center;
-      width: 22px;
-      height: 22px;
+      width: 24px;
+      height: 24px;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
       color: #fff;
-      background: var(--primary);
+      background: var(--grad);
       border-radius: 50%;
+      box-shadow: 0 4px 10px rgba(22, 119, 255, 0.25);
     }
 
     .panel h2 {
       margin: 0;
       font-size: 16px;
-      font-weight: 650;
+      font-weight: 700;
     }
 
     .panel-title .count {
@@ -262,11 +307,11 @@
       gap: 14px;
       padding: 22px 16px;
       background: var(--fill);
-      border: 1px dashed var(--border);
-      border-radius: var(--radius);
+      border: 1.5px dashed rgba(22, 119, 255, 0.28);
+      border-radius: 14px;
       cursor: pointer;
       user-select: none;
-      transition: border-color 0.15s, background-color 0.15s;
+      transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
     }
 
     .dropzone:hover,
@@ -277,21 +322,22 @@
       outline: none;
     }
 
-    .dropzone.is-drag { border-style: solid; }
+    .dropzone.is-drag {
+      border-style: solid;
+      box-shadow: 0 0 0 4px rgba(22, 119, 255, 0.12);
+    }
 
     .dz-icon {
       flex: 0 0 auto;
       display: grid;
       place-items: center;
-      width: 44px;
-      height: 44px;
-      color: var(--primary);
-      background: var(--primary-soft);
-      border-radius: 10px;
+      width: 46px;
+      height: 46px;
+      color: #fff;
+      background: var(--grad);
+      border-radius: 14px;
+      box-shadow: 0 8px 18px rgba(22, 119, 255, 0.26);
     }
-
-    .dropzone:hover .dz-icon,
-    .dropzone.is-drag .dz-icon { background: var(--surface); }
 
     .dz-icon svg {
       width: 22px;
@@ -327,9 +373,18 @@
       gap: 14px 16px;
       margin-top: 14px;
       padding: 14px 16px;
-      background: var(--bg);
-      border: 1px solid var(--border-lighter);
-      border-radius: var(--radius);
+      background: var(--fill);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+    }
+
+    /* 第二行：宫格列数 / 去重开关（按方向二选一或都不显示）+ 导出格式 + 导出宽度 */
+    .settings-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1fr);
+      align-items: end;
+      gap: 14px 16px;
     }
 
     .field {
@@ -354,27 +409,73 @@
       height: 36px;
       padding: 0 10px;
       color: var(--text);
-      background: var(--surface);
+      background: rgba(255, 255, 255, 0.86);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
     }
 
     .field input[type="number"]:focus {
+      background: #fff;
       border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+      box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.15);
     }
 
     .field input[type="color"] {
       width: 48px;
       height: 36px;
       padding: 3px;
-      background: var(--surface);
+      background: rgba(255, 255, 255, 0.86);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       cursor: pointer;
     }
+
+    .switch-field { cursor: pointer; }
+
+    .switch-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 38px;
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--text-regular);
+    }
+
+    .switch-field input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .switch {
+      position: relative;
+      flex: 0 0 auto;
+      width: 36px;
+      height: 20px;
+      background: rgba(30, 41, 59, 0.16);
+      border-radius: 10px;
+      transition: background 0.2s;
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+      transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .switch-field input:checked + .switch { background: var(--grad); }
+    .switch-field input:checked + .switch::after { transform: translateX(16px); }
+    .switch-field input:focus-visible + .switch { outline: 2px solid var(--primary-border); outline-offset: 2px; }
 
     .scale-explain {
       grid-column: 1 / -1;
@@ -386,8 +487,8 @@
       font-size: 13px;
       line-height: 1.6;
       color: var(--text-regular);
-      background: var(--surface);
-      border: 1px solid var(--border-lighter);
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-sm);
     }
 
@@ -404,16 +505,18 @@
       font-style: italic;
       line-height: 1;
       color: #fff;
-      background: var(--primary);
+      background: var(--grad);
       border-radius: 50%;
     }
 
+    /* 分段选择：浅色凹槽里浮起一块白色，选中项一眼可见又不抢颜色 */
     .seg {
       display: flex;
+      gap: 2px;
       width: 100%;
-      overflow: hidden;
-      background: var(--surface);
-      border: 1px solid var(--border);
+      padding: 3px;
+      background: rgba(30, 41, 59, 0.06);
+      border: 1px solid var(--border-lighter);
       border-radius: var(--radius-sm);
     }
 
@@ -424,8 +527,6 @@
       margin: 0;
       cursor: pointer;
     }
-
-    .seg-opt + .seg-opt { border-left: 1px solid var(--border); }
 
     .seg-opt input {
       position: absolute;
@@ -440,22 +541,25 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 34px;
+      min-height: 30px;
       padding: 0 10px;
       font-size: 13px;
       font-weight: 500;
       line-height: 1.2;
       color: var(--text-regular);
       white-space: nowrap;
+      border-radius: 8px;
       user-select: none;
-      transition: background-color 0.15s, color 0.15s;
+      transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
     }
 
     .seg-opt:hover span { color: var(--primary); }
 
     .seg-opt input:checked + span {
-      color: #fff;
-      background: var(--primary);
+      font-weight: 600;
+      color: var(--primary);
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(30, 64, 175, 0.1);
     }
 
     .seg-opt input:focus-visible + span {
@@ -481,19 +585,23 @@
       align-items: center;
       gap: 12px;
       padding: 10px 12px;
-      background: var(--surface);
-      border: 1px solid var(--border-lighter);
-      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       transition: border-color 0.15s, box-shadow 0.15s;
     }
 
-    .thumb:hover { border-color: var(--border); }
+    .thumb:hover {
+      border-color: var(--primary-soft-border);
+      box-shadow: 0 6px 18px rgba(30, 64, 175, 0.08);
+    }
 
     .thumb.is-dragging { opacity: 0.5; }
 
     .thumb.is-drop-target {
       border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+      box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.15);
     }
 
     .thumb-index {
@@ -526,7 +634,7 @@
       object-fit: cover;
       background: var(--border-lighter);
       border: 1px solid var(--border-lighter);
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: zoom-in;
       transition: border-color 0.15s;
     }
@@ -557,6 +665,18 @@
 
     .thumb-meta .scaled.is-up { color: var(--warning-text); }
 
+    .thumb-meta .dedupe {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 1px 8px;
+      font-size: 12px;
+      line-height: 18px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-radius: 9px;
+      font-variant-numeric: tabular-nums;
+    }
+
     .thumb-actions {
       grid-area: actions;
       display: flex;
@@ -584,14 +704,15 @@
       display: inline-flex;
       align-items: center;
       min-height: 26px;
-      padding: 3px 10px;
+      padding: 3px 12px;
       font-size: 12px;
       font-weight: 500;
       line-height: 1.4;
       color: var(--text-regular);
-      background: var(--bg);
-      border: 1px solid var(--border-lighter);
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid var(--glass-border);
       border-radius: 13px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       font-variant-numeric: tabular-nums;
     }
 
@@ -606,24 +727,24 @@
       max-height: min(56vh, 600px);
       padding: 16px;
       text-align: center;
-      border: 1px solid var(--border-lighter);
-      border-radius: var(--radius);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
       background:
-        linear-gradient(45deg, #ebeef5 25%, transparent 25%),
-        linear-gradient(-45deg, #ebeef5 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, #ebeef5 75%),
-        linear-gradient(-45deg, transparent 75%, #ebeef5 75%);
+        linear-gradient(45deg, rgba(30, 41, 59, 0.06) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(30, 41, 59, 0.06) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(30, 41, 59, 0.06) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(30, 41, 59, 0.06) 75%);
       background-size: 18px 18px;
       background-position: 0 0, 0 9px, 9px -9px, -9px 0;
-      background-color: var(--bg);
+      background-color: rgba(255, 255, 255, 0.55);
     }
 
     .preview-wrap canvas {
       max-width: 100%;
       height: auto;
       vertical-align: middle;
-      border-radius: 2px;
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+      border-radius: 4px;
+      box-shadow: 0 10px 30px rgba(30, 41, 90, 0.18);
       cursor: zoom-in;
     }
 
@@ -639,6 +760,7 @@
 
     .preview-tip { margin-top: 8px; }
 
+    /* —— 全屏看图 —— */
     .lightbox {
       position: fixed;
       inset: 0;
@@ -647,7 +769,9 @@
       align-items: stretch;
       justify-content: stretch;
       padding: 0;
-      background: rgba(15, 23, 42, 0.55);
+      background: rgba(15, 23, 42, 0.62);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
       touch-action: none;
     }
 
@@ -674,10 +798,11 @@
       gap: 12px;
       padding: 10px 14px;
       padding-top: max(10px, env(safe-area-inset-top));
-      background: rgba(30, 41, 59, 0.96);
+      background: rgba(15, 23, 42, 0.72);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       color: #e2e8f0;
-      font-size: 0.92rem;
-      font-weight: 650;
+      font-size: 14px;
+      font-weight: 600;
       flex-shrink: 0;
     }
 
@@ -701,7 +826,7 @@
       min-width: 3.2em;
       text-align: right;
       color: #cbd5e1;
-      font-size: 0.84rem;
+      font-size: 13px;
     }
 
     .lightbox-body {
@@ -739,7 +864,7 @@
       max-height: none;
       width: auto;
       height: auto;
-      border-radius: 4px;
+      border-radius: 6px;
       background: transparent;
       pointer-events: none;
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
@@ -756,6 +881,23 @@
     .lightbox-stage img[hidden],
     .lightbox-stage canvas[hidden] {
       display: none !important;
+    }
+
+    .lightbox-bar .btn {
+      height: 32px;
+      padding: 0 14px;
+      color: #e2e8f0;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.16);
+      box-shadow: none;
+    }
+
+    .lightbox-bar .btn:hover:not(:disabled),
+    .lightbox-bar .btn:active:not(:disabled) {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.28);
+      box-shadow: none;
     }
 
     /* —— 标注编辑态 —— */
@@ -845,7 +987,7 @@
       color: #fff;
       font-size: 12px;
       padding: 2px 8px;
-      border-radius: 4px;
+      border-radius: 6px;
       line-height: 1.4;
       pointer-events: none;
     }
@@ -859,11 +1001,13 @@
       display: flex;
       align-items: center;
       gap: 12px;
-      background: #fff;
-      border: 1px solid #e4e7ed;
-      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.86);
+      -webkit-backdrop-filter: var(--blur);
+      backdrop-filter: var(--blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
       padding: 8px 12px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      box-shadow: var(--shadow-pop);
       font-size: 13px;
       color: var(--text);
       white-space: nowrap;
@@ -901,12 +1045,16 @@
       gap: 2px;
       flex-wrap: wrap;
       justify-content: center;
+      /* left: 50% 时默认最多只有半屏宽，会无故折成两行；按内容撑开，屏幕放不下才折行 */
+      width: max-content;
       max-width: calc(100vw - 16px);
-      background: #fff;
-      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.86);
+      -webkit-backdrop-filter: var(--blur);
+      backdrop-filter: var(--blur);
+      border-radius: 16px;
       padding: 6px 8px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-      border: 1px solid #e4e7ed;
+      box-shadow: var(--shadow-pop);
+      border: 1px solid var(--glass-border);
     }
 
     .edit-toolbar .tb {
@@ -925,14 +1073,14 @@
     }
 
     .edit-toolbar .tb:hover {
-      background: #f5f7fa;
+      background: rgba(22, 119, 255, 0.08);
       box-shadow: none;
     }
 
     .edit-toolbar .tb.is-active {
-      background: #ecf5ff;
-      color: #1677FF;
-      box-shadow: none;
+      background: var(--primary-soft);
+      color: var(--primary);
+      box-shadow: inset 0 0 0 1px var(--primary-soft-border);
     }
 
     .edit-toolbar .tb:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -992,13 +1140,13 @@
       width: max-content;
       max-width: calc(100vw - 24px);
       padding: 8px;
-      background: rgba(255, 255, 255, 0.96);
-      border: 1px solid var(--border-light);
-      border-radius: 12px;
-      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1);
+      background: rgba(255, 255, 255, 0.72);
+      -webkit-backdrop-filter: var(--blur);
+      backdrop-filter: var(--blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px;
+      box-shadow: var(--shadow-pop);
       transform: translateX(-50%);
-      -webkit-backdrop-filter: blur(8px);
-      backdrop-filter: blur(8px);
     }
 
     .dock-info {
@@ -1016,22 +1164,8 @@
 
     .compose-dock .btn {
       height: 40px;
-      padding: 0 18px;
-    }
-
-    .lightbox-bar .btn {
-      height: 32px;
-      padding: 0 14px;
-      color: #e2e8f0;
-      background: #334155;
-      border-color: #475569;
-    }
-
-    .lightbox-bar .btn:hover:not(:disabled),
-    .lightbox-bar .btn:active:not(:disabled) {
-      color: #fff;
-      background: #475569;
-      border-color: #64748b;
+      padding: 0 16px;
+      border-radius: 12px;
     }
 
     /* —— 提示条：鼠标停在上面时不消失 —— */
@@ -1039,49 +1173,45 @@
       position: fixed;
       left: 50%;
       bottom: calc(var(--dock-h) + 20px);
-      z-index: 60;
+      z-index: 90;
       display: flex;
-      align-items: flex-start;
-      gap: 8px;
-      max-width: min(92vw, 440px);
-      padding: 10px 16px;
+      align-items: center;
+      gap: 10px;
+      max-width: min(92vw, 520px);
+      padding: 11px 16px;
       font-size: 14px;
-      line-height: 1.5;
-      color: var(--text);
-      background: var(--surface);
-      border: 1px solid var(--border-lighter);
-      border-radius: var(--radius);
+      line-height: 1.45;
+      color: #fff;
+      background: rgba(23, 30, 45, 0.88);
+      -webkit-backdrop-filter: var(--blur);
+      backdrop-filter: var(--blur);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
       box-shadow: var(--shadow-pop);
       opacity: 0;
       pointer-events: none;
-      transform: translateX(-50%) translateY(12px);
-      transition: opacity 0.2s, transform 0.2s;
+      transform: translate(-50%, 12px);
+      transition: opacity 0.2s, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
     .toast.show {
       opacity: 1;
       pointer-events: auto;
-      transform: translateX(-50%) translateY(0);
+      transform: translate(-50%, 0);
     }
 
     .toast-icon {
       flex: 0 0 auto;
       display: grid;
       place-items: center;
-      width: 18px;
-      height: 18px;
-      margin-top: 1px;
+      width: 20px;
+      height: 20px;
       font-size: 12px;
       font-weight: 700;
       line-height: 1;
       color: #fff;
-      background: #67c23a;
+      background: var(--grad);
       border-radius: 50%;
-    }
-
-    .toast.is-warn {
-      background: var(--warning-soft);
-      border-color: var(--warning-border);
     }
 
     .toast.is-warn .toast-icon { background: var(--warning); }
@@ -1090,14 +1220,16 @@
 
     @media (max-width: 760px) {
       .settings { grid-template-columns: auto auto; justify-content: start; }
-      .settings .field-seg { grid-column: 1 / -1; }
+      .settings .field-seg,
+      .settings-row { grid-column: 1 / -1; }
+      .settings-row { grid-template-columns: minmax(0, 1fr); }
     }
 
     @media (max-width: 640px) {
       .app { padding: 14px 12px calc(var(--dock-h) + 40px); }
       html.in-shell .app { padding-top: 12px; }
       .page-head { align-items: center; margin-bottom: 12px; }
-      .page-head h1 { font-size: 19px; }
+      .page-head h1 { font-size: 20px; }
       .page-head .sub { display: none; }
       .panel { padding: 14px 12px; }
       .dropzone {
@@ -1122,18 +1254,22 @@
         left: 0;
         right: 0;
         bottom: 0;
+        gap: 6px;
         width: auto;
         max-width: none;
         padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
         border-width: 1px 0 0;
-        border-radius: 12px 12px 0 0;
+        border-radius: 16px 16px 0 0;
         transform: none;
       }
-      .dock-info { display: none; }
+      .dock-info,
+      .compose-dock .btn-icon { display: none; }
       .compose-dock .btn {
         flex: 1 1 0;
+        min-width: 0;
         height: 42px;
         padding: 0 6px;
+        font-size: 13px;
       }
       .toast {
         left: 12px;
@@ -1143,10 +1279,19 @@
       }
       .toast.show { transform: translateY(0); }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn,
+      .toast,
+      .switch,
+      .switch::after,
+      .seg-opt span { transition: none; }
+    }
   </style>
   <script>
     if (window.self !== window.top) document.documentElement.classList.add("in-shell");
   </script>
+  <script src="../../assets/pwa.js" defer></script>
 </head>
 <body>
   <div class="app">
@@ -1154,7 +1299,7 @@
       <div>
         <a class="home-link" href="../../">← 工具箱</a>
         <h1>图片拼接助手</h1>
-        <p class="sub">多张截图拼成一张长图或宽图，还能标注、打码、裁剪 · 全程在本机处理，不上传</p>
+        <p class="sub">长截图自动去重、宫格拼图、标注打码裁剪 · 全程在本机处理，不上传</p>
       </div>
       <button type="button" class="btn" id="btnClearAll" disabled title="移除已添加的全部图片">清空</button>
     </header>
@@ -1188,6 +1333,10 @@
               <input type="radio" name="direction" value="horizontal" />
               <span>横向 · 宽图</span>
             </label>
+            <label class="seg-opt" title="按顺序每行排几张，拼成宫格图，适合多张照片">
+              <input type="radio" name="direction" value="grid" />
+              <span>宫格 · 拼图</span>
+            </label>
           </div>
         </div>
         <div class="field field-seg">
@@ -1216,6 +1365,67 @@
           <input type="color" id="bgColor" value="#000000" title="图片之间的间距、以及没铺满的空白处用这个颜色" />
         </div>
         <p class="scale-explain" id="scaleExplain"></p>
+        <div class="settings-row">
+          <label class="field switch-field" id="dedupeField" title="同一页面往下滑动截的几张图，自动找出重叠的部分和重复的标题栏、底栏，裁掉后无缝接成一张；没找到重叠的照常拼接">
+            <span class="field-label">长截图去重</span>
+            <span class="switch-line">
+              <input type="checkbox" id="dedupe" checked />
+              <span class="switch" aria-hidden="true"></span>
+              <span>自动裁掉相邻截图重复的部分</span>
+            </span>
+          </label>
+          <div class="field field-seg" id="columnsField" hidden>
+            <span class="field-label" id="columnsLabel">每行几张</span>
+            <div class="seg" id="columns" role="radiogroup" aria-labelledby="columnsLabel">
+              <label class="seg-opt">
+                <input type="radio" name="columns" value="2" checked />
+                <span>2 张</span>
+              </label>
+              <label class="seg-opt">
+                <input type="radio" name="columns" value="3" />
+                <span>3 张</span>
+              </label>
+              <label class="seg-opt">
+                <input type="radio" name="columns" value="4" />
+                <span>4 张</span>
+              </label>
+            </div>
+          </div>
+          <div class="field field-seg">
+            <span class="field-label" id="formatLabel">导出格式</span>
+            <div class="seg" id="format" role="radiogroup" aria-labelledby="formatLabel">
+              <label class="seg-opt" title="无损，文字截图最清楚，文件较大">
+                <input type="radio" name="format" value="png" checked />
+                <span>PNG 无损</span>
+              </label>
+              <label class="seg-opt" title="文件通常只有 PNG 的几分之一，适合照片和发聊天；复制到剪贴板仍是 PNG（浏览器只支持复制 PNG）">
+                <input type="radio" name="format" value="jpeg" />
+                <span>JPG 更小</span>
+              </label>
+            </div>
+          </div>
+          <div class="field field-seg">
+            <span class="field-label" id="outWidthLabel">导出宽度</span>
+            <div class="seg" id="outWidth" role="radiogroup" aria-labelledby="outWidthLabel">
+              <label class="seg-opt" title="保持拼接后的原始宽度">
+                <input type="radio" name="outWidth" value="0" checked />
+                <span>原尺寸</span>
+              </label>
+              <label class="seg-opt" title="比 1440px 宽时等比缩小，不会放大">
+                <input type="radio" name="outWidth" value="1440" />
+                <span>1440</span>
+              </label>
+              <label class="seg-opt" title="比 1080px 宽时等比缩小，不会放大；手机看图足够清楚">
+                <input type="radio" name="outWidth" value="1080" />
+                <span>1080</span>
+              </label>
+              <label class="seg-opt" title="比 720px 宽时等比缩小，不会放大；文件最小">
+                <input type="radio" name="outWidth" value="720" />
+                <span>720</span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="thumbs-head" id="thumbsHead" hidden>
@@ -1236,14 +1446,27 @@
         <div class="preview-empty" id="previewEmpty">添加图片后，这里会实时显示拼接效果</div>
         <canvas id="previewCanvas" hidden title="点击全屏查看"></canvas>
       </div>
-      <p class="hint preview-tip" id="previewTip" hidden>这里是缩小显示，点击可全屏查看；复制、下载用的是原图清晰度。</p>
+      <p class="hint preview-tip" id="previewTip" hidden>这里是缩小显示，点击可全屏查看；复制、下载、发送用的是导出尺寸的清晰原图。</p>
     </section>
 
     <div class="compose-dock compose-only">
       <span class="dock-info" id="dockInfo">还没添加图片</span>
-      <button type="button" class="btn" id="btnCopyStitchDock" disabled title="复制拼好的图，可直接粘贴到聊天或文档">复制图片</button>
-      <button type="button" class="btn" id="btnDownloadStitchDock" disabled title="保存为 PNG 文件">下载图片</button>
-      <button type="button" class="btn btn-primary" id="btnEnterEdit" disabled title="在拼好的图上画框、箭头、文字，打马赛克或裁剪">标注 / 裁剪</button>
+      <button type="button" class="btn" id="btnCopyStitchDock" disabled title="复制拼好的图（PNG），可直接粘贴到聊天或文档">
+        <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></svg>
+        复制图片
+      </button>
+      <button type="button" class="btn" id="btnDownloadStitchDock" disabled title="保存为 PNG 文件">
+        <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11" /><path d="M7.5 10.5 12 15l4.5-4.5" /><path d="M5 20h14" /></svg>
+        下载图片
+      </button>
+      <button type="button" class="btn" id="btnShareDock" disabled hidden title="发进共享剪贴板的房间，手机等其他设备马上能收到">
+        <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3 10 14" /><path d="M21 3 14.5 21 10 14 3 9.5Z" /></svg>
+        <span id="shareDockLabel">发到剪贴板</span>
+      </button>
+      <button type="button" class="btn btn-primary" id="btnEnterEdit" disabled title="在拼好的图上画框、箭头、文字，打马赛克或裁剪">
+        <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1L19 8l-3-3L5 16Z" /><path d="M14 7l3 3" /></svg>
+        标注 / 裁剪
+      </button>
     </div>
 
     <!-- 编辑态 -->
@@ -1327,6 +1550,9 @@
     <button type="button" class="tb" id="btnDownload" title="下载">
       <svg viewBox="0 0 24 24"><path d="M12 3 V15" /><path d="M7 10 L12 15 L17 10" /><path d="M5 21 H19" /></svg>
     </button>
+    <button type="button" class="tb" id="btnShareEdit" hidden title="发到共享剪贴板，其他设备马上能收到">
+      <svg viewBox="0 0 24 24"><path d="M21 3 10 14" /><path d="M21 3 14.5 21 10 14 3 9.5Z" /></svg>
+    </button>
     <button type="button" class="tb tb-cancel" id="btnCancelEdit" title="返回拼接">
       <svg viewBox="0 0 24 24"><path d="M6 6 L18 18" /><path d="M18 6 L6 18" /></svg>
     </button>
@@ -1368,8 +1594,35 @@
   const GAP_MAX = 500;
   const TOAST_MS = 3200;
   const TOAST_WARN_MS = 5200;
+  const JPEG_QUALITY = 0.92;
+  const JPEG_SHARE_QUALITY = 0.75;
+  // 与共享剪贴板单个文件的上限一致
+  const SHARE_MAX_BYTES = 8 * 1024 * 1024;
+  const SHARE_TIMEOUT_MS = 90000;
+  // 长截图去重：每行压成 64 个灰度采样比对；超过 2 万行的图不参与，免得卡顿。误差单位都是 0~255 的平均灰度差
+  const SIG_COLS = 64;
+  const SIG_MAX_ROWS = 20000;
+  const SIG_STRIP_PIXELS = 2 * 1024 * 1024;
+  const TEXTURE_MIN_CONTRAST = 24;
+  const STATIC_ROW_TOLERANCE = 3;
+  const OVERLAP_TOLERANCE = 4;
+  const BAD_ROW_DIFF = 8;
+  const OVERLAP_TIE_MARGIN = 0.35;
+  const OVERLAP_MIN_ROWS = 24;
+  const OVERLAP_MIN_TEXTURED = 12;
+  const OVERLAP_REFINE_COUNT = 8;
+  const COARSE_ROW_STEP = 3;
+  const COARSE_COL_STEP = 3;
+  // 固定标题栏 / 底栏最多认图高的 30%；贴边 7% 以内（状态栏）允许有变化的行
+  const EDGE_BAR_MAX = 0.3;
+  const EDGE_LOOSE_ZONE = 0.07;
+  const IN_SHELL = window.self !== window.top;
+  const SHELL_SOURCE = "pt-shell";
+  const MESSAGE_SOURCE = "pt-stitch";
   const toastState = { timer: 0, hovering: false, duration: TOAST_MS };
-  let images = []; // { id, name, bitmap, width, height, url }
+  const overlapCache = new Map(); // "前一张id>后一张id" → 去重比对结果，null 表示两张接不上
+  const pendingShares = new Map(); // requestId → { timer, note }
+  let images = []; // { id, name, bitmap, width, height, url, sig }
   let previewTimer = 0;
   let fileDragDepth = 0;
   let thumbDragIndex = -1;
@@ -1428,6 +1681,12 @@
     scaleMaxText: document.getElementById("scaleMaxText"),
     scaleMinText: document.getElementById("scaleMinText"),
     scaleExplain: document.getElementById("scaleExplain"),
+    dedupe: document.getElementById("dedupe"),
+    dedupeField: document.getElementById("dedupeField"),
+    columns: document.getElementById("columns"),
+    columnsField: document.getElementById("columnsField"),
+    format: document.getElementById("format"),
+    outWidth: document.getElementById("outWidth"),
     gap: document.getElementById("gap"),
     bgColor: document.getElementById("bgColor"),
     previewCanvas: document.getElementById("previewCanvas"),
@@ -1438,6 +1697,9 @@
     btnEnterEdit: document.getElementById("btnEnterEdit"),
     btnCopyStitchDock: document.getElementById("btnCopyStitchDock"),
     btnDownloadStitchDock: document.getElementById("btnDownloadStitchDock"),
+    btnShareDock: document.getElementById("btnShareDock"),
+    shareDockLabel: document.getElementById("shareDockLabel"),
+    btnShareEdit: document.getElementById("btnShareEdit"),
     btnClearAll: document.getElementById("btnClearAll"),
     lightbox: document.getElementById("lightbox"),
     lightboxTitle: document.getElementById("lightboxTitle"),
@@ -1509,9 +1771,9 @@
 
   /**
    * 追加图片：非图片文件跳过，单张解码失败不影响其他张，按选择顺序排在已有图片后面。
-   * 提示里写清加了几张、一共几张、跳过或失败了几个。
+   * 提示里写清加了几张、一共几张、跳过或失败了几个；note 会接在提示末尾。
    */
-  function addFiles(fileList, verb) {
+  function addFiles(fileList, verb, note) {
     const all = Array.from(fileList || []);
     const files = all.filter((file) => file && file.type && file.type.indexOf("image/") === 0);
     const skipped = all.length - files.length;
@@ -1533,6 +1795,7 @@
       if (loaded.length) parts.push((verb || "已添加") + " " + loaded.length + " 张，共 " + images.length + " 张");
       if (failed) parts.push(failed + " 张读不出来（文件可能损坏或格式不支持）");
       if (skipped) parts.push(skipped + " 个不是图片，已跳过");
+      if (note) parts.push(note);
       showToast(parts.join("；"), failed > 0 || skipped > 0);
     });
   }
@@ -1550,13 +1813,23 @@
     return true;
   }
 
-  /** 每行显示原尺寸；按当前对齐方式会被缩放时，再标出拼接后的尺寸和比例（放大用橙色提醒可能变糊） */
+  /**
+   * 每行显示原尺寸；按当前对齐方式会被缩放时，再标出拼接后的尺寸和比例（放大用橙色提醒可能变糊）。
+   * 纵向去重开着时，标出这张和前后哪张接上了、裁掉多少原图像素；没接上的不标
+   */
   function renderThumbs() {
-    const sizes = computeScaledSizes(getSettings());
+    const settings = getSettings();
+    const sizes = computeScaledSizes(settings);
+    const crops = settings.direction === "vertical" && settings.dedupe && images.length > 1 ? computeCrops() : null;
     const fragment = document.createDocumentFragment();
     images.forEach((item, index) => {
       const scaled = sizes[index];
       const ratio = Math.round((scaled.w / item.width) * 100);
+      const crop = crops ? crops[index] : null;
+      let dedupeText = "";
+      if (crop && crop.top && crop.bottom) dedupeText = "已和上下两张接上：去掉顶部 " + crop.top + "px、底部 " + crop.bottom + "px 重复内容";
+      else if (crop && crop.top) dedupeText = "已和上一张接上：去掉顶部重复的 " + crop.top + "px";
+      else if (crop && crop.bottom) dedupeText = "已和下一张接上：去掉底部重复的 " + crop.bottom + "px";
       const row = document.createElement("div");
       row.className = "thumb";
       row.draggable = true;
@@ -1566,7 +1839,7 @@
         '<img class="thumb-preview" draggable="false" title="点击看大图" />' +
         '<div class="thumb-meta"><div class="name"></div><div class="size">' + item.width + " × " + item.height +
         (ratio === 100 ? "" : '<span class="scaled' + (ratio > 100 ? " is-up" : "") + '"> → ' + scaled.w + " × " + scaled.h + "（" + (ratio > 100 ? "放大" : "缩小") + "到 " + ratio + "%）</span>") +
-        "</div></div>" +
+        "</div>" + (dedupeText ? '<div class="dedupe">' + dedupeText + "</div>" : "") + "</div>" +
         '<div class="thumb-actions">' +
         '<button type="button" class="btn btn-sm btn-step" data-act="up" title="往前挪一位" aria-label="上移"' + (index === 0 ? " disabled" : "") + ">↑</button>" +
         '<button type="button" class="btn btn-sm btn-step" data-act="down" title="往后挪一位" aria-label="下移"' + (index === images.length - 1 ? " disabled" : "") + ">↓</button>" +
@@ -1635,6 +1908,7 @@
     els.btnEnterEdit.disabled = !images.length;
     els.btnCopyStitchDock.disabled = !images.length;
     els.btnDownloadStitchDock.disabled = !images.length;
+    syncShareButtons();
   }
 
   var lightboxView = {
@@ -2037,6 +2311,7 @@
     if (!window.confirm("清空已添加的 " + images.length + " 张图片？只是从这里移除，原文件不受影响。")) return;
     images.forEach(releaseImage);
     images = [];
+    overlapCache.clear();
     renderThumbs();
     schedulePreview();
     showToast("已清空，可以重新添加图片");
@@ -2046,75 +2321,298 @@
     return {
       direction: getRadioValue(els.direction),
       scaleMode: getRadioValue(els.scaleMode),
+      columns: parseInt(getRadioValue(els.columns), 10) || 2,
+      dedupe: els.dedupe.checked,
+      format: getRadioValue(els.format) === "jpeg" ? "jpeg" : "png",
+      outWidth: parseInt(getRadioValue(els.outWidth), 10) || 0,
       gap: Math.min(GAP_MAX, Math.max(0, parseInt(els.gap.value, 10) || 0)),
       bgColor: els.bgColor.value || "#000000"
     };
   }
 
-  /** 纵向统一宽度、横向统一高度：max 向最大的看齐（小图放大），min 向最小的看齐（大图缩小），none 不缩放 */
+  /** 纵向、宫格统一宽度，横向统一高度：max 向最大的看齐（小图放大），min 向最小的看齐（大图缩小），none 不缩放 */
   function computeScaledSizes(settings) {
     const sizes = images.map((item) => ({ w: item.width, h: item.height, img: item }));
     if (!sizes.length || settings.scaleMode === "none") return sizes;
-    const vertical = settings.direction === "vertical";
-    const edges = sizes.map((size) => (vertical ? size.w : size.h));
+    const alignWidth = settings.direction !== "horizontal";
+    const edges = sizes.map((size) => (alignWidth ? size.w : size.h));
     const target = settings.scaleMode === "min" ? Math.min(...edges) : Math.max(...edges);
     return sizes.map((size) => {
-      const scale = target / (vertical ? size.w : size.h);
+      const scale = target / (alignWidth ? size.w : size.h);
       return { w: Math.round(size.w * scale), h: Math.round(size.h * scale), img: size.img };
     });
   }
 
-  /** 成图原始像素尺寸，未做 8000 封顶；没有图片返回 null */
-  function measureStitch(sizes, settings) {
-    if (!sizes.length) return null;
-    const gapTotal = settings.gap * (sizes.length - 1);
-    if (settings.direction === "vertical") {
-      return { w: Math.max(...sizes.map((size) => size.w)), h: sizes.reduce((sum, size) => sum + size.h, 0) + gapTotal };
+  /**
+   * 每行按宽度均分成 SIG_COLS 段、各段求平均灰度，用来比对相邻截图哪些行重复；textured 标记这一行有没有内容（不是纯色）。
+   * 只在水平方向求平均、行与行之间不混合：交给浏览器缩放会把上下行糊在一起，接缝处会差一两行。
+   * 分条读取像素，长图也不会一次占用大量内存。结果缓存在图片上；比 SIG_COLS 还窄、或超过 SIG_MAX_ROWS 行的图不参与去重
+   */
+  function rowSignature(item) {
+    if (item.sig !== undefined) return item.sig;
+    item.sig = null;
+    if (item.width < SIG_COLS || item.height > SIG_MAX_ROWS) return null;
+    const width = item.width;
+    const stripRows = Math.max(1, Math.min(item.height, Math.floor(SIG_STRIP_PIXELS / width)));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = stripRows;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const edges = new Uint32Array(SIG_COLS + 1);
+    for (let col = 0; col <= SIG_COLS; col++) edges[col] = Math.round((col * width) / SIG_COLS);
+    const gray = new Uint8Array(SIG_COLS * item.height);
+    const textured = new Uint8Array(item.height);
+    for (let stripTop = 0; stripTop < item.height; stripTop += stripRows) {
+      const rows = Math.min(stripRows, item.height - stripTop);
+      ctx.clearRect(0, 0, width, rows);
+      ctx.drawImage(item.bitmap, 0, stripTop, width, rows, 0, 0, width, rows);
+      const rgba = ctx.getImageData(0, 0, width, rows).data;
+      for (let row = 0; row < rows; row++) {
+        const rowStart = row * width * 4;
+        const out = (stripTop + row) * SIG_COLS;
+        let low = 255;
+        let high = 0;
+        for (let col = 0; col < SIG_COLS; col++) {
+          let sum = 0;
+          for (let at = rowStart + edges[col] * 4, end = rowStart + edges[col + 1] * 4; at < end; at += 4) {
+            sum += rgba[at] * 77 + rgba[at + 1] * 151 + rgba[at + 2] * 28;
+          }
+          const value = Math.round(sum / ((edges[col + 1] - edges[col]) * 256));
+          gray[out + col] = value;
+          if (value < low) low = value;
+          if (value > high) high = value;
+        }
+        textured[stripTop + row] = high - low > TEXTURE_MIN_CONTRAST ? 1 : 0;
+      }
     }
-    return { w: sizes.reduce((sum, size) => sum + size.w, 0) + gapTotal, h: Math.max(...sizes.map((size) => size.h)) };
+    item.sig = { gray, textured, rows: item.height };
+    return item.sig;
+  }
+
+  /** 两行之间每个采样点的平均灰度差（0~255）；step 大于 1 时隔列抽样，用于粗筛 */
+  function rowDiff(sigA, rowA, sigB, rowB, step) {
+    const startA = rowA * SIG_COLS;
+    const startB = rowB * SIG_COLS;
+    let sum = 0;
+    let count = 0;
+    for (let col = 0; col < SIG_COLS; col += step) {
+      sum += Math.abs(sigA.gray[startA + col] - sigB.gray[startB + col]);
+      count += 1;
+    }
+    return sum / count;
   }
 
   /**
-   * 复制、下载、标注实际用的尺寸：最长边超过 8000 时等比缩小（与 stitchToCanvas 的取整一致），
-   * capped 表示是否缩过，rawW / rawH 是缩之前的尺寸；没有图片返回 null
+   * 从顶部（fromBottom 为 true 时从底部）逐行比较两张图，算出两张共有的固定栏有多高，最多认图高的 EDGE_BAR_MAX。
+   * 贴边的 EDGE_LOOSE_ZONE 内允许有不一样的行（状态栏的时间、电量会变），过了这段遇到第一行不一样就停，
+   * 免得把内容里碰巧都是空白的行也算进固定栏
    */
-  function exportSize(settings, sizes) {
-    const total = measureStitch(sizes || computeScaledSizes(settings), settings);
+  function countStaticRows(sigA, sigB, fromBottom, minRows) {
+    const limit = Math.floor(minRows * EDGE_BAR_MAX);
+    const looseRows = Math.round(minRows * EDGE_LOOSE_ZONE);
+    let staticEnd = 0;
+    for (let index = 0; index < limit; index++) {
+      const rowA = fromBottom ? sigA.rows - 1 - index : index;
+      const rowB = fromBottom ? sigB.rows - 1 - index : index;
+      if (rowDiff(sigA, rowA, sigB, rowB, 1) <= STATIC_ROW_TOLERANCE) staticEnd = index + 1;
+      else if (index >= looseRows) break;
+    }
+    return staticEnd;
+  }
+
+  /**
+   * 长截图去重：判断 B 是不是 A 往下滚动后截的。单位都是原图像素。
+   * 先认出两张共有的固定标题栏（top 行）和底栏（bottom 行），再在中间能滚动的部分里，
+   * 找 A 末尾和 B 开头逐行一致的最长一段（overlap 行）。
+   * 拼接时 A 去掉底部 bottom 行，B 去掉顶部 top + overlap 行，两段无缝接上。
+   * 宽度不同、哪儿都对不上、或者重叠处几乎全是空白（没法确认）时返回 null，按普通拼接处理。
+   */
+  function detectOverlap(itemA, itemB) {
+    if (itemA.width !== itemB.width) return null;
+    const sigA = rowSignature(itemA);
+    const sigB = rowSignature(itemB);
+    if (!sigA || !sigB) return null;
+    const minRows = Math.min(sigA.rows, sigB.rows);
+    const top = countStaticRows(sigA, sigB, false, minRows);
+    const bottom = countStaticRows(sigA, sigB, true, minRows);
+    const aEnd = sigA.rows - bottom;
+    const maxOverlap = Math.min(aEnd - top, sigB.rows - bottom - top);
+    if (maxOverlap < OVERLAP_MIN_ROWS) return null;
+
+    // texturedBefore[n]：B 可滚动部分前 n 行里有内容的行数。大片空白放在哪都对得上，重叠里有内容的行太少就没法确认
+    const texturedBefore = new Uint32Array(maxOverlap + 1);
+    for (let offset = 0; offset < maxOverlap; offset++) {
+      texturedBefore[offset + 1] = texturedBefore[offset] + sigB.textured[top + offset];
+    }
+
+    // 粗筛：每隔几行、几列抽样比一次（空白行也比，灰底对白底这种差别才不会漏掉），累计误差一超预算就放弃这个重叠量
+    const candidates = [];
+    for (let overlap = OVERLAP_MIN_ROWS; overlap <= maxOverlap; overlap++) {
+      if (texturedBefore[overlap] < OVERLAP_MIN_TEXTURED) continue;
+      const samples = Math.ceil(overlap / COARSE_ROW_STEP);
+      const budget = OVERLAP_TOLERANCE * 2 * samples;
+      const base = aEnd - overlap;
+      let sum = 0;
+      for (let offset = 0; offset < overlap && sum <= budget; offset += COARSE_ROW_STEP) {
+        sum += rowDiff(sigA, base + offset, sigB, top + offset, COARSE_COL_STEP);
+      }
+      if (sum <= budget) candidates.push({ overlap, cost: sum / samples });
+    }
+
+    // 精算：粗筛最像的几个逐行逐列再比，有内容的行、空白行各自的平均误差都要在容差内。
+    // 先挑明显对不上的行最少的，再挑误差最小的；误差差不多时取重叠更多的（小重叠可能只是碰巧对上几行）
+    candidates.sort((first, second) => first.cost - second.cost);
+    const refined = [];
+    candidates.slice(0, OVERLAP_REFINE_COUNT).forEach((candidate) => {
+      const base = aEnd - candidate.overlap;
+      let texturedSum = 0;
+      let blankSum = 0;
+      let badRows = 0;
+      for (let offset = 0; offset < candidate.overlap; offset++) {
+        const diff = rowDiff(sigA, base + offset, sigB, top + offset, 1);
+        if (sigB.textured[top + offset]) texturedSum += diff;
+        else blankSum += diff;
+        if (diff > BAD_ROW_DIFF) badRows += 1;
+      }
+      const texturedRows = texturedBefore[candidate.overlap];
+      const blankRows = candidate.overlap - texturedRows;
+      if (texturedSum / texturedRows > OVERLAP_TOLERANCE) return;
+      if (blankRows && blankSum / blankRows > OVERLAP_TOLERANCE) return;
+      refined.push({ overlap: candidate.overlap, cost: (texturedSum + blankSum) / candidate.overlap, badRows });
+    });
+    if (!refined.length) return null;
+    const fewestBad = Math.min(...refined.map((entry) => entry.badRows));
+    const cleanest = refined.filter((entry) => entry.badRows === fewestBad);
+    const bestCost = Math.min(...cleanest.map((entry) => entry.cost));
+    const overlap = Math.max(...cleanest
+      .filter((entry) => entry.cost <= bestCost + OVERLAP_TIE_MARGIN)
+      .map((entry) => entry.overlap));
+    return { top, bottom, overlap };
+  }
+
+  /**
+   * 纵向去重时每张图要裁的原图像素：top 是顶部（与上一张重复的部分），bottom 是底部（与下一张共有的固定栏），
+   * joined 表示和上一张无缝衔接（接缝处不加间距）。相邻两张的比对结果按图片 id 缓存，调顺序不用重算。
+   */
+  function computeCrops() {
+    const crops = images.map(() => ({ top: 0, bottom: 0, joined: false }));
+    for (let index = 1; index < images.length; index++) {
+      const key = images[index - 1].id + ">" + images[index].id;
+      if (!overlapCache.has(key)) overlapCache.set(key, detectOverlap(images[index - 1], images[index]));
+      const match = overlapCache.get(key);
+      if (!match) continue;
+      crops[index - 1].bottom = match.bottom;
+      crops[index].top = match.top + match.overlap;
+      crops[index].joined = true;
+    }
+    return crops;
+  }
+
+  /**
+   * 每张图在成图里的摆放位置（拼接像素，还没做导出缩放）；没有图片返回 null。
+   * srcY / srcH 是从原图截取的那一段（纵向去重时会裁），saved 是去重省掉的高度。
+   * 宫格：每格一样宽（取最宽那张），每行一样高（取这一行最高那张），图在格子里居中。
+   */
+  function layoutStitch(settings) {
+    const sizes = computeScaledSizes(settings);
+    if (!sizes.length) return null;
+    const gap = settings.gap;
+    const cells = [];
+
+    if (settings.direction === "grid") {
+      const columns = Math.max(1, Math.min(settings.columns, sizes.length));
+      const cellW = Math.max(...sizes.map((size) => size.w));
+      let rowTop = 0;
+      for (let start = 0; start < sizes.length; start += columns) {
+        const rowItems = sizes.slice(start, start + columns);
+        const rowH = Math.max(...rowItems.map((size) => size.h));
+        rowItems.forEach((size, column) => {
+          cells.push({
+            img: size.img,
+            x: column * (cellW + gap) + (cellW - size.w) / 2,
+            y: rowTop + (rowH - size.h) / 2,
+            w: size.w,
+            h: size.h,
+            srcY: 0,
+            srcH: size.img.height
+          });
+        });
+        rowTop += rowH + gap;
+      }
+      return { w: columns * cellW + (columns - 1) * gap, h: rowTop - gap, cells, saved: 0 };
+    }
+
+    const vertical = settings.direction === "vertical";
+    const crops = vertical && settings.dedupe ? computeCrops() : null;
+    const cross = Math.max(...sizes.map((size) => (vertical ? size.w : size.h)));
+    let offset = 0;
+    let saved = 0;
+    sizes.forEach((size, index) => {
+      const crop = crops ? crops[index] : null;
+      if (index > 0 && !(crop && crop.joined)) offset += gap;
+      if (!vertical) {
+        cells.push({ img: size.img, x: offset, y: (cross - size.h) / 2, w: size.w, h: size.h, srcY: 0, srcH: size.img.height });
+        offset += size.w;
+        return;
+      }
+      const ratio = size.h / size.img.height;
+      const srcY = crop ? Math.min(crop.top, size.img.height) : 0;
+      const srcH = crop ? Math.max(0, size.img.height - srcY - crop.bottom) : size.img.height;
+      cells.push({ img: size.img, x: (cross - size.w) / 2, y: offset, w: size.w, h: srcH * ratio, srcY, srcH });
+      offset += srcH * ratio;
+      saved += (size.img.height - srcH) * ratio;
+    });
+    return vertical ? { w: cross, h: offset, cells, saved } : { w: offset, h: cross, cells, saved: 0 };
+  }
+
+  /**
+   * 复制、下载、标注、发送实际用的尺寸：先按「导出宽度」缩（只缩不放），最长边仍超过 8000 再等比缩。
+   * capped 表示被 8000 上限缩过，shrunk 表示按导出宽度缩过，rawW / rawH 是缩之前的尺寸；没有图片返回 null
+   */
+  function exportSize(settings, layout) {
+    const total = layout || layoutStitch(settings);
     if (!total) return null;
-    const longest = Math.max(total.w, total.h);
-    const scale = longest > EXPORT_MAX_EDGE ? EXPORT_MAX_EDGE / longest : 1;
+    const widthScale = settings.outWidth ? Math.min(1, settings.outWidth / total.w) : 1;
+    const edgeScale = Math.min(1, EXPORT_MAX_EDGE / Math.max(total.w, total.h));
+    const scale = Math.min(widthScale, edgeScale);
     return {
       w: Math.max(1, Math.round(total.w * scale)),
       h: Math.max(1, Math.round(total.h * scale)),
-      rawW: total.w,
-      rawH: total.h,
-      capped: scale < 1
+      rawW: Math.round(total.w),
+      rawH: Math.round(total.h),
+      capped: edgeScale < widthScale,
+      shrunk: widthScale < 1 && widthScale <= edgeScale,
+      saved: Math.round(total.saved * scale)
     };
   }
 
-  /** 按设置拼接：maxEdge 为 0 表示原尺寸，否则最长边缩到 maxEdge 以内；传入 target 时直接画在它上面 */
-  function stitchToCanvas(settings, maxEdge, target) {
-    const sizes = computeScaledSizes(settings);
-    const total = measureStitch(sizes, settings);
-    if (!total) return null;
-    const vertical = settings.direction === "vertical";
-    const longest = Math.max(total.w, total.h);
-    const scale = maxEdge && longest > maxEdge ? maxEdge / longest : 1;
+  /**
+   * 按设置拼接：maxEdge 为 0 表示不限最长边，maxWidth 为 0 表示不限宽度，两者都只缩不放；
+   * 传入 target 时直接画在它上面（预览复用同一块画布）
+   */
+  function stitchToCanvas(settings, maxEdge, target, maxWidth) {
+    const layout = layoutStitch(settings);
+    if (!layout) return null;
+    const scale = Math.min(
+      1,
+      maxEdge ? maxEdge / Math.max(layout.w, layout.h) : 1,
+      maxWidth ? maxWidth / layout.w : 1
+    );
     const canvas = target || document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(total.w * scale));
-    canvas.height = Math.max(1, Math.round(total.h * scale));
+    canvas.width = Math.max(1, Math.round(layout.w * scale));
+    canvas.height = Math.max(1, Math.round(layout.h * scale));
     const ctx = canvas.getContext("2d");
+    ctx.imageSmoothingQuality = "high";
     ctx.fillStyle = settings.bgColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const gap = settings.gap * scale;
-    let offset = 0;
-    sizes.forEach((size) => {
-      const drawW = size.w * scale;
-      const drawH = size.h * scale;
-      const drawX = vertical ? (canvas.width - drawW) / 2 : offset;
-      const drawY = vertical ? offset : (canvas.height - drawH) / 2;
-      ctx.drawImage(size.img.bitmap, drawX, drawY, drawW, drawH);
-      offset += (vertical ? drawH : drawW) + gap;
+    layout.cells.forEach((cell) => {
+      // 落点取整：无缝衔接的两段之间不会漏出一条底色细线
+      const left = Math.round(cell.x * scale);
+      const top = Math.round(cell.y * scale);
+      const width = Math.round((cell.x + cell.w) * scale) - left;
+      const height = Math.round((cell.y + cell.h) * scale) - top;
+      if (width < 1 || height < 1 || cell.srcH < 1) return;
+      ctx.drawImage(cell.img.bitmap, 0, cell.srcY, cell.img.width, cell.srcH, left, top, width, height);
     });
     return canvas;
   }
@@ -2124,11 +2622,11 @@
     previewTimer = setTimeout(renderPreview, 80);
   }
 
-  /** 刷新缩放说明、成图尺寸和预览图；成图超过 8000px 时提前说明导出会等比缩小 */
+  /** 刷新缩放说明、成图尺寸和预览图；按导出宽度缩小、超过 8000px 被等比缩小、去重省掉多少都写在尺寸标签里 */
   function renderPreview() {
     const settings = getSettings();
-    const sizes = computeScaledSizes(settings);
-    const size = exportSize(settings, sizes);
+    const layout = layoutStitch(settings);
+    const size = exportSize(settings, layout);
     updateScaleExplain(settings);
     els.previewEmpty.hidden = Boolean(size);
     els.previewCanvas.hidden = !size;
@@ -2138,61 +2636,80 @@
       els.dockInfo.textContent = "还没添加图片";
       return;
     }
+    let chip = "成图 " + size.w + " × " + size.h + " px";
+    if (size.capped) {
+      chip = "原始 " + size.rawW + " × " + size.rawH + "，超过 " + EXPORT_MAX_EDGE + "px，导出时等比缩到 " + size.w + " × " + size.h;
+    } else if (size.shrunk) {
+      chip = "导出 " + size.w + " × " + size.h + " px（按导出宽度从 " + size.rawW + " 缩小）";
+    }
+    if (size.saved > 0) chip += " · 去重省掉 " + size.saved + "px";
     els.outputChip.classList.toggle("is-warn", size.capped);
-    els.outputChip.textContent = size.capped
-      ? "原始 " + size.rawW + " × " + size.rawH + "，超过 " + EXPORT_MAX_EDGE + "px，复制/下载时等比缩到 " + size.w + " × " + size.h
-      : "成图 " + size.w + " × " + size.h + " px";
+    els.outputChip.textContent = chip;
     els.dockInfo.textContent = images.length + " 张 · " + size.w + " × " + size.h;
     stitchToCanvas(settings, PREVIEW_MAX_EDGE, els.previewCanvas);
   }
 
   /** 对齐缩放的大白话说明：随方向切换「宽 / 高」字眼，有图时带上实际像素，图片本来一样大时直接说明无需缩放 */
   function updateScaleExplain(settings) {
-    const vertical = settings.direction === "vertical";
-    const edgeName = vertical ? "宽度" : "高度";
-    const bigWord = vertical ? "宽" : "高";
-    const smallWord = vertical ? "窄" : "矮";
+    const grid = settings.direction === "grid";
+    const alignWidth = settings.direction !== "horizontal";
+    const edgeName = alignWidth ? "宽度" : "高度";
+    const bigWord = alignWidth ? "宽" : "高";
+    const smallWord = alignWidth ? "窄" : "矮";
     els.scaleMaxText.textContent = "对齐最" + bigWord;
     els.scaleMinText.textContent = "对齐最" + smallWord;
-    const edges = images.map((item) => (vertical ? item.width : item.height));
+    const edges = images.map((item) => (alignWidth ? item.width : item.height));
     const maxPx = edges.length ? Math.max(...edges) : 0;
     const minPx = edges.length ? Math.min(...edges) : 0;
+    const neatText = grid ? "每一格一样宽" : "拼出来" + (alignWidth ? "左右" : "上下") + "边缘整齐";
     let text;
     if (edges.length === 1) {
       text = "只有一张图，不用对齐；再加几张" + edgeName + "不同的图，这里会说明怎么缩放";
     } else if (edges.length > 1 && maxPx === minPx) {
       text = "这些图" + edgeName + "都是 " + maxPx + "px，不需要缩放，三个选项效果一样";
     } else if (settings.scaleMode === "max") {
-      text = edgeName + "统一成最" + bigWord + "那张" + (maxPx ? "的 " + maxPx + "px" : "") + "：" + smallWord + "的图会被放大（可能略糊），拼出来" + (vertical ? "左右" : "上下") + "边缘整齐";
+      text = edgeName + "统一成最" + bigWord + "那张" + (maxPx ? "的 " + maxPx + "px" : "") + "：" + smallWord + "的图会被放大（可能略糊），" + neatText;
     } else if (settings.scaleMode === "min") {
       text = edgeName + "统一成最" + smallWord + "那张" + (minPx ? "的 " + minPx + "px" : "") + "：" + bigWord + "的图会被缩小，画面清晰、文件更小";
+    } else if (grid) {
+      text = "每张保持原尺寸：比最宽那张窄的图会在格子里居中，旁边露出底色";
     } else {
-      text = "每张保持原尺寸：比最" + bigWord + "那张" + smallWord + "的图会居中摆放，" + (vertical ? "左右两侧" : "上下两边") + "露出底色";
+      text = "每张保持原尺寸：比最" + bigWord + "那张" + smallWord + "的图会居中摆放，" + (alignWidth ? "左右两侧" : "上下两边") + "露出底色";
     }
     els.scaleExplain.textContent = text;
   }
 
   /** 导出直接按封顶尺寸绘制，不先画原尺寸：浏览器画布有尺寸上限，超长图先画原尺寸会得到空白图 */
   function stitchForExport() {
-    return images.length ? stitchToCanvas(getSettings(), EXPORT_MAX_EDGE) : null;
+    const settings = getSettings();
+    return images.length ? stitchToCanvas(settings, EXPORT_MAX_EDGE, null, settings.outWidth) : null;
   }
 
-  function downloadStitchPng() {
+  function downloadStitch() {
     const out = stitchForExport();
     if (!out) {
       showToast("请先添加图片", true);
       return;
     }
-    saveCanvasPng(out);
+    saveCanvasImage(out, getSettings().format);
   }
 
-  function copyStitchPng() {
+  function copyStitch() {
     const out = stitchForExport();
     if (!out) {
       showToast("请先添加图片", true);
       return;
     }
     copyCanvasPng(out, "拼接图");
+  }
+
+  function shareStitch() {
+    const out = stitchForExport();
+    if (!out) {
+      showToast("请先添加图片", true);
+      return;
+    }
+    shareToClipboard(out, "拼接图");
   }
 
   /* —— 编辑态 —— */
@@ -2376,8 +2893,8 @@
     if (!images.length) return;
     const settings = getSettings();
     const size = exportSize(settings);
-    // 直接按封顶尺寸绘制，避免先画出超过浏览器上限的原尺寸画布
-    baseBitmap = stitchToCanvas(settings, EXPORT_MAX_EDGE);
+    // 直接按导出尺寸绘制，避免先画出超过浏览器上限的原尺寸画布
+    baseBitmap = stitchToCanvas(settings, EXPORT_MAX_EDGE, null, settings.outWidth);
     shapes = [];
     history = [];
     historyIndex = -1;
@@ -2394,7 +2911,10 @@
     const gestureTip = preferPan
       ? "双指或按钮缩放，拖动看细节；选下方工具后再标注"
       : "已选中矩形，直接拖动就能画框；滚轮缩放，按住空格拖动画布，Esc 返回拼接";
-    showToast(size.capped ? "成图太大，已等比缩到 " + size.w + " × " + size.h + " 再标注。" + gestureTip : gestureTip, size.capped);
+    let sizeTip = "";
+    if (size.capped) sizeTip = "成图太大，已等比缩到 " + size.w + " × " + size.h + " 再标注。";
+    else if (size.shrunk) sizeTip = "已按导出宽度缩到 " + size.w + " × " + size.h + " 再标注。";
+    showToast(sizeTip + gestureTip, size.capped);
   }
 
   function leaveEdit() {
@@ -3068,6 +3588,8 @@
     var shadow = els.dropShadow.checked;
     var pad = shadow ? 28 : 0;
     var out = document.createElement("canvas");
+    // 圆角、阴影留白处是透明的，导出 JPG 时要先铺白底
+    out.dataset.alpha = radius > 0 || shadow ? "1" : "";
     out.width = src.width + pad * 2;
     out.height = src.height + pad * 2;
     var ctx = out.getContext("2d");
@@ -3106,19 +3628,39 @@
     ctx.closePath();
   }
 
-  function canvasToBlob(canvas) {
-    return new Promise(function (resolve, reject) {
-      canvas.toBlob(function (blob) {
+  /**
+   * 编码成 PNG 或 JPG（quality 只对 JPG 有效，默认 JPEG_QUALITY）。
+   * JPG 没有透明通道：带圆角、阴影留白的标注图（data-alpha）先铺白底，否则透明处会变成黑色
+   */
+  function canvasToBlob(canvas, format, quality) {
+    let source = canvas;
+    if (format === "jpeg" && canvas.dataset.alpha === "1") {
+      source = document.createElement("canvas");
+      source.width = canvas.width;
+      source.height = canvas.height;
+      const flat = source.getContext("2d");
+      flat.fillStyle = "#ffffff";
+      flat.fillRect(0, 0, source.width, source.height);
+      flat.drawImage(canvas, 0, 0);
+    }
+    return new Promise((resolve, reject) => {
+      source.toBlob((blob) => {
         if (blob) resolve(blob);
         else reject(new Error("toBlob failed"));
-      }, "image/png");
+      }, format === "jpeg" ? "image/jpeg" : "image/png", format === "jpeg" ? quality || JPEG_QUALITY : undefined);
     });
   }
 
-  /** 生成 PNG 并触发下载；提示里带文件名和尺寸，方便去下载目录里找 */
-  function saveCanvasPng(canvas) {
-    const fileName = "stitch-" + formatStamp() + ".png";
-    canvasToBlob(canvas).then((blob) => {
+  function formatBytes(bytes) {
+    if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + " MB";
+    return Math.max(1, Math.round(bytes / 1024)) + " KB";
+  }
+
+  /** 按导出格式生成文件并触发下载；提示里带文件名、尺寸和大小，方便去下载目录里找 */
+  function saveCanvasImage(canvas, format) {
+    const ext = format === "jpeg" ? "jpg" : "png";
+    const fileName = "stitch-" + formatStamp() + "." + ext;
+    canvasToBlob(canvas, format).then((blob) => {
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = fileName;
@@ -3126,20 +3668,20 @@
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(link.href), 2000);
-      showToast("已开始下载 " + fileName + "（" + canvas.width + " × " + canvas.height + "）");
+      showToast("已开始下载 " + fileName + "（" + canvas.width + " × " + canvas.height + "，" + formatBytes(blob.size) + "）");
     }).catch((err) => {
-      console.error("生成 PNG 失败", err);
-      showToast("下载失败：浏览器没能生成 PNG，多半是图太大，少拼几张再试", true);
+      console.error("生成图片失败", err);
+      showToast("下载失败：浏览器没能生成 " + ext.toUpperCase() + "，多半是图太大，少拼几张或把导出宽度调小再试", true);
     });
   }
 
-  /** 先转成 PNG 再写剪贴板；浏览器不支持写图片或拒绝写入时，引导改用下载 */
+  /** 先转成 PNG 再写剪贴板（浏览器只支持复制 PNG）；不支持写图片或拒绝写入时，引导改用下载 */
   function copyCanvasPng(canvas, label) {
     if (!navigator.clipboard || !window.ClipboardItem) {
       showToast("这个浏览器不支持复制图片，请改用下载保存", true);
       return;
     }
-    canvasToBlob(canvas)
+    canvasToBlob(canvas, "png")
       .then((blob) => navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]))
       .then(() => {
         showToast("已复制" + label + "（" + canvas.width + " × " + canvas.height + "），可直接粘贴到聊天或文档");
@@ -3150,12 +3692,86 @@
       });
   }
 
-  function downloadPng() {
-    saveCanvasPng(exportCanvas(true));
+  /**
+   * 经工具箱外壳发进共享剪贴板的房间。按导出格式编码；超过剪贴板单个文件 8 MB 上限时，
+   * PNG 先改用 JPG，仍超限再降低 JPG 质量，还是太大就提示调小导出宽度。
+   * 同一时间只发一张；结果由剪贴板回传（share-result）后再提示，久等没回音也会说明
+   */
+  function shareToClipboard(canvas, label) {
+    if (!IN_SHELL) {
+      showToast("从工具箱首页打开拼接，才能发到共享剪贴板", true);
+      return;
+    }
+    if (pendingShares.size) {
+      showToast("上一张还在发送，等它发完再发", true);
+      return;
+    }
+    const format = getSettings().format;
+    const requestId = uid();
+    const entry = { timer: 0, note: "" };
+    pendingShares.set(requestId, entry);
+    syncShareButtons();
+    showToast("正在发到共享剪贴板…");
+    canvasToBlob(canvas, format)
+      .then((blob) => {
+        if (blob.size <= SHARE_MAX_BYTES || format === "jpeg") return blob;
+        entry.note = "PNG 有 " + formatBytes(blob.size) + "，超过 8 MB，已改成 JPG 发送";
+        return canvasToBlob(canvas, "jpeg");
+      })
+      .then((blob) => {
+        if (blob.size <= SHARE_MAX_BYTES) return blob;
+        entry.note = "图片超过 8 MB，已压缩成较低质量的 JPG 发送";
+        return canvasToBlob(canvas, "jpeg", JPEG_SHARE_QUALITY);
+      })
+      .then((blob) => {
+        if (blob.size > SHARE_MAX_BYTES) {
+          finishShare(requestId, false, label + "压缩后仍有 " + formatBytes(blob.size) + "，超过共享剪贴板 8 MB 上限：把「导出宽度」调小再发");
+          return;
+        }
+        const ext = blob.type === "image/jpeg" ? "jpg" : "png";
+        const file = new File([blob], "stitch-" + formatStamp() + "." + ext, { type: blob.type });
+        entry.timer = setTimeout(() => {
+          finishShare(requestId, false, "共享剪贴板一直没回应：到「共享剪贴板」页看看是否已连上、发送进度如何");
+        }, SHARE_TIMEOUT_MS);
+        window.parent.postMessage({ source: MESSAGE_SOURCE, type: "share-to-clipboard", requestId, files: [file] }, "/");
+      })
+      .catch((err) => {
+        console.error("生成要发送的图片失败", err);
+        finishShare(requestId, false, "发送失败：浏览器没能生成图片，多半是图太大，把导出宽度调小再试");
+      });
   }
 
-  function copyPng() {
+  /** 结束一次发送：清掉等待计时、恢复按钮，失败或带提醒时用橙色提示 */
+  function finishShare(requestId, ok, message, warn) {
+    const entry = pendingShares.get(requestId);
+    if (!entry) return;
+    clearTimeout(entry.timer);
+    pendingShares.delete(requestId);
+    syncShareButtons();
+    const note = entry.note ? "；" + entry.note : "";
+    showToast(message + note, !ok || Boolean(warn) || Boolean(note));
+  }
+
+  /** 发到剪贴板只在工具箱里可用（要靠外壳转交）；发送中先禁用，免得重复点 */
+  function syncShareButtons() {
+    const busy = pendingShares.size > 0;
+    els.btnShareDock.hidden = !IN_SHELL;
+    els.btnShareEdit.hidden = !IN_SHELL;
+    els.btnShareDock.disabled = busy || !images.length;
+    els.btnShareEdit.disabled = busy;
+    els.shareDockLabel.textContent = busy ? "发送中…" : "发到剪贴板";
+  }
+
+  function downloadEdited() {
+    saveCanvasImage(exportCanvas(true), getSettings().format);
+  }
+
+  function copyEdited() {
     copyCanvasPng(exportCanvas(true), "标注后的图片");
+  }
+
+  function shareEdited() {
+    shareToClipboard(exportCanvas(true), "标注后的图片");
   }
 
   function formatStamp() {
@@ -3171,10 +3787,13 @@
     return Boolean(types) && Array.from(types).indexOf("Files") >= 0;
   }
 
-  /** 方向、对齐方式会改变每张图的拼接尺寸，所以缩略图说明和预览一起刷新 */
+  /** 方向、对齐、去重会改变缩略图上的尺寸和去重说明，缩略图和预览一起刷新；去重只管纵向，每行几张只管宫格 */
   function onSettingsChange() {
+    const direction = getRadioValue(els.direction);
+    els.dedupeField.hidden = direction !== "vertical";
+    els.columnsField.hidden = direction !== "grid";
     renderThumbs();
-    schedulePreview();
+    renderPreview();
   }
 
   els.dropzone.addEventListener("click", () => els.fileInput.click());
@@ -3231,6 +3850,12 @@
 
   onRadioGroup(els.direction, "change", onSettingsChange);
   onRadioGroup(els.scaleMode, "change", onSettingsChange);
+  els.dedupe.addEventListener("change", onSettingsChange);
+  onRadioGroup(els.columns, "change", renderPreview);
+  onRadioGroup(els.outWidth, "change", renderPreview);
+  onRadioGroup(els.format, "change", () => {
+    els.btnDownloadStitchDock.title = getSettings().format === "jpeg" ? "保存为 JPG 文件（比 PNG 小很多）" : "保存为 PNG 文件（无损）";
+  });
   els.gap.addEventListener("input", schedulePreview);
   els.gap.addEventListener("change", () => {
     const typed = parseInt(els.gap.value, 10);
@@ -3243,8 +3868,9 @@
 
   els.btnClearAll.addEventListener("click", clearAll);
   els.btnEnterEdit.addEventListener("click", enterEdit);
-  els.btnCopyStitchDock.addEventListener("click", copyStitchPng);
-  els.btnDownloadStitchDock.addEventListener("click", downloadStitchPng);
+  els.btnCopyStitchDock.addEventListener("click", copyStitch);
+  els.btnDownloadStitchDock.addEventListener("click", downloadStitch);
+  els.btnShareDock.addEventListener("click", shareStitch);
   els.previewCanvas.addEventListener("click", () => {
     if (images.length) previewStitchLarge();
   });
@@ -3256,7 +3882,8 @@
     toastState.hovering = false;
     scheduleToastHide();
   });
-  renderPreview();
+  // 刷新后浏览器可能还原上次选的方向，按实际选中项决定显示哪些选项
+  onSettingsChange();
   els.btnLightboxClose.addEventListener("click", closeLightbox);
   els.btnLightboxReset.addEventListener("click", function () {
     resetLightboxView(true);
@@ -3282,8 +3909,9 @@
     closeLightbox();
   });
   document.getElementById("btnCancelEdit").addEventListener("click", leaveEdit);
-  document.getElementById("btnDownload").addEventListener("click", downloadPng);
-  document.getElementById("btnCopyEdit").addEventListener("click", copyPng);
+  document.getElementById("btnDownload").addEventListener("click", downloadEdited);
+  document.getElementById("btnCopyEdit").addEventListener("click", copyEdited);
+  els.btnShareEdit.addEventListener("click", shareEdited);
 
   els.btnUndo.addEventListener("click", function () {
     if (historyIndex > 0) restoreHistory(historyIndex - 1);
@@ -3397,7 +4025,7 @@
       if (historyIndex < history.length - 1) restoreHistory(historyIndex + 1);
     } else if (meta && event.key.toLowerCase() === "s") {
       event.preventDefault();
-      downloadPng();
+      downloadEdited();
     } else if (event.key === "Escape") {
       leaveEdit();
     } else if ((event.key === "Delete" || event.key === "Backspace") && selectedIndex >= 0) {
@@ -3406,6 +4034,20 @@
       deleteSelectedShape();
     }
   });
+
+  /* —— 工具箱外壳：接收剪贴板送来的图片、发到剪贴板的结果 —— */
+  window.addEventListener("message", (event) => {
+    if (!IN_SHELL || event.source !== window.parent) return;
+    const data = event.data;
+    if (!data || data.source !== SHELL_SOURCE) return;
+    if (data.type === "add-images" && Array.isArray(data.files)) {
+      const editing = document.body.classList.contains("is-edit");
+      addFiles(data.files, "已从" + String(data.from || "工具箱") + "收到", editing ? "正在标注，点工具栏的 ✕ 回到拼接页就能看到" : "");
+    } else if (data.type === "share-result") {
+      finishShare(data.requestId, Boolean(data.ok), String(data.message || (data.ok ? "已发到共享剪贴板" : "发送失败")), data.warn);
+    }
+  });
+  if (IN_SHELL) window.parent.postMessage({ source: MESSAGE_SOURCE, type: "ready" }, "/");
 })();
   </script>
 </body>

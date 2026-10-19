@@ -3,37 +3,47 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#eef2fb" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="共享剪贴板" />
+  <link rel="manifest" href="../../manifest.webmanifest" />
+  <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png" />
   <title>共享剪贴板</title>
   <style>
     :root {
-      --bg: #f5f7fa;
-      --surface: #ffffff;
-      --fill: #fafafa;
-      --text: #303133;
-      --text-regular: #606266;
-      --muted: #909399;
-      --placeholder: #a8abb2;
-      --border: #dcdfe6;
-      --border-light: #e4e7ed;
-      --border-lighter: #ebeef5;
-      --primary: #1677FF;
-      --primary-hover: #4096FF;
-      --primary-active: #0958D9;
-      --primary-soft: #ecf5ff;
-      --primary-soft-border: #d9ecff;
-      --primary-border: #c6e2ff;
-      --success: #67c23a;
-      --warning: #e6a23c;
-      --danger: #f56c6c;
-      --danger-soft: #fef0f0;
-      --danger-border: #fbc4c4;
-      --radius: 8px;
-      --radius-sm: 4px;
-      --shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
-      --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.14);
+      --bg: #eef2fb;
+      --surface: rgba(255, 255, 255, 0.7);
+      --surface-strong: rgba(255, 255, 255, 0.88);
+      --fill: rgba(241, 245, 252, 0.75);
+      --text: #1e2533;
+      --text-regular: #4a5568;
+      --muted: #8790a3;
+      --placeholder: #a9b0c0;
+      --border: rgba(30, 41, 59, 0.14);
+      --border-light: rgba(30, 41, 59, 0.1);
+      --border-lighter: rgba(30, 41, 59, 0.07);
+      --glass-border: rgba(255, 255, 255, 0.8);
+      --primary: #1677ff;
+      --primary-hover: #3d8bff;
+      --primary-active: #0b5fe0;
+      --primary-soft: rgba(22, 119, 255, 0.09);
+      --primary-soft-border: rgba(22, 119, 255, 0.2);
+      --primary-border: rgba(22, 119, 255, 0.35);
+      --grad: linear-gradient(135deg, #1677ff 0%, #7c5cff 100%);
+      --grad-hover: linear-gradient(135deg, #3d8bff 0%, #8f74ff 100%);
+      --success: #22c55e;
+      --success-text: #15803d;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --danger-soft: rgba(239, 68, 68, 0.08);
+      --danger-border: rgba(239, 68, 68, 0.28);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 30px rgba(30, 64, 175, 0.07);
+      --shadow-pop: 0 18px 48px rgba(30, 41, 90, 0.2);
+      --blur: saturate(170%) blur(18px);
       --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     }
 
@@ -47,15 +57,32 @@
       height: 100%;
     }
 
+    html { background: var(--bg); }
+
     body {
       font-family: var(--font);
       font-size: 14px;
       line-height: 1.5;
       color: var(--text);
-      background: var(--bg);
       -webkit-text-size-adjust: 100%;
       -webkit-tap-highlight-color: transparent;
     }
+
+    /* 静态渐变光晕；在工具箱里时由外层统一绘制，这里透明 */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(44vmax 44vmax at 6% -6%, rgba(22, 119, 255, 0.26), transparent 70%),
+        radial-gradient(40vmax 40vmax at 104% 8%, rgba(139, 92, 246, 0.22), transparent 70%),
+        radial-gradient(46vmax 46vmax at 62% 112%, rgba(6, 182, 212, 0.16), transparent 70%);
+    }
+
+    html.in-shell { background: transparent; }
+    html.in-shell body::before { display: none; }
 
     button,
     input,
@@ -101,10 +128,15 @@
     }
 
     .page-head h1 {
+      width: fit-content;
       margin: 0;
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.01em;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(120deg, #1e2533 30%, #1677ff 75%, #7c5cff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
     .page-head .sub {
@@ -119,16 +151,17 @@
       gap: 8px;
       min-width: 0;
       max-width: 100%;
-      height: 32px;
+      height: 34px;
       padding: 0 14px;
       font-size: 13px;
-      background: var(--surface);
-      border: 1px solid var(--border-light);
-      border-radius: 16px;
+      background: var(--surface-strong);
+      border: 1px solid var(--glass-border);
+      border-radius: 17px;
+      box-shadow: var(--shadow);
     }
 
     .status-text {
-      font-weight: 500;
+      font-weight: 600;
       white-space: nowrap;
     }
 
@@ -146,12 +179,12 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #c0c4cc;
+      background: #b8bfcc;
     }
 
     .status-dot.is-on {
       background: var(--success);
-      box-shadow: 0 0 0 3px rgba(103, 194, 58, 0.2);
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
     }
 
     .status-dot.is-busy {
@@ -190,9 +223,9 @@
     }
 
     .card {
-      padding: 16px;
+      padding: 18px;
       background: var(--surface);
-      border: 1px solid var(--border-lighter);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
     }
@@ -200,7 +233,7 @@
     .card-title {
       margin: 0 0 12px;
       font-size: 15px;
-      font-weight: 650;
+      font-weight: 700;
     }
 
     .field + .field { margin-top: 12px; }
@@ -216,23 +249,24 @@
     input[type="text"],
     textarea {
       width: 100%;
-      padding: 8px 12px;
+      padding: 9px 12px;
       font-size: 14px;
       color: var(--text);
-      background: var(--surface);
+      background: rgba(255, 255, 255, 0.86);
       border: 1px solid var(--border);
       border-radius: var(--radius-sm);
       outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
     }
 
     input[type="text"]:hover,
-    textarea:hover { border-color: #c0c4cc; }
+    textarea:hover { border-color: rgba(30, 41, 59, 0.24); }
 
     input[type="text"]:focus,
     textarea:focus {
+      background: #fff;
       border-color: var(--primary);
-      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+      box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.15);
     }
 
     input::placeholder,
@@ -245,7 +279,7 @@
       resize: vertical;
     }
 
-    /* —— 按钮（Element 风格） —— */
+    /* —— 按钮 —— */
     .btn {
       appearance: none;
       display: inline-flex;
@@ -259,74 +293,73 @@
       line-height: 1;
       color: var(--text-regular);
       text-decoration: none;
-      background: var(--surface);
-      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid var(--border-light);
       border-radius: var(--radius-sm);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       cursor: pointer;
       white-space: nowrap;
       user-select: none;
-      transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+      transition: color 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
     }
 
     .btn:hover {
       color: var(--primary);
-      background: var(--primary-soft);
+      background: #fff;
       border-color: var(--primary-border);
+      box-shadow: 0 4px 12px rgba(22, 119, 255, 0.12);
     }
 
-    .btn:active {
-      color: var(--primary-active);
-      border-color: var(--primary);
-    }
+    .btn:active { transform: translateY(1px); }
 
     .btn:focus-visible {
       outline: 2px solid var(--primary-border);
-      outline-offset: 1px;
+      outline-offset: 2px;
     }
 
     .btn:disabled {
-      color: #c0c4cc;
-      background: var(--surface);
+      color: #b8bfcc;
+      background: rgba(255, 255, 255, 0.6);
       border-color: var(--border-lighter);
+      box-shadow: none;
       cursor: not-allowed;
+      transform: none;
     }
 
     .btn-sm {
-      height: 28px;
-      padding: 0 10px;
+      height: 30px;
+      padding: 0 11px;
       font-size: 13px;
+      border-radius: 8px;
     }
 
     .btn-block { width: 100%; }
 
     .btn-primary {
       color: #fff;
-      background: var(--primary);
-      border-color: var(--primary);
+      background: var(--grad);
+      border-color: transparent;
+      box-shadow: 0 6px 16px rgba(22, 119, 255, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
 
     .btn-primary:hover {
       color: #fff;
-      background: var(--primary-hover);
-      border-color: var(--primary-hover);
-    }
-
-    .btn-primary:active {
-      color: #fff;
-      background: var(--primary-active);
-      border-color: var(--primary-active);
+      background: var(--grad-hover);
+      border-color: transparent;
+      box-shadow: 0 8px 22px rgba(22, 119, 255, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
 
     .btn-primary:disabled {
       color: #fff;
-      background: #a0cfff;
-      border-color: #a0cfff;
+      background: var(--grad);
+      opacity: 0.5;
     }
 
     .btn-accent {
       color: var(--primary);
       background: var(--primary-soft);
       border-color: var(--primary-soft-border);
+      box-shadow: none;
     }
 
     .btn-accent:hover {
@@ -339,6 +372,7 @@
       color: var(--muted);
       background: transparent;
       border-color: transparent;
+      box-shadow: none;
     }
 
     .btn-text-danger:hover,
@@ -346,12 +380,13 @@
       color: var(--danger);
       background: var(--danger-soft);
       border-color: var(--danger-border);
+      box-shadow: none;
     }
 
     .hint {
       margin: 12px 0 0;
       font-size: 12px;
-      line-height: 1.6;
+      line-height: 1.7;
       color: var(--muted);
     }
 
@@ -361,7 +396,7 @@
     }
 
     /* —— 房间信息 —— */
-    .room-card {
+    .room-top {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -374,22 +409,93 @@
 
     .room-name {
       overflow: hidden;
-      font-weight: 600;
+      font-weight: 700;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
     .room-me {
-      margin-top: 2px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 8px;
+      margin-top: 3px;
       font-size: 12px;
       color: var(--muted);
+    }
+
+    .lock-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      height: 20px;
+      padding: 0 7px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--success-text);
+      background: rgba(34, 197, 94, 0.12);
+      border-radius: 10px;
+      cursor: help;
+    }
+
+    .lock-badge svg {
+      width: 11px;
+      height: 11px;
     }
 
     .room-actions {
       flex: 0 0 auto;
       display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
       gap: 6px;
     }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0 0;
+      padding-top: 12px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-regular);
+      border-top: 1px solid var(--border-lighter);
+      cursor: pointer;
+    }
+
+    .switch-row input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .switch {
+      position: relative;
+      flex: 0 0 auto;
+      width: 36px;
+      height: 20px;
+      background: rgba(30, 41, 59, 0.16);
+      border-radius: 10px;
+      transition: background 0.2s;
+    }
+
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+      transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .switch-row input:checked + .switch { background: var(--grad); }
+    .switch-row input:checked + .switch::after { transform: translateX(16px); }
+    .switch-row input:focus-visible + .switch { outline: 2px solid var(--primary-border); outline-offset: 2px; }
 
     /* —— 发送 —— */
     .send-row {
@@ -413,10 +519,10 @@
       text-align: center;
       color: var(--text-regular);
       background: var(--fill);
-      border: 1px dashed var(--border);
-      border-radius: var(--radius);
+      border: 1.5px dashed rgba(22, 119, 255, 0.28);
+      border-radius: 14px;
       cursor: pointer;
-      transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+      transition: color 0.15s, background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
 
     .dropzone:hover,
@@ -432,6 +538,7 @@
       background: var(--primary-soft);
       border-style: solid;
       border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(22, 119, 255, 0.12);
     }
 
     .dz-title b {
@@ -464,6 +571,12 @@
 
     .history-head .card-title { margin: 0; }
 
+    .history-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     .count {
       margin-left: 6px;
       font-size: 13px;
@@ -478,26 +591,34 @@
       flex-direction: column;
       gap: 10px;
       overflow: auto;
-      padding-right: 2px;
+      padding: 2px 4px 2px 2px;
     }
 
+    /* 屏幕外的记录跳过渲染，记录多、图片多时滚动也顺 */
     .clip {
       flex-shrink: 0;
       padding: 12px 14px;
-      background: var(--surface);
-      border: 1px solid var(--border-lighter);
-      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      content-visibility: auto;
+      contain-intrinsic-size: auto 120px;
     }
 
-    .clip.is-self { background: #fafcff; }
+    .clip.is-self {
+      background: linear-gradient(180deg, rgba(234, 243, 255, 0.92), rgba(255, 255, 255, 0.82));
+    }
 
     .clip.is-new { animation: clip-in 1.2s ease-out; }
 
     @keyframes clip-in {
       0% {
-        background: var(--primary-soft);
+        background: rgba(22, 119, 255, 0.14);
         border-color: var(--primary-border);
+        transform: translateY(-4px);
       }
+      30% { transform: none; }
     }
 
     .clip-meta {
@@ -516,12 +637,12 @@
 
     .self-tag {
       height: 18px;
-      padding: 0 6px;
+      padding: 0 7px;
       font-size: 11px;
       line-height: 18px;
       color: var(--primary);
       background: var(--primary-soft);
-      border-radius: 3px;
+      border-radius: 9px;
     }
 
     .clip-time {
@@ -548,13 +669,14 @@
       flex: 0 0 auto;
       display: grid;
       place-items: center;
-      width: 38px;
-      height: 38px;
+      width: 40px;
+      height: 40px;
       font-size: 10px;
       font-weight: 700;
-      color: var(--primary);
-      background: var(--primary-soft);
-      border-radius: 6px;
+      color: #fff;
+      background: var(--grad);
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(22, 119, 255, 0.22);
     }
 
     .file-info { min-width: 0; }
@@ -584,10 +706,10 @@
     .clip-thumb {
       display: block;
       max-width: 100%;
-      max-height: 180px;
+      max-height: 200px;
       margin-top: 10px;
       border: 1px solid var(--border-lighter);
-      border-radius: 6px;
+      border-radius: 10px;
       cursor: zoom-in;
     }
 
@@ -607,7 +729,7 @@
     .clip-progress {
       height: 6px;
       overflow: hidden;
-      background: var(--border-lighter);
+      background: rgba(30, 41, 59, 0.08);
       border-radius: 3px;
     }
 
@@ -615,14 +737,14 @@
       display: block;
       width: 0%;
       height: 100%;
-      background: var(--primary);
+      background: var(--grad);
       border-radius: 3px;
       transition: width 0.12s linear;
     }
 
     .clip-progress.is-err > span { background: var(--danger); }
 
-    .clip-progress.is-pending > span { background: #c0c4cc; }
+    .clip-progress.is-pending > span { background: #b8bfcc; }
 
     .empty {
       padding: 40px 12px;
@@ -632,13 +754,78 @@
       color: var(--muted);
     }
 
+    /* —— 扫码进房 —— */
+    .qr-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 75;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.36);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+
+    .qr-dialog {
+      width: min(380px, 100%);
+      padding: 22px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.92);
+      -webkit-backdrop-filter: var(--blur);
+      backdrop-filter: var(--blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      box-shadow: var(--shadow-pop);
+    }
+
+    .qr-dialog h3 {
+      margin: 0 0 6px;
+      font-size: 18px;
+    }
+
+    .qr-sub {
+      margin: 0 0 14px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-regular);
+      overflow-wrap: anywhere;
+    }
+
+    .qr-box {
+      display: inline-grid;
+      place-items: center;
+      padding: 10px;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 0 0 1px var(--border-lighter), 0 10px 28px rgba(30, 64, 175, 0.12);
+    }
+
+    .qr-box canvas { display: block; }
+
+    .qr-warn {
+      margin: 12px 0 0;
+      font-size: 12px;
+      color: #b45309;
+    }
+
+    .qr-actions {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
     /* —— 全屏看图 —— */
     .lightbox {
       position: fixed;
       inset: 0;
       z-index: 80;
       display: flex;
-      background: rgba(15, 23, 42, 0.55);
+      background: rgba(15, 23, 42, 0.62);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
       touch-action: none;
     }
 
@@ -661,7 +848,8 @@
       font-size: 14px;
       font-weight: 600;
       color: #e2e8f0;
-      background: rgba(30, 41, 59, 0.96);
+      background: rgba(15, 23, 42, 0.72);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .lightbox-bar .title {
@@ -693,14 +881,15 @@
       height: 32px;
       padding: 0 12px;
       color: #e2e8f0;
-      background: #334155;
-      border-color: #475569;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.16);
+      box-shadow: none;
     }
 
     .lightbox-bar .btn:hover {
       color: #fff;
-      background: #475569;
-      border-color: #64748b;
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.28);
     }
 
     .lightbox-body {
@@ -731,7 +920,7 @@
       max-width: none;
       max-height: none;
       pointer-events: none;
-      border-radius: 4px;
+      border-radius: 6px;
       box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
     }
 
@@ -742,22 +931,25 @@
       position: fixed;
       left: 50%;
       bottom: max(24px, env(safe-area-inset-bottom));
-      z-index: 70;
+      z-index: 90;
       display: flex;
       align-items: center;
       gap: 10px;
-      max-width: min(92vw, 480px);
-      padding: 10px 16px;
+      max-width: min(92vw, 520px);
+      padding: 11px 16px;
       font-size: 14px;
       line-height: 1.45;
       color: #fff;
-      background: #303133;
-      border-radius: var(--radius);
+      background: rgba(23, 30, 45, 0.88);
+      -webkit-backdrop-filter: var(--blur);
+      backdrop-filter: var(--blur);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
       box-shadow: var(--shadow-pop);
       opacity: 0;
       pointer-events: none;
       transform: translate(-50%, 12px);
-      transition: opacity 0.2s, transform 0.2s;
+      transition: opacity 0.2s, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
     .toast.show {
@@ -770,12 +962,12 @@
       flex: 0 0 auto;
       display: grid;
       place-items: center;
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       font-size: 12px;
       font-weight: 700;
       line-height: 1;
-      background: var(--primary);
+      background: var(--grad);
       border-radius: 50%;
     }
 
@@ -829,10 +1021,20 @@
 
       .toast.show { transform: translateY(0); }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      .clip.is-new,
+      .status-dot.is-busy { animation: none; }
+
+      .toast,
+      .switch,
+      .switch::after { transition: none; }
+    }
   </style>
   <script>
     if (window.self !== window.top) document.documentElement.classList.add("in-shell");
   </script>
+  <script src="../../assets/pwa.js" defer></script>
 </head>
 <body>
   <div class="app">
@@ -840,7 +1042,7 @@
     <header class="page-head">
       <div>
         <h1>共享剪贴板</h1>
-        <p class="sub">手机、电脑填同一个口令，就能互传文字、截图和文件</p>
+        <p class="sub">手机、电脑填同一个口令，就能互传文字、截图和文件 · 内容端到端加密</p>
       </div>
       <div class="status-pill" role="status">
         <span class="status-dot" id="statusDot"></span>
@@ -864,18 +1066,31 @@
           <div class="field">
             <button type="button" class="btn btn-primary btn-block" id="joinBtn">进入房间</button>
           </div>
-          <p class="hint">各设备填<strong>一字不差</strong>的口令就在同一个房间。口令就是房间号，别人猜中也能进来，别用太简单的，也别传机密内容。</p>
+          <p class="hint">各设备填<strong>一字不差</strong>的口令就进同一个房间。内容在本机用口令加密后才发出，服务器和旁人都看不到；口令别太简单，被猜中就能进房。</p>
         </section>
 
-        <section class="card room-card" id="roomCard" hidden>
-          <div class="room-info">
-            <div class="room-name">房间「<span id="roomName"></span>」</div>
-            <div class="room-me">本机在房间里显示为「<span id="meName"></span>」</div>
+        <section class="card" id="roomCard" hidden>
+          <div class="room-top">
+            <div class="room-info">
+              <div class="room-name">房间「<span id="roomName"></span>」</div>
+              <div class="room-me">
+                <span>本机显示为「<span id="meName"></span>」</span>
+                <span class="lock-badge" title="内容在本机用口令加密后才发出，服务器和旁人都看不到">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>端到端加密
+                </span>
+              </div>
+            </div>
+            <div class="room-actions">
+              <button type="button" class="btn btn-sm btn-accent" id="retryBtn" hidden>重新连接</button>
+              <button type="button" class="btn btn-sm" id="qrBtn" title="手机扫码直接进这个房间，不用手打口令">扫码进房</button>
+              <button type="button" class="btn btn-sm" id="leaveBtn" title="离开后不再收发，换口令也从这里">离开</button>
+            </div>
           </div>
-          <div class="room-actions">
-            <button type="button" class="btn btn-sm btn-accent" id="retryBtn" hidden>重新连接</button>
-            <button type="button" class="btn btn-sm" id="leaveBtn" title="离开后不再收发，换口令也从这里">离开</button>
-          </div>
+          <label class="switch-row" id="notifyRow">
+            <input type="checkbox" id="notifyToggle" />
+            <span class="switch" aria-hidden="true"></span>
+            <span>页面在后台时，收到内容弹系统通知</span>
+          </label>
         </section>
 
         <section class="card" id="shareCard" hidden>
@@ -898,7 +1113,10 @@
         <section class="card history-card">
           <div class="history-head">
             <h2 class="card-title">最近同步<span class="count" id="historyCount"></span></h2>
-            <button type="button" class="btn btn-sm btn-text-danger" id="clearBtn" title="只清空本机列表，其他设备不受影响" hidden>清空本机</button>
+            <div class="history-actions">
+              <button type="button" class="btn btn-sm btn-accent" id="stitchRecentBtn" hidden></button>
+              <button type="button" class="btn btn-sm btn-text-danger" id="clearBtn" title="只清空本机列表，其他设备不受影响" hidden>清空本机</button>
+            </div>
           </div>
           <div class="clip-list" id="clipList">
             <div class="empty" id="emptyHint"></div>
@@ -911,6 +1129,19 @@
   <div class="toast" id="toast" role="status" aria-live="polite">
     <span class="toast-icon" id="toastIcon" aria-hidden="true">✓</span>
     <span id="toastText"></span>
+  </div>
+
+  <div class="qr-overlay" id="qrOverlay" hidden>
+    <div class="qr-dialog" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+      <h3 id="qrTitle">手机扫码进房</h3>
+      <p class="qr-sub">用手机相机或微信扫一扫，打开后自动进入房间「<span id="qrRoom"></span>」</p>
+      <div class="qr-box"><canvas id="qrCanvas" role="img" aria-label="进房二维码"></canvas></div>
+      <p class="qr-warn">二维码里带着口令，别发到群里或给不相关的人</p>
+      <div class="qr-actions">
+        <button type="button" class="btn" id="qrCopyBtn">复制进房链接</button>
+        <button type="button" class="btn btn-primary" id="qrCloseBtn">好了</button>
+      </div>
+    </div>
   </div>
 
   <div class="lightbox" id="lightbox" hidden>
@@ -940,24 +1171,41 @@
       const NAME_KEY = "pt-clipboard-name";
       const DEVICE_KEY = "pt-clipboard-device";
       const JOINED_KEY = "pt-clipboard-joined";
+      const NOTIFY_KEY = "pt-clipboard-notify";
       const SHELL_MESSAGE_SOURCE = "pt-clipboard";
+      const SHELL_SOURCE = "pt-shell";
       const PAGE_TITLE = "共享剪贴板";
       const MQTT_URLS = [
         "wss://broker.emqx.io:8084/mqtt",
         "wss://broker.hivemq.com:8884/mqtt"
       ];
+      // 协议 v2：整包 AES-GCM 加密，频道名由口令慢哈希得出；v1 明文频道只用来识别还没刷新的旧版设备
+      const PROTOCOL_VERSION = 2;
+      const PACKET_MAGIC = new Uint8Array([0x50, 0x54, 0x43, 0x32]);
+      const PACKET_IV_BYTES = 12;
+      const KDF_SALT = "pt-clipboard/v2";
+      const KDF_ITERATIONS = 200000;
+      const QR_SCRIPT_URL = "./vendor/qrcode.min.js";
+      const DB_NAME = "pt-clipboard";
+      const DB_STORE = "clips";
       const MAX_HISTORY = 40;
+      const MAX_SAVED_BYTES = 120 * 1024 * 1024;
       const MAX_FILE_BYTES = 8 * 1024 * 1024;
-      const MAX_INLINE_CHARS = 120000;
-      const FILE_CHUNK_BYTES = 96 * 1024;
+      const MAX_INLINE_BYTES = 96 * 1024;
+      const FILE_CHUNK_BYTES = 120 * 1024;
       const UPLOAD_CONCURRENCY = 2;
       const CHUNK_INFLIGHT = 3;
       const RECEIVE_STALL_MS = 5000;
       const CONNECT_FALLBACK_MS = 14000;
-      const PEER_TTL_MS = 8 * 60 * 1000;
+      const SHARE_WAIT_MS = 12000;
+      // 在线台数靠对方发来的包刷新；空闲时用心跳续命。后台页 setInterval 会被浏览器拖慢，TTL 要比心跳宽裕
+      const PEER_TTL_MS = 20 * 60 * 1000;
       const PEER_PRUNE_MS = 5000;
+      const HEARTBEAT_MS = 5 * 60 * 1000;
       const SEEN_TTL_MS = 10 * 60 * 1000;
       const PASTE_DEBOUNCE_MS = 400;
+      const PROGRESS_PAINT_MS = 80;
+      const STITCH_RECENT_LIMIT = 9;
       const TOAST_MS = 3200;
       const TOAST_WARN_MS = 5200;
       const IN_SHELL = window.self !== window.top;
@@ -974,19 +1222,28 @@
         roomName: document.getElementById("roomName"),
         meName: document.getElementById("meName"),
         retryBtn: document.getElementById("retryBtn"),
+        qrBtn: document.getElementById("qrBtn"),
         leaveBtn: document.getElementById("leaveBtn"),
+        notifyRow: document.getElementById("notifyRow"),
+        notifyToggle: document.getElementById("notifyToggle"),
         shareCard: document.getElementById("shareCard"),
         textInput: document.getElementById("textInput"),
         sendTextBtn: document.getElementById("sendTextBtn"),
         dropzone: document.getElementById("dropzone"),
         fileInput: document.getElementById("fileInput"),
         historyCount: document.getElementById("historyCount"),
+        stitchRecentBtn: document.getElementById("stitchRecentBtn"),
         clearBtn: document.getElementById("clearBtn"),
         clipList: document.getElementById("clipList"),
         emptyHint: document.getElementById("emptyHint"),
         toast: document.getElementById("toast"),
         toastIcon: document.getElementById("toastIcon"),
         toastText: document.getElementById("toastText"),
+        qrOverlay: document.getElementById("qrOverlay"),
+        qrRoom: document.getElementById("qrRoom"),
+        qrCanvas: document.getElementById("qrCanvas"),
+        qrCopyBtn: document.getElementById("qrCopyBtn"),
+        qrCloseBtn: document.getElementById("qrCloseBtn"),
         lightbox: document.getElementById("lightbox"),
         lightboxTitle: document.getElementById("lightboxTitle"),
         lightboxBody: document.getElementById("lightboxBody"),
@@ -1018,18 +1275,30 @@
         rafId: 0,
         zoomDirty: false
       };
+      const textEncoder = new TextEncoder();
+      const textDecoder = new TextDecoder();
       const seenIds = Object.create(null);
+      const legacyWarned = Object.create(null);
+      const roomSecretCache = new Map();
+      const clipNodes = new Map();
+      const progressDirty = new Set();
       const toastState = { timer: 0, hovering: false, duration: TOAST_MS };
       const deviceId = loadOrCreateDeviceId();
 
       let room = "";
       let topic = "";
+      let legacyTopic = "";
+      let roomKey = null;
+      let joinSeq = 0;
+      let openSeq = 0;
+      let connId = "";
       let displayName = "";
       let connected = false;
       let mqttClient = null;
       let mqttUrlIndex = 0;
       let connectTimer = 0;
       let pruneTimer = 0;
+      let heartbeatTimer = 0;
       let statusKind = "";
       let lastShellLabel = "";
       let clips = [];
@@ -1037,9 +1306,12 @@
       let pendingFiles = Object.create(null);
       let lastPasteAt = 0;
       let uidSeq = 0;
-      let progressRenderTimer = 0;
+      let progressTimer = 0;
       let unreadWhileHidden = 0;
       let dragDepth = 0;
+      let dbPromise = null;
+      let storageWarned = false;
+      let qrScriptPromise = null;
 
       /* —— 基础工具 —— */
 
@@ -1096,9 +1368,11 @@
 
       function formatTime(ts) {
         const date = new Date(ts);
-        return [date.getHours(), date.getMinutes(), date.getSeconds()]
+        const time = [date.getHours(), date.getMinutes(), date.getSeconds()]
           .map((part) => String(part).padStart(2, "0"))
           .join(":");
+        if (date.toDateString() === new Date().toDateString()) return time;
+        return (date.getMonth() + 1) + "/" + date.getDate() + " " + time;
       }
 
       function isImageMime(mime) {
@@ -1120,7 +1394,8 @@
         return (isImageMime(mime) ? "图片 " : "文件 ") + fileName + "（" + formatBytes(size || 0) + "）";
       }
 
-      function roomToTopic(roomName) {
+      /** 旧版（v1）明文频道名，只用于发现还没刷新的旧版设备，从不往里发消息 */
+      function legacyTopicOf(roomName) {
         let hash = 5381;
         for (let i = 0; i < roomName.length; i++) {
           hash = ((hash << 5) + hash) + roomName.charCodeAt(i);
@@ -1129,19 +1404,6 @@
         const hex = (hash >>> 0).toString(36);
         const safe = String(roomName).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 28);
         return ("ptclip/" + hex + (safe || "r")).slice(0, 64);
-      }
-
-      function uint8ToBase64(bytes) {
-        let bin = "";
-        for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-        return btoa(bin);
-      }
-
-      function base64ToUint8(b64) {
-        const bin = atob(b64);
-        const bytes = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        return bytes;
       }
 
       function rangeIndices(total) {
@@ -1161,7 +1423,195 @@
         await Promise.all(Array.from({ length: workers }, runOne));
       }
 
-      /* —— 提示 —— */
+      /* —— 加密：口令 → 密钥 + 频道名；每条消息整包 AES-GCM —— */
+
+      function bytesToHex(bytes) {
+        return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+      }
+
+      /**
+       * 口令先过 PBKDF2（故意慢，挡住按频道名反推口令），再用 HKDF 分出加密密钥和频道名。
+       * 同一口令只算一次，结果缓存在内存里。
+       */
+      function deriveRoomSecrets(roomName) {
+        if (roomSecretCache.has(roomName)) return roomSecretCache.get(roomName);
+        const task = (async () => {
+          const material = await crypto.subtle.importKey("raw", textEncoder.encode(roomName), "PBKDF2", false, ["deriveBits"]);
+          const master = await crypto.subtle.deriveBits(
+            { name: "PBKDF2", hash: "SHA-256", salt: textEncoder.encode(KDF_SALT), iterations: KDF_ITERATIONS },
+            material,
+            256
+          );
+          const hkdf = await crypto.subtle.importKey("raw", master, "HKDF", false, ["deriveBits", "deriveKey"]);
+          const key = await crypto.subtle.deriveKey(
+            { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(0), info: textEncoder.encode("pt-clipboard/v2/aes") },
+            hkdf,
+            { name: "AES-GCM", length: 256 },
+            false,
+            ["encrypt", "decrypt"]
+          );
+          const topicBits = await crypto.subtle.deriveBits(
+            { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(0), info: textEncoder.encode("pt-clipboard/v2/topic") },
+            hkdf,
+            128
+          );
+          return { key: key, topic: "ptclip2/" + bytesToHex(new Uint8Array(topicBits)) };
+        })();
+        roomSecretCache.set(roomName, task);
+        task.catch((err) => {
+          roomSecretCache.delete(roomName);
+          console.error("生成房间密钥失败", err);
+        });
+        return task;
+      }
+
+      /** 明文 = [4 字节头长度][头 JSON][正文字节]；密文包 = "PTC2" + 12 字节 IV + AES-GCM 密文 */
+      async function sealPacket(header, body, key) {
+        const headerBytes = textEncoder.encode(JSON.stringify(header));
+        const bodyBytes = body || new Uint8Array(0);
+        const plain = new Uint8Array(4 + headerBytes.length + bodyBytes.length);
+        new DataView(plain.buffer).setUint32(0, headerBytes.length);
+        plain.set(headerBytes, 4);
+        plain.set(bodyBytes, 4 + headerBytes.length);
+        const iv = crypto.getRandomValues(new Uint8Array(PACKET_IV_BYTES));
+        const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, plain));
+        const packet = new Uint8Array(PACKET_MAGIC.length + iv.length + cipher.length);
+        packet.set(PACKET_MAGIC, 0);
+        packet.set(iv, PACKET_MAGIC.length);
+        packet.set(cipher, PACKET_MAGIC.length + iv.length);
+        return packet;
+      }
+
+      /** 不是本协议的包返回 null；密钥不对会抛错（由调用方记录后丢弃） */
+      async function openPacket(payload, key) {
+        const bytes = payload instanceof Uint8Array ? payload : new Uint8Array(payload);
+        const offset = PACKET_MAGIC.length + PACKET_IV_BYTES;
+        if (bytes.length < offset + 16 + 4) return null;
+        for (let i = 0; i < PACKET_MAGIC.length; i++) {
+          if (bytes[i] !== PACKET_MAGIC[i]) return null;
+        }
+        const iv = bytes.slice(PACKET_MAGIC.length, offset);
+        const plain = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, bytes.slice(offset)));
+        const headerLength = new DataView(plain.buffer).getUint32(0);
+        if (headerLength > plain.length - 4) return null;
+        return {
+          header: JSON.parse(textDecoder.decode(plain.subarray(4, 4 + headerLength))),
+          body: plain.subarray(4 + headerLength)
+        };
+      }
+
+      /* —— 本机保存：IndexedDB，刷新、重开后记录还在 —— */
+
+      function openDb() {
+        if (dbPromise) return dbPromise;
+        dbPromise = new Promise((resolve, reject) => {
+          if (!window.indexedDB) {
+            reject(new Error("浏览器不支持 IndexedDB"));
+            return;
+          }
+          const request = indexedDB.open(DB_NAME, 1);
+          request.onupgradeneeded = () => {
+            if (!request.result.objectStoreNames.contains(DB_STORE)) {
+              request.result.createObjectStore(DB_STORE, { keyPath: "id" });
+            }
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        return dbPromise;
+      }
+
+      /** 在一个事务里执行 operate；返回 operate 返回的请求的结果 */
+      function dbRun(mode, operate) {
+        return openDb().then((db) => new Promise((resolve, reject) => {
+          const tx = db.transaction(DB_STORE, mode);
+          const request = operate(tx.objectStore(DB_STORE));
+          tx.oncomplete = () => resolve(request ? request.result : undefined);
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error);
+        }));
+      }
+
+      function warnStorageOnce(err) {
+        console.error("本机保存记录失败", err);
+        if (storageWarned) return;
+        storageWarned = true;
+        toast("本机存储空间不够或被禁用，记录刷新后可能不在了", { warn: true });
+      }
+
+      /** 文字、以及已经拿到完整内容的文件才保存；接收中的不存 */
+      function saveClip(item) {
+        if (!item || item.unsaved) return;
+        if (item.kind === "file" && !item.blob) return;
+        const record = item.kind === "text"
+          ? { id: item.id, kind: "text", from: item.from, at: item.at, self: Boolean(item.self), text: item.text || "" }
+          : { id: item.id, kind: "file", from: item.from, at: item.at, self: Boolean(item.self), fileName: item.fileName, mime: item.mime, size: item.size, blob: item.blob };
+        dbRun("readwrite", (store) => store.put(record)).catch(warnStorageOnce);
+      }
+
+      function deleteSavedClips(ids) {
+        if (!ids.length) return;
+        dbRun("readwrite", (store) => {
+          ids.forEach((id) => store.delete(id));
+          return null;
+        }).catch((err) => console.error("删除本机记录失败", err));
+      }
+
+      function clearSavedClips() {
+        dbRun("readwrite", (store) => store.clear()).catch((err) => console.error("清空本机记录失败", err));
+      }
+
+      /** 文件总量超过 MAX_SAVED_BYTES 时，最早的文件只留在本次内存里、不再占本机存储 */
+      function enforceSavedBytes() {
+        let total = 0;
+        const dropped = [];
+        clips.forEach((item) => {
+          if (item.kind !== "file" || !item.blob) return;
+          total += item.blob.size;
+          if (total > MAX_SAVED_BYTES && !item.unsaved) {
+            item.unsaved = true;
+            dropped.push(item.id);
+          }
+        });
+        deleteSavedClips(dropped);
+      }
+
+      /** 打开页面时恢复上次的记录；读不到就当没有，不影响收发 */
+      async function restoreHistory() {
+        let records = [];
+        try {
+          records = (await dbRun("readonly", (store) => store.getAll())) || [];
+        } catch (err) {
+          console.error("读取本机记录失败", err);
+          return;
+        }
+        if (!records.length) return;
+        records.sort((left, right) => (right.at || 0) - (left.at || 0));
+        deleteSavedClips(records.slice(MAX_HISTORY).map((record) => record.id));
+        const known = new Set(clips.map((item) => item.id));
+        const restored = records.slice(0, MAX_HISTORY).filter((record) => !known.has(record.id)).map((record) => {
+          seenIds[record.id] = Date.now();
+          if (record.kind === "text") {
+            return { kind: "text", id: record.id, from: record.from, at: record.at, text: record.text || "", self: Boolean(record.self) };
+          }
+          return {
+            kind: "file",
+            id: record.id,
+            from: record.from,
+            at: record.at,
+            fileName: record.fileName,
+            mime: record.mime,
+            size: record.size,
+            blob: record.blob || null,
+            url: record.blob ? URL.createObjectURL(record.blob) : "",
+            self: Boolean(record.self)
+          };
+        });
+        clips = clips.concat(restored).sort((left, right) => (right.at || 0) - (left.at || 0)).slice(0, MAX_HISTORY);
+        renderHistory();
+      }
+
+      /* —— 提示与外壳联动 —— */
 
       function toast(message, options) {
         const warn = Boolean(options && options.warn);
@@ -1181,13 +1631,35 @@
         }, toastState.duration);
       }
 
-      /** 状态同步给外壳（顶栏圆点 / 提示）；文案没变就不重复发 */
       function postToShell(message) {
         if (!IN_SHELL) return;
         try {
           window.parent.postMessage(Object.assign({ source: SHELL_MESSAGE_SOURCE }, message), "/");
         } catch (err) {
           console.error("通知工具箱外壳失败", err);
+        }
+      }
+
+      /** 单独打开本页且在后台时弹系统通知；在工具箱里由外壳统一判断，避免重复弹 */
+      function notifySystem(title, body) {
+        if (IN_SHELL || readStorage(NOTIFY_KEY) !== "1") return;
+        if (!("Notification" in window) || Notification.permission !== "granted") return;
+        if (!document.hidden && document.hasFocus()) return;
+        const options = { body: body, tag: "pt-clipboard", renotify: true, icon: "../../icons/icon-192.png", data: { tool: "clipboard" } };
+        if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+          navigator.serviceWorker.ready
+            .then((registration) => registration.showNotification(title, options))
+            .catch((err) => console.error("系统通知发送失败", err));
+          return;
+        }
+        try {
+          const notification = new Notification(title, options);
+          notification.onclick = () => {
+            window.focus();
+            notification.close();
+          };
+        } catch (err) {
+          console.error("系统通知发送失败", err);
         }
       }
 
@@ -1208,8 +1680,8 @@
       function syncShellStatus(peerCount) {
         let label = "未进入房间";
         if (topic && connected) label = "已连接 · " + (peerCount + 1) + " 台在线";
-        else if (topic && statusKind === "err") label = "连接失败";
-        else if (topic) label = "连接中…";
+        else if (room && statusKind === "err") label = "连接失败";
+        else if (room) label = "连接中…";
         if (label === lastShellLabel) return;
         lastShellLabel = label;
         postToShell({ type: "status", status: statusKind, label });
@@ -1232,15 +1704,23 @@
         syncShellStatus(names.length);
       }
 
-      function notePeer(msg) {
-        if (!msg || !msg.deviceId || msg.deviceId === deviceId) return;
-        peers[msg.deviceId] = { name: msg.from || "设备", at: Date.now() };
+      function notePeer(header) {
+        if (!header || !header.deviceId || header.deviceId === deviceId) return;
+        peers[header.deviceId] = { name: header.from || "设备", at: Date.now(), connId: header.connId || "" };
         updatePeerUi();
       }
 
-      /** 收到别的设备发来的内容：外壳里推给顶栏提醒；单独打开且页面在后台时标题加未读数 */
+      /** 发出后的结果文案：房间里没有别的设备在线时要说清楚——对方现在进房也收不到这条 */
+      function sentSuffix() {
+        return onlinePeerNames().length
+          ? ""
+          : "；但房间里只有本机在线，其他设备之后进房也收不到这条，到时可点「重发」";
+      }
+
+      /** 收到别的设备发来的内容：外壳里推给顶栏提醒；单独打开且页面在后台时标题加未读数并弹通知 */
       function notifyReceived(from, summary) {
         postToShell({ type: "received", from, summary });
+        notifySystem("共享剪贴板 · 来自「" + from + "」", summary);
         if (IN_SHELL || !document.hidden) return;
         unreadWhileHidden += 1;
         document.title = "(" + unreadWhileHidden + ") " + PAGE_TITLE;
@@ -1267,7 +1747,7 @@
         return false;
       }
 
-      /* —— 列表渲染 —— */
+      /* —— 列表渲染：按条目局部更新，进度只改进度条 —— */
 
       function makeButton(label, className, onClick, title) {
         const button = document.createElement("button");
@@ -1279,38 +1759,43 @@
         return button;
       }
 
-      function buildUploadProgress(upload) {
-        const wrap = document.createElement("div");
-        wrap.className = "clip-progress-wrap";
+      function progressView(upload) {
         const total = Math.max(1, upload.total || 1);
         const done = Math.max(0, upload.done || 0);
         const pct = Math.min(100, Math.round((done / total) * 100));
-        const label = document.createElement("div");
-        label.className = "clip-progress-text";
-        const bar = document.createElement("div");
-        bar.className = "clip-progress";
-        if (upload.status === "pending") {
-          label.textContent = "排队等待发送…";
-          bar.classList.add("is-pending");
-        } else if (upload.status === "error") {
-          label.textContent = "发送失败" + (upload.error ? "：" + upload.error : "");
-          label.classList.add("is-err");
-          bar.classList.add("is-err");
-        } else if (upload.status === "stalled") {
-          label.textContent = "接收卡住了（已收 " + done + "/" + total + " 片），已自动向对方补要；仍不动可点「重新接收」";
-          label.classList.add("is-err");
-          bar.classList.add("is-err");
-        } else if (upload.status === "receiving") {
-          label.textContent = "接收中 " + pct + "%（" + done + "/" + total + " 片）";
-        } else {
-          label.textContent = "发送中 " + pct + "%（" + done + "/" + total + " 片）";
+        if (upload.status === "pending") return { text: "排队等待发送…", width: 8, kind: "pending" };
+        if (upload.status === "error") return { text: "发送失败" + (upload.error ? "：" + upload.error : ""), width: pct, kind: "err" };
+        if (upload.status === "stalled") {
+          return { text: "接收卡住了（已收 " + done + "/" + total + " 片），已自动向对方补要；仍不动可点「重新接收」", width: pct, kind: "err" };
         }
+        if (upload.status === "receiving") return { text: "接收中 " + pct + "%（" + done + "/" + total + " 片）", width: pct, kind: "" };
+        return { text: "发送中 " + pct + "%（" + done + "/" + total + " 片）", width: pct, kind: "" };
+      }
+
+      function buildUploadProgress(upload) {
+        const view = progressView(upload);
+        const wrap = document.createElement("div");
+        wrap.className = "clip-progress-wrap";
+        const label = document.createElement("div");
+        label.className = "clip-progress-text" + (view.kind === "err" ? " is-err" : "");
+        label.textContent = view.text;
+        const bar = document.createElement("div");
+        bar.className = "clip-progress" + (view.kind ? " is-" + view.kind : "");
         const fill = document.createElement("span");
-        fill.style.width = (upload.status === "pending" ? 8 : pct) + "%";
+        fill.style.width = view.width + "%";
         bar.appendChild(fill);
         wrap.appendChild(label);
         wrap.appendChild(bar);
         return wrap;
+      }
+
+      function paintProgress(node, upload) {
+        const label = node.querySelector(".clip-progress-text");
+        const fill = node.querySelector(".clip-progress > span");
+        if (!label || !fill) return;
+        const view = progressView(upload);
+        label.textContent = view.text;
+        fill.style.width = view.width + "%";
       }
 
       function buildClip(item) {
@@ -1336,7 +1821,7 @@
           body.textContent = item.text || "";
           el.appendChild(body);
           actions.appendChild(makeButton("复制", "btn btn-sm btn-accent", () => copyText(item.text || "")));
-          actions.appendChild(makeButton("重发", "btn btn-sm", () => resendItem(item), "再发一次给房间里的其他设备"));
+          actions.appendChild(makeButton("重发", "btn btn-sm", () => resendItem(item.id), "再发一次给房间里的其他设备"));
         } else {
           const status = item.upload ? item.upload.status : "";
           const transferring = status === "uploading" || status === "pending" || status === "receiving";
@@ -1358,11 +1843,16 @@
             const img = document.createElement("img");
             img.className = "clip-thumb";
             img.alt = item.fileName || "图片";
+            img.decoding = "async";
+            img.loading = "lazy";
             img.src = item.url;
             img.title = "点击全屏查看";
             img.addEventListener("click", () => openLightbox(item.url, item.fileName || "图片"));
             el.appendChild(img);
-            actions.appendChild(makeButton("复制图片", "btn btn-sm btn-accent", () => copyImage(item.url, item.mime)));
+            actions.appendChild(makeButton("复制图片", "btn btn-sm btn-accent", () => copyImage(item.id)));
+            if (IN_SHELL) {
+              actions.appendChild(makeButton("拿去拼接", "btn btn-sm", () => openInStitch([item.id]), "在「图片拼接」里打开这张图"));
+            }
           }
           if (item.url && !transferring) {
             const link = document.createElement("a");
@@ -1374,9 +1864,9 @@
             actions.appendChild(link);
           }
           if (canRereceive) {
-            actions.appendChild(makeButton("重新接收", "btn btn-sm btn-primary", () => requestRereceive(item), "请发送方把整个文件重新发一遍"));
+            actions.appendChild(makeButton("重新接收", "btn btn-sm btn-primary", () => requestRereceive(item.id), "请发送方把整个文件重新发一遍"));
           } else if (!transferring) {
-            actions.appendChild(makeButton("重发", "btn btn-sm", () => resendItem(item), "再发一次给房间里的其他设备"));
+            actions.appendChild(makeButton("重发", "btn btn-sm", () => resendItem(item.id), "再发一次给房间里的其他设备"));
           }
         }
 
@@ -1385,43 +1875,96 @@
         return el;
       }
 
-      function renderHistory(scrollToTop) {
-        const keepScroll = els.clipList.scrollTop;
-        els.clipList.querySelectorAll(".clip").forEach((node) => node.remove());
+      function findClip(id) {
+        return clips.find((item) => item.id === id) || null;
+      }
+
+      /** 最近的、已完整收到的图片，按时间从早到晚排（拼接顺序和聊天顺序一致） */
+      function recentImageItems() {
+        return clips
+          .filter((item) => item.kind === "file" && isImageMime(item.mime) && item.url && !item.upload)
+          .slice(0, STITCH_RECENT_LIMIT)
+          .reverse();
+      }
+
+      /** 列表外围：空提示、条数、批量按钮 */
+      function updateHistoryChrome() {
         els.emptyHint.hidden = clips.length > 0;
-        els.emptyHint.textContent = topic
+        els.emptyHint.textContent = room
           ? "还没有内容。在左边输入文字发送，或在本页空白处直接 Ctrl + V；其他设备发来的也会出现在这里。"
           : "进入房间后，各设备互传的文字、图片和文件都会显示在这里。";
         els.historyCount.textContent = clips.length ? clips.length + " 条" : "";
         els.clearBtn.hidden = !clips.length;
+        const imageCount = IN_SHELL ? recentImageItems().length : 0;
+        els.stitchRecentBtn.hidden = imageCount < 2;
+        els.stitchRecentBtn.textContent = "拼接最近 " + imageCount + " 张图";
+        els.stitchRecentBtn.title = "把最近收到 / 发出的 " + imageCount + " 张图片按时间顺序送去「图片拼接」";
+      }
+
+      function renderHistory() {
+        clipNodes.forEach((node) => node.remove());
+        clipNodes.clear();
         const fragment = document.createDocumentFragment();
-        clips.forEach((item) => fragment.appendChild(buildClip(item)));
+        clips.forEach((item) => {
+          const node = buildClip(item);
+          clipNodes.set(item.id, node);
+          fragment.appendChild(node);
+        });
         els.clipList.appendChild(fragment);
-        els.clipList.scrollTop = scrollToTop ? 0 : keepScroll;
+        updateHistoryChrome();
+      }
+
+      function renderItem(item) {
+        const node = buildClip(item);
+        const old = clipNodes.get(item.id);
+        clipNodes.set(item.id, node);
+        if (old) old.replaceWith(node);
+        else els.clipList.insertBefore(node, els.emptyHint.nextSibling);
+        updateHistoryChrome();
       }
 
       function pushLocal(item) {
         clips.unshift(item);
-        if (clips.length > MAX_HISTORY) clips.splice(MAX_HISTORY).forEach(releaseHistoryItem);
-        renderHistory(true);
+        const trimmed = clips.length > MAX_HISTORY ? clips.splice(MAX_HISTORY) : [];
+        trimmed.forEach((old) => {
+          releaseHistoryItem(old);
+          const node = clipNodes.get(old.id);
+          if (node) node.remove();
+          clipNodes.delete(old.id);
+        });
+        deleteSavedClips(trimmed.map((old) => old.id));
+        renderItem(item);
+        els.clipList.scrollTop = 0;
+        saveClip(item);
+        enforceSavedBytes();
       }
 
-      /** 进度类更新合并到 80ms 一次重绘；immediate 用于状态切换（开始/完成/失败） */
-      function patchLocal(id, patch, immediate) {
+      /** 只改进度时合并成 80ms 刷一次进度条；状态、内容变了就重画这一条 */
+      function patchLocal(id, patch) {
         const index = clips.findIndex((item) => item.id === id);
-        if (index < 0) return;
-        clips[index] = Object.assign({}, clips[index], patch);
-        if (immediate) {
-          clearTimeout(progressRenderTimer);
-          progressRenderTimer = 0;
-          renderHistory(false);
-          return;
+        if (index < 0) return null;
+        const prev = clips[index];
+        const next = Object.assign({}, prev, patch);
+        clips[index] = next;
+        const progressOnly = Object.keys(patch).length === 1 && patch.upload && prev.upload && prev.upload.status === patch.upload.status;
+        if (progressOnly && clipNodes.has(id)) {
+          progressDirty.add(id);
+          if (!progressTimer) progressTimer = setTimeout(flushProgress, PROGRESS_PAINT_MS);
+          return next;
         }
-        if (progressRenderTimer) return;
-        progressRenderTimer = setTimeout(() => {
-          progressRenderTimer = 0;
-          renderHistory(false);
-        }, 80);
+        progressDirty.delete(id);
+        renderItem(next);
+        return next;
+      }
+
+      function flushProgress() {
+        progressTimer = 0;
+        progressDirty.forEach((id) => {
+          const item = findClip(id);
+          const node = clipNodes.get(id);
+          if (item && item.upload && node) paintProgress(node, item.upload);
+        });
+        progressDirty.clear();
       }
 
       /** 释放条目占用的对象 URL 与接收中的分片缓存；仅本机清理，不发 MQTT */
@@ -1442,7 +1985,11 @@
         if (!els.lightbox.hidden && item.url && els.lightboxImg.getAttribute("src") === item.url) closeLightbox();
         releaseHistoryItem(item);
         clips.splice(index, 1);
-        renderHistory(false);
+        const node = clipNodes.get(id);
+        if (node) node.remove();
+        clipNodes.delete(id);
+        deleteSavedClips([id]);
+        updateHistoryChrome();
         toast("已从本机删除，其他设备不受影响");
       }
 
@@ -1451,7 +1998,8 @@
         if (!window.confirm("清空本机的 " + clips.length + " 条记录？其他设备上的不受影响。")) return;
         clips.forEach(releaseHistoryItem);
         clips = [];
-        renderHistory(false);
+        renderHistory();
+        clearSavedClips();
         toast("已清空本机列表");
       }
 
@@ -1476,8 +2024,8 @@
       }
 
       /** 文档未聚焦时异步剪贴板接口必定拒绝，此时直接在点击回调内同步走兼容复制，才不会丢失用户手势 */
-      function copyText(text) {
-        const succeed = () => toast("已复制到剪贴板");
+      function copyText(text, successMessage) {
+        const succeed = () => toast(successMessage || "已复制到剪贴板");
         const fail = () => toast("复制失败：请选中文字后手动复制", { warn: true });
         if (navigator.clipboard && navigator.clipboard.writeText && document.hasFocus()) {
           navigator.clipboard.writeText(text).then(succeed).catch((err) => {
@@ -1519,9 +2067,18 @@
         });
       }
 
+      async function blobOfItem(item) {
+        if (item.blob) return item.blob;
+        if (!item.url) return null;
+        const resp = await fetch(item.url);
+        if (!resp.ok) throw new Error("读取本机文件失败 HTTP " + resp.status);
+        return resp.blob();
+      }
+
       /** 系统剪贴板只稳定支持 PNG，其他格式先转码再写入 */
-      async function copyImage(url, mime) {
-        if (!url) {
+      async function copyImage(id) {
+        const item = findClip(id);
+        if (!item || !item.url) {
           toast("图片还没收完，暂时不能复制", { warn: true });
           return;
         }
@@ -1530,10 +2087,8 @@
           return;
         }
         try {
-          const resp = await fetch(url);
-          if (!resp.ok) throw new Error("HTTP " + resp.status);
-          const blob = await resp.blob();
-          let type = blob.type || mime || "image/png";
+          const blob = await blobOfItem(item);
+          let type = blob.type || item.mime || "image/png";
           let payload = blob;
           if (type !== "image/png") {
             payload = await blobToPng(blob);
@@ -1732,9 +2287,91 @@
         if (!moved && tapOnMask) closeLightbox();
       }
 
+      /* —— 扫码进房 —— */
+
+      function joinLink() {
+        return location.href.split("#")[0] + "#join=" + encodeURIComponent(room);
+      }
+
+      /** 二维码库只在第一次点「扫码进房」时加载 */
+      function loadQrScript() {
+        if (window.qrcode) return Promise.resolve();
+        if (qrScriptPromise) return qrScriptPromise;
+        qrScriptPromise = new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = QR_SCRIPT_URL;
+          script.onload = () => resolve();
+          script.onerror = () => {
+            qrScriptPromise = null;
+            reject(new Error("二维码组件加载失败"));
+          };
+          document.head.appendChild(script);
+        });
+        return qrScriptPromise;
+      }
+
+      /** 方块码点 + 四周留白，深色对白底，各种相机和微信都好扫 */
+      function drawQr(canvas, text) {
+        const qr = window.qrcode(0, "M");
+        qr.addData(text);
+        qr.make();
+        const count = qr.getModuleCount();
+        const quiet = 2;
+        const cell = Math.max(3, Math.floor(232 / (count + quiet * 2)));
+        const size = (count + quiet * 2) * cell;
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = Math.round(size * ratio);
+        canvas.height = Math.round(size * ratio);
+        canvas.style.width = size + "px";
+        canvas.style.height = size + "px";
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = "#1e2533";
+        for (let row = 0; row < count; row++) {
+          for (let col = 0; col < count; col++) {
+            if (qr.isDark(row, col)) ctx.fillRect((col + quiet) * cell, (row + quiet) * cell, cell, cell);
+          }
+        }
+      }
+
+      async function openQrDialog() {
+        if (!room) return;
+        try {
+          await loadQrScript();
+          drawQr(els.qrCanvas, joinLink());
+        } catch (err) {
+          console.error("生成进房二维码失败", err);
+          toast("二维码生成失败：可以点「复制进房链接」发到手机上打开", { warn: true });
+        }
+        els.qrRoom.textContent = room;
+        els.qrOverlay.hidden = false;
+      }
+
+      function closeQrDialog() {
+        els.qrOverlay.hidden = true;
+      }
+
+      /** 扫码打开的链接带 #join=口令：读出来后立刻从地址栏抹掉，免得口令留在历史记录里 */
+      function consumeJoinHash() {
+        const matched = /(?:^#|&)join=([^&]*)/.exec(location.hash || "");
+        if (!matched) return "";
+        let linkedRoom = "";
+        try {
+          linkedRoom = decodeURIComponent(matched[1]).trim().slice(0, 64);
+        } catch (err) {
+          console.error("进房链接里的口令解析失败", err);
+        }
+        history.replaceState(null, "", location.pathname + location.search);
+        return linkedRoom;
+      }
+
       /* —— 连接 —— */
 
+      // 强制断开不发 DISCONNECT，服务器会替本机发出离线遗嘱，对端随即减台数
       function closeMqttQuiet() {
+        openSeq += 1;
         clearTimeout(connectTimer);
         connectTimer = 0;
         if (!mqttClient) return;
@@ -1753,10 +2390,21 @@
         closeMqttQuiet();
         clearInterval(pruneTimer);
         pruneTimer = 0;
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = 0;
         Object.keys(pendingFiles).forEach((fileId) => clearReceiveWatch(pendingFiles[fileId]));
         peers = Object.create(null);
         pendingFiles = Object.create(null);
+        connId = "";
         updatePeerUi();
+      }
+
+      /** 已连接时定时宣告在线（reply=true，对端只刷新台数、不回包，避免互刷） */
+      function startHeartbeat() {
+        if (heartbeatTimer) return;
+        heartbeatTimer = setInterval(() => {
+          if (connected) publishHello(true);
+        }, HEARTBEAT_MS);
       }
 
       function showJoinedUi(joined) {
@@ -1765,10 +2413,11 @@
         els.shareCard.hidden = !joined;
         els.roomName.textContent = room;
         els.meName.textContent = displayName;
-        renderHistory(false);
+        updateHistoryChrome();
       }
 
-      function joinRoom() {
+      /** 进房：先在本机由口令算出密钥和频道（几十到几百毫秒），再连服务器 */
+      async function joinRoom() {
         const nextRoom = (els.roomInput.value || "").trim();
         const nextName = (els.nameInput.value || "").trim() || guessDeviceName();
         if (!nextRoom) {
@@ -1781,22 +2430,44 @@
           toast("通信组件加载失败，请刷新页面重试", { warn: true });
           return;
         }
+        if (!window.crypto || !crypto.subtle) {
+          setStatus("err", "当前网址不支持加密");
+          toast("加密需要用 https 或 localhost 打开本页，当前网址浏览器不提供加密功能", { warn: true });
+          return;
+        }
         stopChannel();
+        joinSeq += 1;
+        const seq = joinSeq;
         room = nextRoom;
         displayName = nextName;
-        topic = roomToTopic(room);
+        topic = "";
+        roomKey = null;
         writeStorage(ROOM_KEY, room);
         writeStorage(NAME_KEY, displayName);
         writeStorage(JOINED_KEY, "1");
         showJoinedUi(true);
+        setStatus("busy", "正在生成加密密钥…");
+        let secrets;
+        try {
+          secrets = await deriveRoomSecrets(room);
+        } catch (err) {
+          setStatus("err", "生成密钥失败");
+          toast("生成加密密钥失败，请刷新页面重试", { warn: true });
+          return;
+        }
+        if (seq !== joinSeq) return;
+        roomKey = secrets.key;
+        topic = secrets.topic;
+        legacyTopic = legacyTopicOf(room);
         mqttUrlIndex = 0;
         openMqtt();
       }
 
       function leaveRoom() {
-        // 先宣告离开再拆连接，让对端立刻减台数
-        publishBye();
+        joinSeq += 1;
         topic = "";
+        legacyTopic = "";
+        roomKey = null;
         stopChannel();
         room = "";
         writeStorage(JOINED_KEY, "0");
@@ -1805,11 +2476,29 @@
         toast("已离开房间，不再收发内容");
       }
 
-      function openMqtt() {
+      /**
+       * 每次建连都换一个连接号，并把带这个连接号的「离开」包作为遗嘱交给服务器：
+       * 关页、断网、点「离开」（强制断开）时由服务器代发，对端立刻减台数。
+       */
+      async function openMqtt() {
         if (!topic) return;
         closeMqttQuiet();
+        const seq = openSeq;
         const line = mqttUrlIndex % MQTT_URLS.length;
+        const nextConnId = uid();
         setStatus("busy", "正在连接（线路 " + (line + 1) + "/" + MQTT_URLS.length + "）…");
+        let will = null;
+        try {
+          will = await sealPacket(
+            { v: PROTOCOL_VERSION, type: "bye", id: uid(), deviceId, connId: nextConnId, from: displayName, at: Date.now() },
+            null,
+            roomKey
+          );
+        } catch (err) {
+          // 没有遗嘱照样能连，只是本机掉线后对端要等在线超时才减台数
+          console.error("准备离线遗嘱失败", err);
+        }
+        if (seq !== openSeq || !topic) return;
         let client;
         try {
           client = mqtt.connect(MQTT_URLS[line], {
@@ -1817,7 +2506,8 @@
             clean: true,
             reconnectPeriod: 5000,
             connectTimeout: 12000,
-            protocolVersion: 4
+            protocolVersion: 4,
+            will: will ? { topic, payload: will, qos: 0, retain: false } : undefined
           });
         } catch (err) {
           console.error("MQTT 连接创建失败", err);
@@ -1825,13 +2515,14 @@
           return;
         }
         mqttClient = client;
+        connId = nextConnId;
 
         client.on("connect", () => {
           clearTimeout(connectTimer);
           connectTimer = 0;
           connected = true;
           setStatus("on", "已连接");
-          client.subscribe(topic, { qos: 0 }, (err) => {
+          client.subscribe([topic, legacyTopic], { qos: 0 }, (err) => {
             if (!err) {
               // 进房宣告一次在线；对方收到后会回一声，双方都能统计到台数
               publishHello(false);
@@ -1842,11 +2533,12 @@
             toast("进房失败：请点「重新连接」再试", { warn: true });
           });
           if (!pruneTimer) pruneTimer = setInterval(updatePeerUi, PEER_PRUNE_MS);
+          startHeartbeat();
         });
 
         client.on("message", (msgTopic, payload) => {
-          if (msgTopic !== topic) return;
-          handleMqttPayload(payload.toString());
+          if (msgTopic === legacyTopic) noteLegacyDevice(payload);
+          else if (msgTopic === topic) handlePacket(payload).catch((err) => console.error("处理收到的消息失败", err));
         });
 
         client.on("reconnect", () => {
@@ -1901,99 +2593,113 @@
         openMqtt();
       }
 
-      function publishJson(obj, qos) {
-        if (!topic) return Promise.reject(new Error("未进房"));
-        if (!mqttClient || !mqttClient.connected) return Promise.reject(new Error("未连接"));
-        const body = JSON.stringify(obj);
+      /** 跨工具发送时等连接就绪；超时、出错或已离开房间返回 false */
+      function waitForConnection(timeoutMs) {
+        if (connected) return Promise.resolve(true);
+        return new Promise((resolve) => {
+          const startedAt = Date.now();
+          const timer = setInterval(() => {
+            if (!connected && room && statusKind !== "err" && Date.now() - startedAt < timeoutMs) return;
+            clearInterval(timer);
+            resolve(connected);
+          }, 200);
+        });
+      }
+
+      /* —— 发布 —— */
+
+      /** 头部统一补上协议版本、设备和显示名后整包加密发出 */
+      async function publishPacket(header, body, qos) {
+        if (!topic || !roomKey) throw new Error("未进房");
+        if (!mqttClient || !mqttClient.connected) throw new Error("未连接");
         const client = mqttClient;
-        return new Promise((resolve, reject) => {
-          client.publish(topic, body, { qos: qos == null ? 0 : qos }, (err) => {
+        const targetTopic = topic;
+        const packet = await sealPacket(
+          Object.assign({ v: PROTOCOL_VERSION, deviceId, connId, from: displayName }, header),
+          body,
+          roomKey
+        );
+        await new Promise((resolve, reject) => {
+          client.publish(targetTopic, packet, { qos: qos == null ? 0 : qos }, (err) => {
             if (err) reject(err);
             else resolve();
           });
         });
       }
 
+      /**
+       * 在线宣告。isReply=false：进房 / 切回页面时用，对端会回一声，双方都能刷新台数；
+       * isReply=true：定时心跳，对端只更新「谁在线」、不再回包。
+       */
       function publishHello(isReply) {
         if (!topic || !mqttClient || !mqttClient.connected) return;
-        publishJson({
-          v: 1,
-          type: "hello",
-          id: uid(),
-          deviceId,
-          from: displayName,
-          at: Date.now(),
-          reply: Boolean(isReply)
-        }).catch((err) => {
+        publishPacket({ type: "hello", id: uid(), at: Date.now(), reply: Boolean(isReply) }, null, 0).catch((err) => {
           console.error("在线宣告失败", err);
         });
       }
 
-      // 关页/离开时尽量发出；不 await，避免拆连接前被卡住
-      function publishBye() {
-        if (!topic || !mqttClient || !mqttClient.connected) return;
-        try {
-          mqttClient.publish(topic, JSON.stringify({
-            v: 1,
-            type: "bye",
-            id: uid(),
-            deviceId,
-            from: displayName,
-            at: Date.now()
-          }), { qos: 0 });
-        } catch (err) {
-          console.error("离开宣告失败", err);
-        }
-      }
-
       /* —— 接收 —— */
 
-      function handleMqttPayload(raw) {
-        if (!raw) return;
-        let payload;
+      /** 旧版设备在明文频道说话：提醒一次去刷新那台设备，内容一概不处理 */
+      function noteLegacyDevice(payload) {
+        let message = null;
         try {
-          payload = JSON.parse(raw);
+          message = JSON.parse(payload.toString());
         } catch (err) {
-          console.warn("收到无法解析的消息，已忽略", err);
+          console.warn("旧版频道收到无法解析的消息，已忽略", err);
           return;
         }
-        if (!payload || payload.v !== 1 || payload.deviceId === deviceId) return;
+        if (!message || message.v !== 1 || !message.deviceId || message.deviceId === deviceId) return;
+        if (legacyWarned[message.deviceId]) return;
+        legacyWarned[message.deviceId] = true;
+        toast("「" + (message.from || "另一台设备") + "」还在用旧版剪贴板：刷新那台设备的页面后才能互传（新版内容已加密）", { warn: true });
+      }
 
-        // 对端离开：立刻从在线列表移除
-        if (payload.type === "bye") {
-          if (peers[payload.deviceId]) {
-            delete peers[payload.deviceId];
+      async function handlePacket(payload) {
+        const key = roomKey;
+        const expectTopic = topic;
+        if (!key) return;
+        let packet = null;
+        try {
+          packet = await openPacket(payload, key);
+        } catch (err) {
+          console.warn("收到无法解密的消息，已忽略", err);
+          return;
+        }
+        if (!packet || topic !== expectTopic) return;
+        const header = packet.header;
+        if (!header || header.v !== PROTOCOL_VERSION || header.deviceId === deviceId) return;
+
+        // 对端离开（含服务器代发的离线遗嘱）：立刻从在线列表移除。
+        // 对端断线重连后，旧连接的遗嘱可能晚到，连接号对不上的一律不理，免得把在线设备误删
+        if (header.type === "bye") {
+          const peer = peers[header.deviceId];
+          if (peer && (!peer.connId || !header.connId || peer.connId === header.connId)) {
+            delete peers[header.deviceId];
             updatePeerUi();
           }
           return;
         }
 
-        notePeer(payload);
+        notePeer(header);
 
         // 进房握手：收到对方 hello 后回一次（reply 不再回，避免互刷）
-        if (payload.type === "hello") {
-          if (!payload.reply) publishHello(true);
+        if (header.type === "hello") {
+          if (!header.reply) publishHello(true);
           return;
         }
-        if (payload.type === "text") {
-          if (markSeen(payload.id)) return;
-          const from = payload.from || "对端";
-          pushLocal({
-            kind: "text",
-            id: payload.id,
-            from,
-            at: payload.at || Date.now(),
-            text: payload.text || "",
-            self: false,
-            fresh: true
-          });
+        if (header.type === "text") {
+          if (markSeen(header.id)) return;
+          const from = header.from || "对端";
+          const text = textDecoder.decode(packet.body);
+          pushLocal({ kind: "text", id: header.id, from, at: header.at || Date.now(), text, self: false, fresh: true });
           toast("收到「" + from + "」发来的文字");
-          notifyReceived(from, textSummary(payload.text));
+          notifyReceived(from, textSummary(text));
           return;
         }
-        if (payload.type === "file-chunk") acceptFileChunk(payload);
-        else if (payload.type === "file-done") handleFileDone(payload);
-        else if (payload.type === "file-need") handleFileNeed(payload);
+        if (header.type === "file-chunk") acceptFileChunk(header, packet.body);
+        else if (header.type === "file-done") handleFileDone(header);
+        else if (header.type === "file-need") handleFileNeed(header);
       }
 
       function listMissingChunks(bag) {
@@ -2020,7 +2726,7 @@
         const missing = listMissingChunks(bag);
         patchLocal(fileId, {
           upload: { done: bag.got, total: bag.total, status: "stalled", error: "缺 " + missing.length + " 片" }
-        }, true);
+        });
         if (bag.autoAsked) return;
         bag.autoAsked = true;
         askFileChunks(fileId, missing, false);
@@ -2032,18 +2738,15 @@
           return;
         }
         const bag = pendingFiles[fileId];
-        publishJson({
-          v: 1,
+        publishPacket({
           type: "file-need",
           id: fileId,
           missing: missing || [],
           total: bag ? bag.total : (missing && missing.length) || 1,
-          deviceId,
-          from: displayName,
           at: Date.now()
-        }, 1).then(() => {
+        }, null, 1).then(() => {
           if (bag) {
-            patchLocal(fileId, { upload: { done: bag.got, total: bag.total, status: "receiving" } }, true);
+            patchLocal(fileId, { upload: { done: bag.got, total: bag.total, status: "receiving" } });
             touchReceiveWatch(fileId);
           }
           toast(isManual ? "已请对方重新发送，请保持对方页面开着" : "有分片丢了，正在自动向对方补要…");
@@ -2078,6 +2781,7 @@
           mime: bag.mime,
           size: bag.size,
           url: "",
+          blob: null,
           self: false,
           fresh: true,
           upload: { done: 0, total: bag.total, status: "receiving" }
@@ -2085,8 +2789,9 @@
       }
 
       /** 手动重收：清空已收分片，请发送端整份重发 */
-      function requestRereceive(item) {
-        if (!item || !item.id) return;
+      function requestRereceive(id) {
+        const item = findClip(id);
+        if (!item) return;
         if (!connected) {
           toast("还没连上，连上后再点「重新接收」", { warn: true });
           return;
@@ -2101,40 +2806,40 @@
           bag.got = 0;
           bag.autoAsked = false;
         }
-        patchLocal(item.id, { url: "", blob: null, upload: { done: 0, total: bag.total, status: "receiving" } }, true);
+        patchLocal(item.id, { url: "", blob: null, upload: { done: 0, total: bag.total, status: "receiving" } });
         askFileChunks(item.id, rangeIndices(bag.total), true);
       }
 
       /** 发送端宣告发完：一片都没收到就建占位整份重要，收到部分则只补缺片 */
-      function handleFileDone(payload) {
-        if (!payload || !payload.id || seenIds[payload.id]) return;
-        let bag = pendingFiles[payload.id];
+      function handleFileDone(header) {
+        if (!header.id || seenIds[header.id]) return;
+        let bag = pendingFiles[header.id];
         if (!bag) {
-          bag = newReceiveBag(payload, payload.total || 1, true);
-          pendingFiles[payload.id] = bag;
-          pushLocal(receivingItem(payload.id, bag));
-          askFileChunks(payload.id, rangeIndices(bag.total), false);
+          bag = newReceiveBag(header, header.total || 1, true);
+          pendingFiles[header.id] = bag;
+          pushLocal(receivingItem(header.id, bag));
+          askFileChunks(header.id, rangeIndices(bag.total), false);
           return;
         }
         if (bag.got >= bag.total) return;
         const missing = listMissingChunks(bag);
         if (!missing.length) return;
         bag.autoAsked = true;
-        askFileChunks(payload.id, missing, false);
+        askFileChunks(header.id, missing, false);
       }
 
       /** 对端缺片：本机还留着原文件才补发，补发不改本机列表 */
-      async function handleFileNeed(payload) {
-        if (!payload || !payload.id) return;
-        const item = clips.find((entry) => entry.id === payload.id && entry.blob);
+      async function handleFileNeed(header) {
+        if (!header.id) return;
+        const item = clips.find((entry) => entry.id === header.id && entry.blob);
         if (!item) {
-          console.warn("对端要补片，但本机已没有这个文件", payload.id);
+          console.warn("对端要补片，但本机已没有这个文件", header.id);
           return;
         }
-        const missing = payload.missing && payload.missing.length
-          ? payload.missing
+        const missing = header.missing && header.missing.length
+          ? header.missing
           : rangeIndices(Math.max(1, Math.ceil(item.blob.size / FILE_CHUNK_BYTES)));
-        toast("「" + (payload.from || "对端") + "」请求补发 " + (item.fileName || "文件") + "，正在发送…");
+        toast("「" + (header.from || "对端") + "」请求补发 " + (item.fileName || "文件") + "，正在发送…");
         try {
           await publishFileChunks(item.blob, item.fileName || "文件", item.mime || item.blob.type || "application/octet-stream", item.id, item.at || Date.now(), missing);
         } catch (err) {
@@ -2143,66 +2848,65 @@
         }
       }
 
-      function acceptFileChunk(payload) {
-        if (!payload || !payload.id || seenIds[payload.id]) return;
-        let bag = pendingFiles[payload.id];
+      function acceptFileChunk(header, body) {
+        if (!header.id || seenIds[header.id]) return;
+        let bag = pendingFiles[header.id];
         const isNew = !bag;
         if (isNew) {
-          bag = newReceiveBag(payload, payload.total || 1, false);
-          pendingFiles[payload.id] = bag;
-          pushLocal(receivingItem(payload.id, bag));
+          bag = newReceiveBag(header, header.total || 1, false);
+          pendingFiles[header.id] = bag;
+          pushLocal(receivingItem(header.id, bag));
           toast("「" + bag.from + "」正在发来 " + bag.fileName + "…");
         }
 
-        const index = payload.index;
+        const index = header.index;
         if (index == null || index < 0 || index >= bag.total) return;
         if (!bag.chunks[index]) {
-          try {
-            bag.chunks[index] = base64ToUint8(payload.data || "");
-            bag.got += 1;
-          } catch (err) {
-            console.error("分片解码失败", err);
-            return;
-          }
+          bag.chunks[index] = body;
+          bag.got += 1;
         }
-        touchReceiveWatch(payload.id);
+        touchReceiveWatch(header.id);
 
         const complete = bag.got >= bag.total;
-        patchLocal(payload.id, { upload: { done: bag.got, total: bag.total, status: "receiving" } }, complete || isNew);
-        if (!complete) return;
+        if (!complete) {
+          patchLocal(header.id, { upload: { done: bag.got, total: bag.total, status: "receiving" } });
+          return;
+        }
 
         clearReceiveWatch(bag);
-        if (markSeen(payload.id)) {
-          delete pendingFiles[payload.id];
+        if (markSeen(header.id)) {
+          delete pendingFiles[header.id];
           return;
         }
         try {
           if (listMissingChunks(bag).length) throw new Error("分片不完整");
           const blob = new Blob(bag.chunks, { type: bag.mime });
-          patchLocal(payload.id, {
+          const done = patchLocal(header.id, {
             url: URL.createObjectURL(blob),
             blob,
             size: bag.size || blob.size,
             mime: bag.mime,
             upload: null,
             fresh: true
-          }, true);
+          });
+          saveClip(done);
+          enforceSavedBytes();
           toast("收到「" + bag.from + "」发来的 " + bag.fileName);
           notifyReceived(bag.from, fileSummary(bag.fileName, bag.mime, bag.size || blob.size));
         } catch (err) {
           console.error("组装文件失败", err);
-          patchLocal(payload.id, {
+          patchLocal(header.id, {
             upload: { done: bag.got, total: bag.total, status: "error", error: "拼装失败，请点「重新接收」" }
-          }, true);
+          });
           toast("收到 " + bag.fileName + " 但拼装失败，请点「重新接收」", { warn: true });
         }
-        delete pendingFiles[payload.id];
+        delete pendingFiles[header.id];
       }
 
       /* —— 发送 —— */
 
       function ensureCanSend() {
-        if (!topic) {
+        if (!room) {
           toast("请先进入房间", { warn: true });
           return false;
         }
@@ -2223,20 +2927,16 @@
         const list = indices && indices.length ? indices.slice() : rangeIndices(total);
         await runPool(list, CHUNK_INFLIGHT, async (chunkIndex) => {
           if (chunkIndex < 0 || chunkIndex >= total) return;
-          await publishJson({
-            v: 1,
+          await publishPacket({
             type: "file-chunk",
             id,
-            deviceId,
-            from: displayName,
             at,
             fileName,
             mime: mime || "application/octet-stream",
             size: blob.size,
             index: chunkIndex,
-            total,
-            data: uint8ToBase64(bytes.subarray(chunkIndex * FILE_CHUNK_BYTES, (chunkIndex + 1) * FILE_CHUNK_BYTES))
-          }, 1);
+            total
+          }, bytes.subarray(chunkIndex * FILE_CHUNK_BYTES, (chunkIndex + 1) * FILE_CHUNK_BYTES), 1);
         });
       }
 
@@ -2248,7 +2948,7 @@
         const localUrl = opts.url || URL.createObjectURL(blob);
 
         if (opts.alreadyInList) {
-          patchLocal(id, { url: localUrl, blob, upload: { done: 0, total, status: "uploading" } }, true);
+          patchLocal(id, { url: localUrl, blob, upload: { done: 0, total, status: "uploading" } });
         } else {
           pushLocal({
             kind: "file",
@@ -2267,41 +2967,34 @@
 
         let completed = 0;
         await runPool(rangeIndices(total), CHUNK_INFLIGHT, async (chunkIndex) => {
-          await publishJson({
-            v: 1,
+          await publishPacket({
             type: "file-chunk",
             id,
-            deviceId,
-            from: displayName,
             at,
             fileName,
             mime: mime || "application/octet-stream",
             size: blob.size,
             index: chunkIndex,
-            total,
-            data: uint8ToBase64(bytes.subarray(chunkIndex * FILE_CHUNK_BYTES, (chunkIndex + 1) * FILE_CHUNK_BYTES))
-          }, 1);
+            total
+          }, bytes.subarray(chunkIndex * FILE_CHUNK_BYTES, (chunkIndex + 1) * FILE_CHUNK_BYTES), 1);
           completed += 1;
-          patchLocal(id, { upload: { done: completed, total, status: "uploading" } }, completed >= total);
+          patchLocal(id, { upload: { done: completed, total, status: "uploading" } });
         });
 
         markSeen(id);
-        patchLocal(id, { upload: null }, true);
-        await publishJson({
-          v: 1,
+        patchLocal(id, { upload: null });
+        await publishPacket({
           type: "file-done",
           id,
-          deviceId,
-          from: displayName,
           at,
           fileName,
           mime: mime || "application/octet-stream",
           size: blob.size,
           total
-        }, 1);
+        }, null, 1);
       }
 
-      /** 超过 MAX_INLINE_CHARS 的长文按 clipboard.txt 文件分片发，避免单条消息过大被服务器拒收 */
+      /** 超过 MAX_INLINE_BYTES 的长文按 clipboard.txt 文件分片发，避免单条消息过大被服务器拒收 */
       async function sendText(text) {
         const content = String(text || "");
         if (!content.trim()) {
@@ -2312,57 +3005,62 @@
         if (!ensureCanSend()) return;
         const id = uid();
         const at = Date.now();
+        const encoded = textEncoder.encode(content);
         try {
-          if (content.length <= MAX_INLINE_CHARS) {
-            await publishJson({ v: 1, type: "text", id, deviceId, from: displayName, at, text: content }, 1);
+          if (encoded.length <= MAX_INLINE_BYTES) {
+            await publishPacket({ type: "text", id, at }, encoded, 1);
             markSeen(id);
             pushLocal({ kind: "text", id, from: displayName, at, text: content, self: true });
             els.textInput.value = "";
-            toast("已发送，房间里的其他设备会马上收到");
+            const suffix = sentSuffix();
+            toast(suffix ? "已发送" + suffix : "已发送，房间里的其他设备会马上收到", { warn: Boolean(suffix) });
             return;
           }
-          await publishFileBlob(new Blob([content], { type: "text/plain;charset=utf-8" }), "clipboard.txt", "text/plain", id, at);
+          await publishFileBlob(new Blob([encoded], { type: "text/plain;charset=utf-8" }), "clipboard.txt", "text/plain", id, at);
           els.textInput.value = "";
-          toast("文字太长，已打包成 clipboard.txt 发送");
+          toast("文字太长，已打包成 clipboard.txt 发送" + sentSuffix(), { warn: Boolean(sentSuffix()) });
         } catch (err) {
           console.error("发送文字失败", err);
           toast("发送失败：连接可能断了，稍等变绿后再试", { warn: true });
         }
       }
 
-      async function resendItem(item) {
+      async function resendItem(id) {
+        const item = findClip(id);
         if (!item || !ensureCanSend()) return;
         try {
           if (item.kind === "text") {
-            const id = uid();
+            const textId = uid();
             const at = Date.now();
-            await publishJson({ v: 1, type: "text", id, deviceId, from: displayName, at, text: item.text || "" }, 1);
-            markSeen(id);
-            pushLocal({ kind: "text", id, from: displayName, at, text: item.text || "", self: true });
-            toast("已重发这段文字");
+            await publishPacket({ type: "text", id: textId, at }, textEncoder.encode(item.text || ""), 1);
+            markSeen(textId);
+            pushLocal({ kind: "text", id: textId, from: displayName, at, text: item.text || "", self: true });
+            toast("已重发这段文字" + sentSuffix(), { warn: Boolean(sentSuffix()) });
             return;
           }
-          let blob = item.blob || null;
-          if (!blob && item.url) {
-            const resp = await fetch(item.url);
-            if (!resp.ok) throw new Error("读取原文件失败 HTTP " + resp.status);
-            blob = await resp.blob();
-          }
+          const blob = await blobOfItem(item);
           if (!blob) {
             toast("没法重发：这个文件在本机已经失效了", { warn: true });
             return;
           }
           await publishFileBlob(blob, item.fileName || "文件", item.mime || blob.type || "application/octet-stream", uid(), Date.now());
-          toast("已重发 " + (item.fileName || "文件"));
+          toast("已重发 " + (item.fileName || "文件") + sentSuffix(), { warn: Boolean(sentSuffix()) });
         } catch (err) {
           console.error("重发失败", err);
           toast("重发失败：连接可能断了，稍等变绿后再试", { warn: true });
         }
       }
 
-      async function sendFiles(fileList) {
+      /**
+       * 发文件；quiet 为 true 时不弹提示（跨工具发送由外壳转告结果）。
+       * 返回 { okCount, failCount, message }：message 是给用户看的完整结果。
+       */
+      async function sendFiles(fileList, options) {
+        const opts = options || {};
         const files = Array.from(fileList || []);
-        if (!files.length || !ensureCanSend()) return;
+        const result = { okCount: 0, failCount: 0, message: "" };
+        if (!files.length) return result;
+        if (!opts.quiet && !ensureCanSend()) return result;
         const oversized = files.filter((file) => file.size > MAX_FILE_BYTES);
         const jobs = files.filter((file) => file.size <= MAX_FILE_BYTES).map((file) => {
           const job = { file, id: uid(), at: Date.now(), url: URL.createObjectURL(file) };
@@ -2371,7 +3069,7 @@
             id: job.id,
             from: displayName,
             at: job.at,
-            fileName: file.name,
+            fileName: file.name || "图片.png",
             mime: file.type || "application/octet-stream",
             size: file.size,
             url: job.url,
@@ -2385,18 +3083,17 @@
           ? "；" + oversized.length + " 个超过 8MB 没发：" + oversized.map((file) => file.name).join("、")
           : "";
         if (!jobs.length) {
-          toast("没有发送：" + oversized.map((file) => file.name).join("、") + " 超过 8MB", { warn: true });
-          return;
+          result.message = "没有发送：" + oversized.map((file) => file.name).join("、") + " 超过 8MB";
+          if (!opts.quiet) toast(result.message, { warn: true });
+          return result;
         }
 
-        let okCount = 0;
-        let failCount = 0;
         await runPool(jobs, UPLOAD_CONCURRENCY, async (job) => {
           try {
-            await publishFileBlob(job.file, job.file.name, job.file.type || "application/octet-stream", job.id, job.at, { alreadyInList: true, url: job.url });
-            okCount += 1;
+            await publishFileBlob(job.file, job.file.name || "图片.png", job.file.type || "application/octet-stream", job.id, job.at, { alreadyInList: true, url: job.url });
+            result.okCount += 1;
           } catch (err) {
-            failCount += 1;
+            result.failCount += 1;
             console.error("发送文件失败", job.file.name, err);
             patchLocal(job.id, {
               upload: {
@@ -2405,13 +3102,100 @@
                 status: "error",
                 error: "连接可能断了，变绿后点「重发」"
               }
-            }, true);
+            });
           }
         });
 
-        if (failCount && okCount) toast("发出 " + okCount + " 个，失败 " + failCount + " 个（可点「重发」）" + skippedText, { warn: true });
-        else if (failCount) toast("发送失败，变绿后点「重发」再试" + skippedText, { warn: true });
-        else toast("已发送 " + okCount + " 个文件" + skippedText, { warn: Boolean(oversized.length) });
+        const suffix = result.okCount ? sentSuffix() : "";
+        if (result.failCount && result.okCount) result.message = "发出 " + result.okCount + " 个，失败 " + result.failCount + " 个（可点「重发」）" + skippedText;
+        else if (result.failCount) result.message = "发送失败，变绿后点「重发」再试" + skippedText;
+        else result.message = "已发送 " + result.okCount + " 个文件" + skippedText + suffix;
+        result.warn = Boolean(result.failCount || oversized.length || suffix);
+        if (!opts.quiet) toast(result.message, { warn: result.warn });
+        return result;
+      }
+
+      /* —— 跨工具：拼好的图发进房间、收到的图拿去拼接 —— */
+
+      /** 外壳转来的「发到剪贴板」：没进房、连不上都给出明确原因，结果回传给外壳 */
+      async function handleShellSendFiles(data) {
+        const files = (Array.isArray(data.files) ? data.files : []).filter((file) => file instanceof Blob);
+        const reply = (ok, message, extra) => {
+          postToShell(Object.assign({ type: "send-result", requestId: data.requestId, ok: ok, message: message }, extra || {}));
+        };
+        if (!files.length) {
+          reply(false, "没有收到要发送的图片");
+          return;
+        }
+        if (!room) {
+          reply(false, "共享剪贴板还没进房间：先到「共享剪贴板」填口令进房", { needRoom: true });
+          return;
+        }
+        if (!(await waitForConnection(SHARE_WAIT_MS))) {
+          reply(false, "共享剪贴板没连上服务器，稍后再试；也可以到剪贴板页点「重新连接」");
+          return;
+        }
+        const result = await sendFiles(files, { quiet: true });
+        const ok = result.okCount > 0 && !result.failCount;
+        const message = ok
+          ? "已发到共享剪贴板房间「" + room + "」" + (sentSuffix() || "，其他设备会马上收到")
+          : result.message;
+        reply(ok, message, { warn: result.warn });
+      }
+
+      async function openInStitch(ids) {
+        const items = ids.map(findClip).filter((item) => item && item.url);
+        if (!items.length) return;
+        try {
+          const files = await Promise.all(items.map(async (item) => {
+            const blob = await blobOfItem(item);
+            return new File([blob], item.fileName || "图片.png", { type: blob.type || item.mime || "image/png" });
+          }));
+          postToShell({ type: "open-in-stitch", files: files });
+        } catch (err) {
+          console.error("送去拼接失败", err);
+          toast("图片读取失败，没能送去拼接", { warn: true });
+        }
+      }
+
+      function onShellMessage(event) {
+        if (!IN_SHELL || event.source !== window.parent) return;
+        const data = event.data;
+        if (!data || data.source !== SHELL_SOURCE) return;
+        if (data.type === "send-files") handleShellSendFiles(data);
+      }
+
+      /* —— 后台通知开关 —— */
+
+      function syncNotifyToggle() {
+        const supported = "Notification" in window;
+        els.notifyRow.hidden = !supported;
+        if (!supported) return;
+        els.notifyToggle.checked = readStorage(NOTIFY_KEY) === "1" && Notification.permission === "granted";
+      }
+
+      async function onNotifyToggle() {
+        if (!els.notifyToggle.checked) {
+          writeStorage(NOTIFY_KEY, "0");
+          toast("已关闭后台通知");
+          return;
+        }
+        let permission = Notification.permission;
+        try {
+          if (permission === "default") permission = await Notification.requestPermission();
+        } catch (err) {
+          console.error("申请通知权限失败", err);
+        }
+        if (permission !== "granted") {
+          els.notifyToggle.checked = false;
+          writeStorage(NOTIFY_KEY, "0");
+          toast(permission === "denied"
+            ? "浏览器拒绝了通知权限：点地址栏左侧的网站设置，把「通知」改成允许后再打开"
+            : "没有拿到通知权限，后台通知未开启", { warn: true });
+          return;
+        }
+        writeStorage(NOTIFY_KEY, "1");
+        toast("已开启：页面在后台或最小化时，收到内容会弹系统通知");
       }
 
       /* —— 事件 —— */
@@ -2427,7 +3211,7 @@
           ? Array.from(data.items).filter((entry) => entry.kind === "file").map((entry) => entry.getAsFile()).filter(Boolean)
           : [];
         const text = data ? data.getData("text/plain") : "";
-        if (!topic) {
+        if (!room) {
           if (!inField && (files.length || text)) toast("先进入房间，粘贴的内容才会发出去", { warn: true });
           return;
         }
@@ -2470,7 +3254,7 @@
           event.preventDefault();
           dragDepth = 0;
           els.dropzone.classList.remove("is-drag");
-          if (!topic) {
+          if (!room) {
             toast("先进入房间，再把文件拖进来", { warn: true });
             return;
           }
@@ -2522,6 +3306,13 @@
         });
         els.leaveBtn.addEventListener("click", leaveRoom);
         els.retryBtn.addEventListener("click", reconnectNow);
+        els.qrBtn.addEventListener("click", openQrDialog);
+        els.qrCloseBtn.addEventListener("click", closeQrDialog);
+        els.qrCopyBtn.addEventListener("click", () => copyText(joinLink(), "进房链接已复制，发到手机上打开即可（链接里带着口令）"));
+        els.qrOverlay.addEventListener("click", (event) => {
+          if (event.target === event.currentTarget) closeQrDialog();
+        });
+        els.notifyToggle.addEventListener("change", onNotifyToggle);
         els.sendTextBtn.addEventListener("click", () => sendText(els.textInput.value));
         els.textInput.addEventListener("keydown", (event) => {
           if (event.key !== "Enter" || !(event.ctrlKey || event.metaKey) || event.isComposing) return;
@@ -2539,6 +3330,10 @@
           els.fileInput.value = "";
         });
         els.clearBtn.addEventListener("click", clearLocalHistory);
+        els.stitchRecentBtn.addEventListener("click", () => {
+          const items = recentImageItems();
+          openInStitch(items.map((item) => item.id));
+        });
         els.toast.addEventListener("mouseenter", () => {
           toastState.hovering = true;
           clearTimeout(toastState.timer);
@@ -2548,35 +3343,46 @@
           scheduleToastHide();
         });
         document.addEventListener("keydown", (event) => {
-          if (event.key === "Escape" && !els.lightbox.hidden) closeLightbox();
+          if (event.key !== "Escape") return;
+          if (!els.lightbox.hidden) closeLightbox();
+          else if (!els.qrOverlay.hidden) closeQrDialog();
         });
         document.addEventListener("paste", onDocumentPaste);
         bindPageDrop();
         bindLightbox();
+        window.addEventListener("message", onShellMessage);
 
         document.addEventListener("visibilitychange", () => {
           if (document.hidden) return;
           resetUnreadTitle();
           reconnectIfStale("切回页面");
+          // 后台时心跳可能被拖慢，切回来立刻探一次，把台数补齐
+          if (connected) publishHello(false);
         });
         window.addEventListener("online", () => reconnectIfStale("网络恢复"));
         window.addEventListener("pageshow", (event) => {
           if (event.persisted) reconnectIfStale("从后台缓存恢复");
         });
-        window.addEventListener("pagehide", publishBye);
-        window.addEventListener("beforeunload", () => {
-          publishBye();
-          stopChannel();
-        });
+        window.addEventListener("beforeunload", stopChannel);
       }
 
-      els.roomInput.value = readStorage(ROOM_KEY) || "";
+      const linkedRoom = consumeJoinHash();
+      els.roomInput.value = linkedRoom || readStorage(ROOM_KEY) || "";
       els.nameInput.value = readStorage(NAME_KEY) || guessDeviceName();
       bindEvents();
+      syncNotifyToggle();
       showJoinedUi(false);
       setStatus("", "未进入房间");
-      // 上次已进房且口令仍在：打开页面自动重连，免得再点「进入房间」
-      if (els.roomInput.value.trim() && readStorage(JOINED_KEY) !== "0") joinRoom();
+      renderHistory();
+      restoreHistory();
+      postToShell({ type: "ready" });
+      // 扫码进来的直接进房；上次已进房且口令仍在：打开页面自动重连，免得再点「进入房间」
+      if (linkedRoom) {
+        joinRoom();
+        toast("已通过进房链接进入房间「" + linkedRoom + "」");
+      } else if (els.roomInput.value.trim() && readStorage(JOINED_KEY) !== "0") {
+        joinRoom();
+      }
     })();
   </script>
 </body>

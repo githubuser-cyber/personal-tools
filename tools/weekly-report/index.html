@@ -3,50 +3,63 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#eef2fb" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="周报助手" />
+  <meta name="apple-mobile-web-app-title" content="周报填写" />
   <meta name="format-detection" content="telephone=no" />
+  <link rel="manifest" href="../../manifest.webmanifest" />
+  <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png" />
   <title>周报填写助手</title>
   <style>
     :root {
-      --bg: #f5f7fa;
+      --bg: #eef2fb;
+      /* 输入框、事项行用实色白底保证好读；面板、底栏等大块用半透明毛玻璃 */
       --surface: #ffffff;
-      --fill: #f5f7fa;
-      --text: #303133;
-      --text-regular: #606266;
-      --muted: #909399;
-      --placeholder: #a8abb2;
-      --border: #dcdfe6;
-      --border-light: #e4e7ed;
-      --border-lighter: #ebeef5;
-      --primary: #1677FF;
-      --primary-hover: #4096FF;
-      --primary-active: #0958D9;
-      --primary-soft: #ecf5ff;
-      --primary-soft-border: #d9ecff;
-      --primary-border: #c6e2ff;
-      --success: #67c23a;
-      --success-text: #529b2e;
-      --success-soft: #f0f9eb;
-      --success-border: #e1f3d8;
-      --warning: #e6a23c;
-      --warning-text: #b88230;
-      --warning-soft: #fdf6ec;
-      --warning-border: #f5dab1;
-      --danger: #f56c6c;
-      --danger-soft: #fef0f0;
-      --danger-border: #fbc4c4;
-      --radius: 8px;
-      --radius-sm: 4px;
-      --shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.04);
-      --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.14);
+      --glass: rgba(255, 255, 255, 0.7);
+      --fill: rgba(241, 245, 252, 0.75);
+      --text: #1e2533;
+      --text-regular: #4a5568;
+      --muted: #8790a3;
+      --placeholder: #a9b0c0;
+      --border: rgba(30, 41, 59, 0.14);
+      --border-light: rgba(30, 41, 59, 0.1);
+      --border-lighter: rgba(30, 41, 59, 0.07);
+      --glass-border: rgba(255, 255, 255, 0.8);
+      --primary: #1677ff;
+      --primary-hover: #3d8bff;
+      --primary-active: #0b5fe0;
+      --primary-soft: rgba(22, 119, 255, 0.09);
+      --primary-soft-border: rgba(22, 119, 255, 0.2);
+      --primary-border: rgba(22, 119, 255, 0.35);
+      --grad: linear-gradient(135deg, #1677ff 0%, #7c5cff 100%);
+      --grad-hover: linear-gradient(135deg, #3d8bff 0%, #8f74ff 100%);
+      --success: #22a35a;
+      --success-text: #15803d;
+      --success-soft: rgba(34, 163, 90, 0.1);
+      --success-border: rgba(34, 163, 90, 0.28);
+      --warning: #f59e0b;
+      --warning-text: #b45309;
+      --warning-soft: rgba(245, 158, 11, 0.1);
+      --warning-border: rgba(245, 158, 11, 0.3);
+      --danger: #ef4444;
+      --danger-soft: rgba(239, 68, 68, 0.08);
+      --danger-border: rgba(239, 68, 68, 0.28);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 10px 30px rgba(30, 64, 175, 0.07);
+      --shadow-pop: 0 18px 48px rgba(30, 41, 90, 0.2);
+      --blur: saturate(170%) blur(18px);
       --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     }
 
     * { box-sizing: border-box; }
 
     [hidden] { display: none !important; }
+
+    html { background: var(--bg); }
 
     body {
       margin: 0;
@@ -56,10 +69,25 @@
       font-size: 15px;
       line-height: 1.5;
       color: var(--text);
-      background: var(--bg);
       -webkit-text-size-adjust: 100%;
       -webkit-tap-highlight-color: transparent;
     }
+
+    /* 静态渐变光晕；在工具箱里时由外层统一绘制，这里透明 */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(44vmax 44vmax at 6% -6%, rgba(22, 119, 255, 0.26), transparent 70%),
+        radial-gradient(40vmax 40vmax at 104% 8%, rgba(139, 92, 246, 0.22), transparent 70%),
+        radial-gradient(46vmax 46vmax at 62% 112%, rgba(6, 182, 212, 0.16), transparent 70%);
+    }
+
+    html.in-shell { background: transparent; }
+    html.in-shell body::before { display: none; }
 
     button,
     input,
@@ -104,9 +132,16 @@
       align-items: center;
       gap: 6px 10px;
       margin: 0;
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: -0.01em;
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .page-head .title-text {
+      background: linear-gradient(120deg, #1e2533 30%, #1677ff 75%, #7c5cff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
     .page-head .sub {
@@ -124,9 +159,10 @@
       font-weight: 500;
       letter-spacing: 0;
       color: var(--text-regular);
-      background: var(--surface);
-      border: 1px solid var(--border-light);
-      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
     }
 
     .week-chip.is-stale {
@@ -155,59 +191,66 @@
       font-weight: 500;
       line-height: 1;
       color: var(--text-regular);
-      background: var(--surface);
-      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid var(--border-light);
       border-radius: var(--radius-sm);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       cursor: pointer;
       white-space: nowrap;
       user-select: none;
-      transition: color 0.15s, background-color 0.15s, border-color 0.15s;
+      transition: color 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
     }
 
     .btn:hover {
       color: var(--primary);
-      background: var(--primary-soft);
+      background: #fff;
       border-color: var(--primary-border);
+      box-shadow: 0 4px 12px rgba(22, 119, 255, 0.12);
     }
 
-    .btn:active {
-      color: var(--primary-active);
-      border-color: var(--primary);
-    }
+    .btn:active { transform: translateY(1px); }
 
     .btn:focus-visible {
       outline: 2px solid var(--primary-border);
-      outline-offset: 1px;
+      outline-offset: 2px;
+    }
+
+    .btn-icon {
+      flex: 0 0 auto;
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     .btn-sm {
       height: 30px;
-      padding: 0 12px;
+      padding: 0 11px;
       font-size: 13px;
     }
 
     .btn-primary {
       color: #fff;
-      background: var(--primary);
-      border-color: var(--primary);
+      background: var(--grad);
+      border-color: transparent;
+      box-shadow: 0 6px 16px rgba(22, 119, 255, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
 
     .btn-primary:hover {
       color: #fff;
-      background: var(--primary-hover);
-      border-color: var(--primary-hover);
-    }
-
-    .btn-primary:active {
-      color: #fff;
-      background: var(--primary-active);
-      border-color: var(--primary-active);
+      background: var(--grad-hover);
+      border-color: transparent;
+      box-shadow: 0 8px 22px rgba(22, 119, 255, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
 
     .btn-accent {
       color: var(--primary);
       background: var(--primary-soft);
       border-color: var(--primary-soft-border);
+      box-shadow: none;
     }
 
     .btn-accent:hover {
@@ -215,6 +258,21 @@
       background: var(--primary);
       border-color: var(--primary);
     }
+
+    .count-badge {
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 18px;
+      text-align: center;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-radius: 9px;
+    }
+
+    .btn:hover .count-badge { background: rgba(22, 119, 255, 0.14); }
 
     /* —— 填写状态条 —— */
     .banner {
@@ -225,9 +283,10 @@
       margin-bottom: 14px;
       padding: 10px 14px;
       font-size: 14px;
-      border: 1px solid var(--border-light);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius);
-      background: var(--surface);
+      background: var(--glass);
+      box-shadow: var(--shadow);
     }
 
     .banner-icon {
@@ -282,9 +341,9 @@
 
     .panel {
       padding: 18px;
-      background: var(--surface);
-      border: 1px solid var(--border-light);
-      border-radius: var(--radius);
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
       box-shadow: var(--shadow);
     }
 
@@ -942,15 +1001,21 @@
       justify-content: center;
       gap: 8px;
       max-width: calc(100vw - 24px);
-      padding: 10px 12px;
-      background: var(--surface);
-      border: 1px solid var(--border-light);
-      border-radius: var(--radius);
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.72);
+      -webkit-backdrop-filter: var(--blur);
+      backdrop-filter: var(--blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px;
       box-shadow: var(--shadow-pop);
       transform: translateX(-50%);
     }
 
-    .dock .btn { padding: 0 14px; }
+    .dock .btn {
+      height: 40px;
+      padding: 0 14px;
+      border-radius: 12px;
+    }
 
     .dock .ico {
       font-size: 15px;
@@ -998,14 +1063,16 @@
     .dock .btn-dock-copy {
       padding: 0 18px;
       color: #fff;
-      background: var(--primary);
-      border-color: var(--primary);
+      background: var(--grad);
+      border-color: transparent;
+      box-shadow: 0 6px 16px rgba(22, 119, 255, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
 
     .dock .btn-dock-copy:hover {
       color: #fff;
-      background: var(--primary-hover);
-      border-color: var(--primary-hover);
+      background: var(--grad-hover);
+      border-color: transparent;
+      box-shadow: 0 8px 22px rgba(22, 119, 255, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
 
     .scroll-jump {
@@ -1023,6 +1090,10 @@
       height: 40px;
       padding: 0;
       font-size: 16px;
+      background: rgba(255, 255, 255, 0.72);
+      -webkit-backdrop-filter: var(--blur);
+      backdrop-filter: var(--blur);
+      border-color: var(--glass-border);
       border-radius: 50%;
       box-shadow: var(--shadow);
     }
@@ -1036,7 +1107,9 @@
       align-items: center;
       justify-content: center;
       padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
-      background: rgba(0, 0, 0, 0.45);
+      background: rgba(15, 23, 42, 0.36);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
     }
 
     .import-overlay.show { display: flex; }
@@ -1044,8 +1117,9 @@
     .import-dialog {
       width: min(560px, 100%);
       padding: 20px;
-      background: var(--surface);
-      border-radius: var(--radius);
+      background: rgba(250, 251, 255, 0.96);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
       box-shadow: var(--shadow-pop);
     }
 
@@ -1091,17 +1165,20 @@
       align-items: center;
       gap: 10px;
       max-width: min(92vw, 560px);
-      padding: 10px 16px;
+      padding: 11px 16px;
       font-size: 14px;
       line-height: 1.45;
       color: #fff;
-      background: #303133;
-      border-radius: var(--radius);
+      background: rgba(23, 30, 45, 0.88);
+      -webkit-backdrop-filter: var(--blur);
+      backdrop-filter: var(--blur);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
       box-shadow: var(--shadow-pop);
       opacity: 0;
       pointer-events: none;
       transform: translate(-50%, 12px);
-      transition: opacity 0.2s, transform 0.2s;
+      transition: opacity 0.2s, transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
     .toast.show {
@@ -1114,13 +1191,13 @@
       flex: 0 0 auto;
       display: grid;
       place-items: center;
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
       font-size: 12px;
       font-weight: 700;
       line-height: 1;
       border-radius: 50%;
-      background: var(--primary);
+      background: var(--grad);
     }
 
     .toast.is-warn .toast-icon { background: var(--warning); }
@@ -1138,6 +1215,152 @@
     }
 
     .toast-action:hover { background: rgba(255, 255, 255, 0.14); }
+
+    /* —— 往期周报抽屉 —— */
+    .drawer-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 65;
+      display: flex;
+      justify-content: flex-end;
+      background: rgba(15, 23, 42, 0.32);
+      -webkit-backdrop-filter: blur(6px);
+      backdrop-filter: blur(6px);
+    }
+
+    .drawer {
+      display: flex;
+      flex-direction: column;
+      width: min(460px, 100%);
+      height: 100%;
+      /* 遮罩层自带模糊，抽屉自己的 backdrop-filter 透不到页面，直接用接近不透明的白 */
+      background: rgba(250, 251, 255, 0.96);
+      border-left: 1px solid var(--glass-border);
+      box-shadow: var(--shadow-pop);
+      animation: drawer-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    @keyframes drawer-in {
+      from {
+        opacity: 0;
+        transform: translateX(28px);
+      }
+    }
+
+    .drawer-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: max(18px, env(safe-area-inset-top)) 18px 12px;
+      border-bottom: 1px solid var(--border-lighter);
+    }
+
+    .drawer-head h3 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .drawer-note {
+      margin: 4px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .drawer-body {
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: auto;
+      padding: 14px 18px;
+    }
+
+    .drawer-foot {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 18px max(12px, env(safe-area-inset-bottom));
+      border-top: 1px solid var(--border-lighter);
+    }
+
+    .drawer-foot-note {
+      flex: 1 1 160px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .archive-item {
+      padding: 12px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border-lighter);
+      border-radius: var(--radius);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .archive-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 2px 10px;
+    }
+
+    .archive-week {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .archive-range {
+      font-size: 13px;
+      color: var(--text-regular);
+    }
+
+    .archive-current {
+      padding: 0 7px;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 20px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-radius: 10px;
+    }
+
+    .archive-meta {
+      width: 100%;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .archive-text {
+      max-height: 300px;
+      margin: 10px 0 0;
+      overflow: auto;
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: var(--fill);
+      border: 1px solid var(--border-lighter);
+      border-radius: var(--radius-sm);
+    }
+
+    .archive-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .archive-empty {
+      padding: 36px 12px;
+      font-size: 13px;
+      line-height: 1.7;
+      text-align: center;
+      color: var(--muted);
+    }
 
     /* —— 响应式 —— */
     @media (max-width: 960px) {
@@ -1229,7 +1452,7 @@
         max-width: none;
         padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
         border-width: 1px 0 0;
-        border-radius: 12px 12px 0 0;
+        border-radius: 18px 18px 0 0;
         transform: none;
       }
 
@@ -1256,22 +1479,28 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .row.is-moved { animation: none; }
+      .row.is-moved,
+      .drawer { animation: none; }
     }
   </style>
   <script>
     if (window.self !== window.top) document.documentElement.classList.add("in-shell");
   </script>
+  <script src="../../assets/pwa.js" defer></script>
 </head>
 <body>
   <div class="app">
     <header class="page-head">
       <div>
         <a class="home-link" href="../../">← 工具箱</a>
-        <h1>周报填写助手 <span class="week-chip" id="weekChip"></span></h1>
-        <p class="sub">草稿自动保存在本机，断网也能用 · 边填边按项目、进度自动整理</p>
+        <h1><span class="title-text">周报填写助手</span> <span class="week-chip" id="weekChip"></span></h1>
+        <p class="sub">草稿自动保存在本机、每周自动存档，断网也能用 · 边填边按项目、进度自动整理</p>
       </div>
       <div class="header-actions">
+        <button type="button" class="btn" id="btnArchive" title="复制报告、下周转本周、清空、导入前自动存下的往期周报，可复制、查看、恢复">
+          <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span>往期</span><span class="count-badge" id="archiveCount" hidden></span>
+        </button>
         <button type="button" class="btn btn-accent" id="btnPromote" title="新的一周用：把「下周计划」转成本周事项，同名事项带回进度">下周转本周</button>
         <button type="button" class="btn" id="btnClear" title="清空本周和下周的全部内容">清空</button>
       </div>
@@ -1300,7 +1529,7 @@
               <h2>本周工作重点</h2>
               <span class="section-count" id="thisCount">0 项</span>
             </div>
-            <p class="section-hint">进度填 1–100，− / + 每次 5%，做完点「完成」；回车新增下一条。同项目内按进度从低到高自动排好。</p>
+            <p class="section-hint">进度填 1–100，− / + 每次 5%，做完点「完成」；回车新增下一条，粘贴多行文字会按行拆成多条。同项目内按进度从低到高自动排好。</p>
             <div class="rows" id="thisWeekRows"></div>
           </section>
 
@@ -1309,7 +1538,7 @@
               <h2>下周工作计划</h2>
               <span class="section-count" id="nextCount">0 项</span>
             </div>
-            <p class="section-hint">底部「未完成写入下周」可一键带入本周没做完的事项；按住序号拖动可调整同项目内的先后。</p>
+            <p class="section-hint">底部「未完成写入下周」可一键带入本周没做完的事项；按住序号拖动可调整同项目内的先后；同样支持粘贴多行拆条。</p>
             <div class="rows" id="nextWeekRows"></div>
           </section>
         </div>
@@ -1329,7 +1558,7 @@
       </div>
     </div>
 
-    <footer class="hint">换设备继续写：一端「复制报告」发到微信 / 备忘录，另一端「导入成稿」粘贴即可</footer>
+    <footer class="hint">换设备继续写：一端「复制报告」发到微信 / 备忘录，另一端「导入成稿」粘贴即可；连往期一起搬家用「往期 → 导出备份」</footer>
   </div>
 
   <div class="scroll-jump" id="scrollJump">
@@ -1367,6 +1596,25 @@
     </div>
   </div>
 
+  <div class="drawer-overlay" id="archiveOverlay" hidden>
+    <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="archiveTitle">
+      <div class="drawer-head">
+        <div>
+          <h3 id="archiveTitle">往期周报</h3>
+          <p class="drawer-note">复制报告、下周转本周、清空、导入之前都会自动存一份，跨周打开时也会存下上周的草稿；同一周只留最新一份，最多保留 104 周</p>
+        </div>
+        <button type="button" class="btn btn-sm" id="btnArchiveClose">关闭</button>
+      </div>
+      <div class="drawer-body" id="archiveList"></div>
+      <div class="drawer-foot">
+        <span class="drawer-foot-note">备份包含当前草稿和全部往期，换电脑、清浏览器数据前导出一份</span>
+        <button type="button" class="btn btn-sm" id="btnBackupImport" title="选择「导出备份」得到的 .json 文件，恢复草稿和往期">导入备份</button>
+        <button type="button" class="btn btn-sm btn-primary" id="btnBackupExport" title="把当前草稿和全部往期存成一个 .json 文件">导出备份</button>
+        <input type="file" id="backupFile" accept="application/json,.json" hidden />
+      </div>
+    </aside>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite">
     <span class="toast-icon" id="toastIcon" aria-hidden="true">✓</span>
     <span id="toastText"></span>
@@ -1379,6 +1627,12 @@
 
   const STORAGE_KEY = "msb-weekly-report-v2";
   const LEGACY_STORAGE_KEY = "msb-weekly-report-v1";
+  const ARCHIVE_KEY = "msb-weekly-report-archive-v1";
+  const ARCHIVE_MAX_WEEKS = 104;
+  const BACKUP_APP = "pt-weekly-report";
+  const BACKUP_VERSION = 1;
+  const BACKUP_MAX_BYTES = 5 * 1024 * 1024;
+  const WEEK_KEY_PATTERN = /^\d{4}-W\d{2}$/;
   const DEFAULT_TAGS = ["广东MSB", "香港MSB"];
   const MIN_PROGRESS = 1;
   const MAX_PROGRESS = 100;
@@ -1431,6 +1685,11 @@
     scrollJump: document.getElementById("scrollJump"),
     importOverlay: document.getElementById("importOverlay"),
     importText: document.getElementById("importText"),
+    archiveOverlay: document.getElementById("archiveOverlay"),
+    archiveList: document.getElementById("archiveList"),
+    archiveCount: document.getElementById("archiveCount"),
+    btnArchiveClose: document.getElementById("btnArchiveClose"),
+    backupFile: document.getElementById("backupFile"),
     toast: document.getElementById("toast"),
     toastIcon: document.getElementById("toastIcon"),
     toastText: document.getElementById("toastText"),
@@ -1440,6 +1699,8 @@
   const organizeQueue = { timer: 0, rowId: "" };
   const dragState = { id: "", tag: "" };
   const toastState = { timer: 0, hovering: false, onAction: null };
+  // 往期存档按周倒序常驻内存，只在变化时整体写回本机
+  let archive = [];
   let composing = false;
   let pointerDown = false;
 
@@ -1470,11 +1731,21 @@
     return matched ? Number(matched[1]) : 0;
   }
 
-  function currentWeekRangeText() {
-    const now = new Date();
-    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  /** ISO 周（如 2026-W43）的周一到周日，例如「10/19 – 10/25」；第 1 周是包含 1 月 4 日的那一周 */
+  function weekRangeText(weekKey) {
+    const matched = /^(\d{4})-W(\d{2})$/.exec(String(weekKey || ""));
+    if (!matched) return "";
+    const jan4 = new Date(Number(matched[1]), 0, 4);
+    const monday = new Date(jan4.getFullYear(), 0, 4 - ((jan4.getDay() + 6) % 7) + (Number(matched[2]) - 1) * 7);
     const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
     return (monday.getMonth() + 1) + "/" + monday.getDate() + " – " + (sunday.getMonth() + 1) + "/" + sunday.getDate();
+  }
+
+  /** 往期列表里的周名：今年的只写「第 n 周」，往年的带上年份 */
+  function weekLabel(weekKey) {
+    const label = "第 " + weekNumberOf(weekKey) + " 周";
+    const year = String(weekKey).slice(0, 4);
+    return year === currentWeekKey().slice(0, 4) ? label : year + " 年" + label;
   }
 
   function uid() {
@@ -1731,6 +2002,20 @@
       });
   }
 
+  /** 一份草稿数据（本机存储或备份文件里的）清洗后放进 state；周键不合法时归到当前周 */
+  function applyDraft(data) {
+    state.weekKey = WEEK_KEY_PATTERN.test(String(data.weekKey || "")) ? data.weekKey : currentWeekKey();
+    state.tags = sanitizeTags(data.tags);
+    state.thisWeek = sanitizeItems(data.thisWeek, true);
+    state.nextWeek = sanitizeItems(data.nextWeek, false);
+    // 事项里用到但不在项目列表的标签补回列表，保证每个分组都能选、能加
+    state.thisWeek.concat(state.nextWeek).forEach((item) => {
+      if (!item.tag) item.tag = primaryTag();
+      if (state.tags.indexOf(item.tag) < 0) state.tags.push(item.tag);
+    });
+    state.lastTag = state.tags.indexOf(data.lastTag) >= 0 ? data.lastTag : "";
+  }
+
   /** 读取草稿；没有草稿或数据损坏返回 false */
   function loadState() {
     migrateLegacyStorage();
@@ -1744,16 +2029,7 @@
       return false;
     }
     if (!data || typeof data !== "object") return false;
-    state.weekKey = typeof data.weekKey === "string" ? data.weekKey : currentWeekKey();
-    state.tags = sanitizeTags(data.tags);
-    state.thisWeek = sanitizeItems(data.thisWeek, true);
-    state.nextWeek = sanitizeItems(data.nextWeek, false);
-    // 事项里用到但不在项目列表的标签补回列表，保证每个分组都能选、能加
-    state.thisWeek.concat(state.nextWeek).forEach((item) => {
-      if (!item.tag) item.tag = primaryTag();
-      if (state.tags.indexOf(item.tag) < 0) state.tags.push(item.tag);
-    });
-    state.lastTag = state.tags.indexOf(data.lastTag) >= 0 ? data.lastTag : "";
+    applyDraft(data);
     return true;
   }
 
@@ -1776,6 +2052,74 @@
   function commitEdit() {
     state.weekKey = currentWeekKey();
     persist();
+  }
+
+  /* —— 往期存档：每周一份，只存已填内容 —— */
+
+  /** 清洗一条存档；周键不合法、或本周下周都没有已填事项时返回 null */
+  function sanitizeArchiveEntry(raw) {
+    if (!raw || typeof raw !== "object" || !WEEK_KEY_PATTERN.test(String(raw.weekKey || ""))) return null;
+    const tags = sanitizeTags(raw.tags);
+    const thisWeek = sanitizeItems(raw.thisWeek, true).filter(isFilled);
+    const nextWeek = sanitizeItems(raw.nextWeek, false).filter(isFilled);
+    if (!thisWeek.length && !nextWeek.length) return null;
+    thisWeek.concat(nextWeek).forEach((item) => {
+      if (!item.tag) item.tag = tags[0];
+    });
+    const savedAt = Number(raw.savedAt);
+    return { weekKey: raw.weekKey, savedAt: savedAt > 0 ? savedAt : Date.now(), tags: tags, thisWeek: thisWeek, nextWeek: nextWeek };
+  }
+
+  function readArchive() {
+    try {
+      const raw = localStorage.getItem(ARCHIVE_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return (Array.isArray(list) ? list : []).map(sanitizeArchiveEntry).filter(Boolean);
+    } catch (err) {
+      console.error("读取往期周报失败", err);
+      return [];
+    }
+  }
+
+  function updateArchiveCount() {
+    els.archiveCount.hidden = !archive.length;
+    els.archiveCount.textContent = String(archive.length);
+  }
+
+  /** 换成新的存档列表：按周倒序、超过上限丢掉最早的，再写回本机；写失败返回 false（内存里仍是新列表） */
+  function saveArchive(entries) {
+    archive = entries
+      .slice()
+      .sort((left, right) => (left.weekKey < right.weekKey ? 1 : left.weekKey > right.weekKey ? -1 : 0))
+      .slice(0, ARCHIVE_MAX_WEEKS);
+    updateArchiveCount();
+    try {
+      localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive));
+      return true;
+    } catch (err) {
+      console.error("保存往期周报失败", err);
+      showToast("往期存档写入失败：浏览器存储可能已满，请在「往期」里先导出备份", { warn: true });
+      return false;
+    }
+  }
+
+  /**
+   * 当前草稿存进往期，按草稿所属的周归档，同一周只留最新一份。
+   * 没有已填事项时不存；和这周已存的内容完全一样时不重写。返回 true 表示新存或更新了。
+   */
+  function archiveDraft() {
+    const thisWeek = organizedCopy(state.thisWeek, "this").filter(isFilled).map((item) => (
+      { id: item.id, tag: tagOf(item), title: String(item.title).trim(), progress: item.progress }
+    ));
+    const nextWeek = organizedCopy(state.nextWeek, "next").filter(isFilled).map((item) => (
+      { id: item.id, tag: tagOf(item), title: String(item.title).trim() }
+    ));
+    if (!thisWeek.length && !nextWeek.length) return false;
+    const weekKey = WEEK_KEY_PATTERN.test(state.weekKey) ? state.weekKey : currentWeekKey();
+    const existing = archive.find((entry) => entry.weekKey === weekKey);
+    if (existing && buildReportText(existing.thisWeek, existing.nextWeek) === buildReportText(thisWeek, nextWeek)) return false;
+    const entry = { weekKey: weekKey, savedAt: Date.now(), tags: state.tags.slice(), thisWeek: thisWeek, nextWeek: nextWeek };
+    return saveArchive(archive.filter((other) => other.weekKey !== weekKey).concat([entry]));
   }
 
   /* —— 实时整理：项目顺序 → 本周按进度从低到高；下周保持填写先后 —— */
@@ -1891,18 +2235,18 @@
     return "--proj-bg:" + color.bg + ";--proj-border:" + color.border + ";--proj-text:" + color.text;
   }
 
-  function reportLines(kind) {
-    return listOf(kind).filter(isFilled).map((item, index) => {
+  function reportLines(list, withProgress) {
+    return list.filter(isFilled).map((item, index) => {
       const head = (index + 1) + "、【" + tagOf(item) + "】" + normalizeTitle(item.title);
-      if (kind !== "this" || isBadProgress(item)) return head;
+      if (!withProgress || isBadProgress(item)) return head;
       return head + "（" + clampProgress(item.progress) + "%）";
     });
   }
 
-  /** 复制出去的纯文本，格式需与 parseReportText 保持一致 */
-  function buildReportText() {
-    const thisLines = reportLines("this");
-    const nextLines = reportLines("next");
+  /** 复制出去的纯文本，格式需与 parseReportText 保持一致；不传列表时用当前草稿 */
+  function buildReportText(thisWeek, nextWeek) {
+    const thisLines = reportLines(thisWeek || state.thisWeek, true);
+    const nextLines = reportLines(nextWeek || state.nextWeek, false);
     return ["本周工作重点："]
       .concat(thisLines.length ? thisLines : ["（暂无）"])
       .concat(["", "下周工作计划："])
@@ -2125,7 +2469,7 @@
       els.weekChip.title = "现在是第 " + weekNumberOf(current) + " 周。开始写新的一周可点右侧「下周转本周」；直接修改草稿后此提示会消失";
       return;
     }
-    els.weekChip.textContent = "第 " + weekNumberOf(current) + " 周 · " + currentWeekRangeText();
+    els.weekChip.textContent = "第 " + weekNumberOf(current) + " 周 · " + weekRangeText(current);
     els.weekChip.title = "";
   }
 
@@ -2658,7 +3002,7 @@
     return matched && !isBadProgress(matched) ? clampProgress(matched.progress) : "";
   }
 
-  /** 新一周：下周计划转成本周事项，同项目同名事项带回本周进度，下周清空 */
+  /** 新一周：先把整份草稿存进往期，再把下周计划转成本周事项（同项目同名事项带回本周进度），下周清空 */
   function promoteNextToThis() {
     const plans = state.nextWeek.filter(isFilled);
     if (!plans.length) {
@@ -2667,9 +3011,10 @@
     }
     const hasThis = state.thisWeek.some(isFilled);
     const message = hasThis
-      ? "把下周计划的 " + plans.length + " 项转成本周事项？\n\n· 当前本周内容会被替换\n· 与本周同项目、同内容的事项会带回进度\n· 下周计划会清空"
-      : "把下周计划的 " + plans.length + " 项转成本周事项？\n\n· 进度先留空，填写时补上\n· 下周计划会清空";
+      ? "把下周计划的 " + plans.length + " 项转成本周事项？\n\n· 当前本周内容会被替换（替换前整份存进「往期」）\n· 与本周同项目、同内容的事项会带回进度\n· 下周计划会清空"
+      : "把下周计划的 " + plans.length + " 项转成本周事项？\n\n· 进度先留空，填写时补上\n· 下周计划会清空（清空前存进「往期」）";
     if (!window.confirm(message)) return;
+    const archived = archiveDraft();
 
     const seen = new Set();
     const promoted = [];
@@ -2691,17 +3036,21 @@
     showToast(
       "已转入本周 " + promoted.length + " 项" +
       (carried ? "，其中 " + carried + " 项带回了进度" : "") +
-      "；请补填进度和下周计划"
+      "；请补填进度和下周计划" +
+      (archived ? "。原内容已存进「往期」" : "")
     );
   }
 
+  /** 清空本周和下周；清空前整份存进往期，需要时可在「往期」恢复 */
   function clearAll() {
-    if (!window.confirm("清空本周和下周的全部内容？清空后不能撤销。")) return;
+    const hasContent = state.thisWeek.some(isFilled) || state.nextWeek.some(isFilled);
+    if (hasContent && !window.confirm("清空本周和下周的全部内容？\n清空前会整份存进「往期」，需要时可以在那里恢复。")) return;
+    const archived = archiveDraft();
     state.thisWeek = [emptyItem("this", primaryTag())];
     state.nextWeek = [];
     commitEdit();
     renderAll();
-    showToast("已清空，可以开始写新的一周");
+    showToast(archived ? "已清空，原内容已存进「往期」，可以开始写新的一周" : "已清空，可以开始写新的一周");
   }
 
   /* —— 复制 —— */
@@ -2737,15 +3086,16 @@
     return legacyCopy(text);
   }
 
-  /** 复制前先落实挂起的整理，保证复制结果与预览一致 */
+  /** 复制前先落实挂起的整理，保证复制结果与预览一致；复制成功后这一版存进往期（同周覆盖） */
   function copyReport() {
     flushOrganize();
     const status = getFillStatus();
     const summary = "本周 " + status.thisFilled + " 项 · 下周 " + status.nextFilled + " 项";
     writeClipboard(buildReportText()).then(() => {
+      const archivedNote = archiveDraft() ? "，这一版已存进「往期」" : "";
       const problems = fillProblems(status);
-      if (problems.length) showToast("已复制（" + summary + "），注意：" + problems.join("；"), { warn: true });
-      else showToast("已复制周报（" + summary + "），可直接粘贴");
+      if (problems.length) showToast("已复制（" + summary + "）" + archivedNote + "。注意：" + problems.join("；"), { warn: true });
+      else showToast("已复制周报（" + summary + "），可直接粘贴" + archivedNote);
     }).catch((err) => {
       console.error("复制周报失败", err);
       showToast("复制失败：请在预览里手动选中文字复制", { warn: true });
@@ -2754,23 +3104,31 @@
 
   /* —— 导入成稿 —— */
 
-  function parseItemLine(line, withProgress) {
-    const text = String(line || "").trim();
-    if (!text || /^[（(]\s*暂无\s*[）)]$/.test(text)) return null;
-    const matched = text.match(/^\d+\s*[、.．]\s*【([^】]*)】(.*)$/);
-    if (!matched) return null;
-    const tag = String(matched[1] || "").trim();
-    let rest = String(matched[2] || "").trim();
+  /**
+   * 一行文字转成事项，导入成稿和多行粘贴共用。
+   * 开头的序号（1、 1. (1)）和项目符号（- • ·）去掉；「【项目】」归到该项目，没有就用 fallbackTag；
+   * 末尾的「（80%）」「（已完成）」或「 80%」识别成进度，下周计划不记进度但同样去掉。
+   * 空行、「本周工作重点：」这类标题行、「（暂无）」返回 null。
+   */
+  function parseItemLine(line, withProgress, fallbackTag) {
+    let rest = String(line || "").trim()
+      .replace(/^(?:\d{1,3}\s*(?:[、．)）]|\.(?!\d))|[（(]\d{1,3}[)）]|[-*•·●▪◦](?=\s))\s*/, "")
+      .trim();
+    if (!rest || /^(?:本周工作重点|下周工作计划)\s*[:：]?$/.test(rest) || /^[（(]\s*暂无\s*[）)]$/.test(rest)) return null;
+    let tag = fallbackTag;
+    const tagMatch = rest.match(/^【([^】]*)】\s*([\s\S]*)$/);
+    if (tagMatch) {
+      tag = tagMatch[1].trim() || fallbackTag;
+      rest = tagMatch[2].trim();
+    }
     let progress = "";
-    if (withProgress) {
-      const progressMatch = rest.match(/[（(]\s*(\d+)\s*%\s*[）)]\s*$/);
-      if (progressMatch) {
-        progress = clampProgress(progressMatch[1]);
-        rest = rest.slice(0, progressMatch.index).trim();
-      } else if (/[（(]\s*已完成\s*[）)]\s*$/.test(rest)) {
-        progress = MAX_PROGRESS;
-        rest = rest.replace(/[（(]\s*已完成\s*[）)]\s*$/, "").trim();
-      }
+    const progressMatch = rest.match(/(?:[（(]\s*(\d{1,3})\s*%\s*[）)]|\s(\d{1,3})\s*%)\s*$/);
+    if (progressMatch) {
+      progress = clampProgress(progressMatch[1] || progressMatch[2]);
+      rest = rest.slice(0, progressMatch.index).trim();
+    } else if (/[（(]\s*已完成\s*[）)]\s*$/.test(rest)) {
+      progress = MAX_PROGRESS;
+      rest = rest.replace(/[（(]\s*已完成\s*[）)]\s*$/, "").trim();
     }
     if (!rest) return null;
     return withProgress
@@ -2794,14 +3152,15 @@
         return;
       }
       if (!section) return;
-      const item = parseItemLine(line, section === "this");
+      const item = parseItemLine(line, section === "this", primaryTag());
       if (item) (section === "this" ? parsed.thisWeek : parsed.nextWeek).push(item);
     });
     return parsed;
   }
 
-  function openImportModal() {
-    els.importText.value = "";
+  /** prefill：在事项框里粘贴了整份周报时，直接把内容带进来 */
+  function openImportModal(prefill) {
+    els.importText.value = typeof prefill === "string" ? prefill : "";
     els.importOverlay.classList.add("show");
     els.importOverlay.setAttribute("aria-hidden", "false");
     setTimeout(() => els.importText.focus(), 0);
@@ -2827,14 +3186,11 @@
     }
     const hasLocal = state.thisWeek.some(isFilled) || state.nextWeek.some(isFilled);
     const counts = "本周 " + parsed.thisWeek.length + " 项 · 下周 " + parsed.nextWeek.length + " 项";
-    if (hasLocal && !window.confirm("识别到" + counts + "。\n导入会替换当前的本周和下周内容，确定继续？")) return;
+    if (hasLocal && !window.confirm("识别到" + counts + "。\n导入会替换当前的本周和下周内容（替换前整份存进「往期」），确定继续？")) return;
+    const archived = archiveDraft();
 
     const addedTags = [];
     parsed.thisWeek.concat(parsed.nextWeek).forEach((item) => {
-      if (!item.tag) {
-        item.tag = primaryTag();
-        return;
-      }
       if (state.tags.indexOf(item.tag) < 0) {
         state.tags.push(item.tag);
         addedTags.push(item.tag);
@@ -2845,7 +3201,259 @@
     commitEdit();
     closeImportModal();
     renderAll();
-    showToast("已导入：" + counts + (addedTags.length ? "，新增项目 " + addedTags.join("、") : ""));
+    showToast(
+      "已导入：" + counts +
+      (addedTags.length ? "，新增项目 " + addedTags.join("、") : "") +
+      (archived ? "；原内容已存进「往期」" : "")
+    );
+  }
+
+  /* —— 多行粘贴拆条 —— */
+
+  /**
+   * 事项内容框里粘贴多行文字：按行拆成多条，紧跟在当前行后面，可撤销。
+   * 每行按 parseItemLine 识别序号、项目和进度，没写项目的沿用当前行的项目；
+   * 当前行是空的（或整段选中后粘贴）就用第一行填上，否则全部新增在它后面。
+   * 粘贴的是一整份周报（同时有「本周工作重点」和「下周工作计划」）时改为打开「导入成稿」。
+   * 识别出的事项不足两条时不拦截，按普通粘贴处理。
+   */
+  function onRowsPaste(event) {
+    const target = event.target;
+    if (target.getAttribute("data-field") !== "title" || !event.clipboardData) return;
+    const text = event.clipboardData.getData("text/plain");
+    const lines = text.replace(/\r\n?/g, "\n").split("\n").map((line) => line.trim()).filter(Boolean);
+    if (lines.length < 2) return;
+    if (lines.some((line) => line.indexOf("本周工作重点") === 0) && lines.some((line) => line.indexOf("下周工作计划") === 0)) {
+      event.preventDefault();
+      openImportModal(text);
+      showToast("粘贴的是一整份周报，已放进「导入成稿」，点「确认导入」即可替换当前内容");
+      return;
+    }
+    const row = target.closest(".row");
+    const kind = row ? row.getAttribute("data-kind") : "";
+    const item = row ? findItem(kind, row.getAttribute("data-id")) : null;
+    if (!item) return;
+    const parsed = lines.map((line) => parseItemLine(line, kind === "this", tagOf(item))).filter(Boolean);
+    if (parsed.length < 2) return;
+    event.preventDefault();
+
+    // 1. 记下改动前的整份数据，撤销时原样放回
+    const before = JSON.stringify({ tags: state.tags, lastTag: state.lastTag, thisWeek: state.thisWeek, nextWeek: state.nextWeek });
+    // 2. 当前行可被替换时第一行填进当前行，其余插在它后面
+    const replaceCurrent = isBlankTitle(item) || (target.selectionStart === 0 && target.selectionEnd === target.value.length);
+    const additions = replaceCurrent ? parsed.slice(1) : parsed;
+    if (replaceCurrent) {
+      item.title = parsed[0].title;
+      item.tag = parsed[0].tag;
+      if (kind === "this" && parsed[0].progress !== "") item.progress = parsed[0].progress;
+    }
+    const list = listOf(kind);
+    list.splice(list.indexOf(item) + 1, 0, ...additions);
+    // 3. 行里写了新项目名的，补进项目列表
+    const addedTags = [];
+    parsed.forEach((entry) => {
+      if (state.tags.indexOf(entry.tag) >= 0) return;
+      state.tags.push(entry.tag);
+      addedTags.push(entry.tag);
+    });
+    commitEdit();
+    renderAll();
+    focusRowTitle((additions.length ? additions[additions.length - 1] : item).id);
+
+    const missingProgress = kind === "this" ? parsed.filter((entry) => entry.progress === "").length : 0;
+    showToast(
+      "已按行拆成 " + parsed.length + " 条" +
+      (addedTags.length ? "，新增项目 " + addedTags.join("、") : "") +
+      (missingProgress ? "，其中 " + missingProgress + " 条还没填进度" : ""),
+      {
+        actionLabel: "撤销",
+        onAction: () => {
+          const snapshot = JSON.parse(before);
+          state.tags = snapshot.tags;
+          state.lastTag = snapshot.lastTag;
+          state.thisWeek = snapshot.thisWeek;
+          state.nextWeek = snapshot.nextWeek;
+          commitEdit();
+          renderAll();
+          focusRowTitle(item.id);
+          showToast("已撤销拆分，恢复成粘贴前的样子");
+        }
+      }
+    );
+  }
+
+  /* —— 往期抽屉与备份 —— */
+
+  function formatSavedAt(time) {
+    const date = new Date(time);
+    return (date.getMonth() + 1) + "/" + date.getDate() + " " + pad(date.getHours()) + ":" + pad(date.getMinutes());
+  }
+
+  /** 往期列表；正文在点「查看」时才生成 */
+  function renderArchive() {
+    if (!archive.length) {
+      els.archiveList.innerHTML = '<div class="archive-empty">还没有往期周报<br />复制报告、下周转本周、清空或导入之前，会自动把当时的草稿存到这里</div>';
+      return;
+    }
+    const current = currentWeekKey();
+    els.archiveList.innerHTML = archive.map((entry) => (
+      `<div class="archive-item" data-week="${escapeHtml(entry.weekKey)}">` +
+        '<div class="archive-head">' +
+          `<span class="archive-week">${weekLabel(entry.weekKey)}</span>` +
+          `<span class="archive-range">${weekRangeText(entry.weekKey)}</span>` +
+          (entry.weekKey === current ? '<span class="archive-current">本周</span>' : "") +
+          `<span class="archive-meta">本周 ${entry.thisWeek.length} 项 · 下周 ${entry.nextWeek.length} 项 · ${formatSavedAt(entry.savedAt)} 存档</span>` +
+        "</div>" +
+        '<pre class="archive-text" hidden></pre>' +
+        '<div class="archive-actions">' +
+          '<button type="button" class="btn btn-sm btn-accent" data-archive-action="copy">复制</button>' +
+          '<button type="button" class="btn btn-sm" data-archive-action="view" aria-expanded="false">查看</button>' +
+          '<button type="button" class="btn btn-sm" data-archive-action="restore" title="放回编辑区接着改；当前草稿会先存进往期">恢复到编辑区</button>' +
+          '<button type="button" class="btn btn-sm btn-remove" data-archive-action="delete" title="删除这一周的存档（可撤销）">删除</button>' +
+        "</div>" +
+      "</div>"
+    )).join("");
+  }
+
+  function openArchive() {
+    renderArchive();
+    els.archiveOverlay.hidden = false;
+    els.btnArchiveClose.focus({ preventScroll: true });
+  }
+
+  function closeArchive() {
+    els.archiveOverlay.hidden = true;
+  }
+
+  /** 存档放回编辑区：当前草稿有内容时先确认，并整份存进往期，再替换 */
+  function restoreArchive(entry) {
+    const label = weekLabel(entry.weekKey);
+    const hasLocal = state.thisWeek.some(isFilled) || state.nextWeek.some(isFilled);
+    if (hasLocal && !window.confirm("用" + label + "的存档替换编辑区里的内容？\n当前草稿会先存进「往期」，之后也能找回。")) return;
+    archiveDraft();
+    entry.tags.concat(entry.thisWeek.concat(entry.nextWeek).map(tagOf)).forEach((tag) => {
+      if (state.tags.indexOf(tag) < 0) state.tags.push(tag);
+    });
+    state.thisWeek = entry.thisWeek.map((item) => ({ id: uid(), tag: item.tag, title: item.title, progress: item.progress }));
+    if (!state.thisWeek.length) state.thisWeek = [emptyItem("this", primaryTag())];
+    state.nextWeek = entry.nextWeek.map((item) => ({ id: uid(), tag: item.tag, title: item.title }));
+    // 保留存档所属的周，页头会提示「草稿停在第 n 周」，改动后自动归到本周
+    state.weekKey = entry.weekKey;
+    persist();
+    closeArchive();
+    renderAll();
+    showToast(
+      "已恢复" + label + "的周报，可以接着改或直接复制" +
+      (entry.weekKey !== currentWeekKey() ? "；要以它开始新的一周，点「下周转本周」" : "")
+    );
+  }
+
+  /** 删除一周的存档，7 秒内可撤销 */
+  function deleteArchive(entry) {
+    saveArchive(archive.filter((other) => other !== entry));
+    renderArchive();
+    showToast("已删除" + weekLabel(entry.weekKey) + "的存档", {
+      actionLabel: "撤销",
+      onAction: () => {
+        saveArchive(archive.filter((other) => other.weekKey !== entry.weekKey).concat([entry]));
+        renderArchive();
+        showToast("已恢复" + weekLabel(entry.weekKey) + "的存档");
+      }
+    });
+  }
+
+  function onArchiveListClick(event) {
+    const button = event.target.closest("[data-archive-action]");
+    if (!button) return;
+    const card = button.closest(".archive-item");
+    const entry = archive.find((other) => other.weekKey === card.getAttribute("data-week"));
+    if (!entry) return;
+    const action = button.getAttribute("data-archive-action");
+    if (action === "copy") {
+      writeClipboard(buildReportText(entry.thisWeek, entry.nextWeek)).then(() => {
+        showToast("已复制" + weekLabel(entry.weekKey) + "的周报（本周 " + entry.thisWeek.length + " 项 · 下周 " + entry.nextWeek.length + " 项）");
+      }).catch((err) => {
+        console.error("复制往期周报失败", err);
+        showToast("复制失败：点「查看」后手动选中文字复制", { warn: true });
+      });
+    } else if (action === "view") {
+      const text = card.querySelector(".archive-text");
+      const opening = text.hidden;
+      if (opening) text.textContent = buildReportText(entry.thisWeek, entry.nextWeek);
+      text.hidden = !opening;
+      button.textContent = opening ? "收起" : "查看";
+      button.setAttribute("aria-expanded", String(opening));
+    } else if (action === "restore") {
+      restoreArchive(entry);
+    } else if (action === "delete") {
+      deleteArchive(entry);
+    }
+  }
+
+  /** 当前草稿 + 全部往期打包成一个 JSON 文件下载 */
+  function exportBackup() {
+    const now = new Date();
+    const data = {
+      app: BACKUP_APP,
+      version: BACKUP_VERSION,
+      exportedAt: now.toISOString(),
+      draft: { weekKey: state.weekKey, tags: state.tags, lastTag: state.lastTag, thisWeek: state.thisWeek, nextWeek: state.nextWeek },
+      archive: archive
+    };
+    const fileName = "weekly-report-backup-" + now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + ".json";
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast("已导出备份 " + fileName + "：当前草稿 + 往期 " + archive.length + " 周");
+  }
+
+  /**
+   * 导入「导出备份」得到的 JSON：先校验格式并确认，再把当前草稿存进往期，
+   * 然后草稿整份替换成备份里的，往期按周合并（同一周以备份为准）。
+   */
+  function importBackupFile(file) {
+    if (!file) return;
+    if (file.size > BACKUP_MAX_BYTES) {
+      showToast("文件超过 5 MB，不像是周报备份：请选择「导出备份」得到的 .json", { warn: true });
+      return;
+    }
+    file.text().then((raw) => {
+      // 1. 校验：必须是本工具导出的备份
+      let data = null;
+      try {
+        data = JSON.parse(raw);
+      } catch (err) {
+        console.error("周报备份不是合法的 JSON", err);
+      }
+      if (!data || data.app !== BACKUP_APP || !data.draft || typeof data.draft !== "object") {
+        showToast("这不是周报备份文件：请选择「导出备份」得到的 .json", { warn: true });
+        return;
+      }
+      // 2. 清洗后给出摘要让用户确认
+      const entries = (Array.isArray(data.archive) ? data.archive : []).map(sanitizeArchiveEntry).filter(Boolean);
+      const thisFilled = sanitizeItems(data.draft.thisWeek, true).filter(isFilled).length;
+      const nextFilled = sanitizeItems(data.draft.nextWeek, false).filter(isFilled).length;
+      const summary = "草稿（本周 " + thisFilled + " 项 · 下周 " + nextFilled + " 项）+ 往期 " + entries.length + " 周";
+      if (!window.confirm("导入备份：" + summary + "\n\n· 编辑区的内容会被备份里的草稿替换（替换前先存进「往期」）\n· 往期按周合并，同一周以备份里的为准\n\n确定导入？")) return;
+      // 3. 当前草稿先归档，再合并往期、替换草稿
+      archiveDraft();
+      const backupWeeks = new Set(entries.map((entry) => entry.weekKey));
+      saveArchive(archive.filter((entry) => !backupWeeks.has(entry.weekKey)).concat(entries));
+      applyDraft(data.draft);
+      if (!state.thisWeek.length && !state.nextWeek.length) state.thisWeek = [emptyItem("this", primaryTag())];
+      persist();
+      renderAll();
+      renderArchive();
+      showToast("已导入备份：" + summary);
+    }).catch((err) => {
+      console.error("读取周报备份失败", err);
+      showToast("备份文件读取失败：请重新选择文件", { warn: true });
+    });
   }
 
   /* —— 全局 —— */
@@ -2873,8 +3481,21 @@
       if (button) deleteTag(button.getAttribute("data-tag"));
     });
 
+    document.getElementById("btnArchive").addEventListener("click", openArchive);
     document.getElementById("btnPromote").addEventListener("click", promoteNextToThis);
     document.getElementById("btnClear").addEventListener("click", clearAll);
+    els.btnArchiveClose.addEventListener("click", closeArchive);
+    els.archiveOverlay.addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) closeArchive();
+    });
+    els.archiveList.addEventListener("click", onArchiveListClick);
+    document.getElementById("btnBackupExport").addEventListener("click", exportBackup);
+    document.getElementById("btnBackupImport").addEventListener("click", () => els.backupFile.click());
+    els.backupFile.addEventListener("change", () => {
+      const file = els.backupFile.files[0];
+      els.backupFile.value = "";
+      importBackupFile(file);
+    });
     els.dock.addEventListener("click", onGlobalActionClick);
     els.scrollJump.addEventListener("click", onGlobalActionClick);
     els.previewPanel.addEventListener("click", onGlobalActionClick);
@@ -2894,6 +3515,7 @@
     [els.thisWeekRows, els.nextWeekRows].forEach((container) => {
       container.addEventListener("input", onRowsInput);
       container.addEventListener("keydown", onRowsKeydown);
+      container.addEventListener("paste", onRowsPaste);
       container.addEventListener("click", onRowsClick);
       container.addEventListener("compositionstart", () => {
         composing = true;
@@ -2919,6 +3541,7 @@
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
       closeImportModal();
+      closeArchive();
       closeAllTagSelects();
     });
 
@@ -2950,12 +3573,18 @@
       state.thisWeek = [];
       state.nextWeek = [];
     }
+    archive = readArchive();
+    updateArchiveCount();
+    // 跨周打开时把停在旧周的草稿先存进往期，忘了复制也不会在新一周被覆盖
+    const staleWeek = state.weekKey !== currentWeekKey() ? state.weekKey : "";
+    const archivedStale = staleWeek ? archiveDraft() : false;
     if (!state.thisWeek.length && !state.nextWeek.length) {
       state.thisWeek = [emptyItem("this", primaryTag())];
     }
     bindEvents();
     renderAll();
     persist();
+    if (archivedStale) showToast(weekLabel(staleWeek) + "的周报已自动存进「往期」；开始写新的一周可点「下周转本周」");
   }
 
   init();
