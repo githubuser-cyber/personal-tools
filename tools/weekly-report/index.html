@@ -900,12 +900,12 @@
       align-self: start;
     }
 
+    /* 内容比一屏高时改为跟着页面滚，避免预览被裁成两截小窗 */
+    .preview-col.is-flow { position: static; }
+
     .preview-panel {
       display: flex;
       flex-direction: column;
-      /* 固定高度，本周、下周各自滚动；底栏不挡住下周计划 */
-      height: calc(100vh - 148px);
-      max-height: calc(100vh - 148px);
     }
 
     .preview-head {
@@ -929,33 +929,20 @@
     }
 
     .preview-text {
-      flex: 1 1 auto;
       display: flex;
       flex-direction: column;
       gap: 8px;
-      min-height: 0;
-      overflow: hidden;
     }
 
-    /* 本周占剩余高度，下周单独一块、最多四成五，条目再多也不会把下周挤出视野 */
+    /* 本周、下周各一块，按内容撑开，条目全部露出来 */
     .preview-pane {
       display: flex;
       flex-direction: column;
       gap: 6px;
-      min-height: 0;
-      overflow: auto;
       padding: 10px 12px;
       background: var(--fill);
       border: 1px solid var(--border-lighter);
       border-radius: var(--radius);
-    }
-
-    .preview-pane.is-this { flex: 1 1 auto; }
-
-    .preview-pane.is-next {
-      flex: 0 1 auto;
-      max-height: 45%;
-      min-height: 96px;
     }
 
     .preview-section-title {
@@ -1386,18 +1373,6 @@
       .layout { grid-template-columns: 1fr !important; }
 
       .preview-col { position: static; }
-
-      .preview-panel { height: auto; max-height: none; }
-
-      .preview-text { overflow: visible; }
-
-      .preview-pane.is-this,
-      .preview-pane.is-next {
-        flex: none;
-        max-height: none;
-        min-height: 0;
-        overflow: visible;
-      }
     }
 
     @media (max-width: 700px) {
@@ -2565,6 +2540,18 @@
       item.classList.remove("is-wrap");
       if (item.scrollWidth > fitWidth) item.classList.add("is-wrap");
     });
+    syncPreviewFlow();
+  }
+
+  /** 预览比一屏高时不再吸顶，否则吸住的上半截会把下周计划挡在屏幕外面 */
+  function syncPreviewFlow() {
+    const column = els.previewPanel.closest(".preview-col");
+    if (!column) return;
+    if (window.innerWidth <= SINGLE_COLUMN_MAX_WIDTH) {
+      column.classList.remove("is-flow");
+      return;
+    }
+    column.classList.toggle("is-flow", els.previewPanel.offsetHeight > window.innerHeight - 24);
   }
 
   function refreshPreview() {
