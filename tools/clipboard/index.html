@@ -1198,10 +1198,13 @@
       const RECEIVE_STALL_MS = 5000;
       const CONNECT_FALLBACK_MS = 14000;
       const SHARE_WAIT_MS = 12000;
-      // 在线台数靠对方发来的包刷新；空闲时用心跳续命。后台页 setInterval 会被浏览器拖慢，TTL 要比心跳宽裕
+      // 在线台数靠对方发来的包刷新；心跳同时用来发现假连接。后台页定时器会被拖慢，TTL 要比心跳宽裕
       const PEER_TTL_MS = 20 * 60 * 1000;
       const PEER_PRUNE_MS = 5000;
-      const HEARTBEAT_MS = 5 * 60 * 1000;
+      const HEARTBEAT_MS = 45 * 1000;
+      const MQTT_KEEPALIVE_SEC = 30;
+      const STUCK_RECONNECT_MS = 20000;
+      const RECONNECT_BACKOFF_MS = 15000;
       const SEEN_TTL_MS = 10 * 60 * 1000;
       const PASTE_DEBOUNCE_MS = 400;
       const PROGRESS_PAINT_MS = 80;
@@ -1299,6 +1302,10 @@
       let connectTimer = 0;
       let pruneTimer = 0;
       let heartbeatTimer = 0;
+      let reconnectTimer = 0;
+      let stuckTimer = 0;
+      let sessionUpOnce = false;
+      let lastForceReconnectAt = 0;
       let statusKind = "";
       let lastShellLabel = "";
       let clips = [];
@@ -2387,11 +2394,16 @@
 
       function stopChannel() {
         connected = false;
+        sessionUpOnce = false;
         closeMqttQuiet();
         clearInterval(pruneTimer);
         pruneTimer = 0;
         clearInterval(heartbeatTimer);
         heartbeatTimer = 0;
+        clearTimeout(reconnectTimer);
+        reconnectTimer = 0;
+        clearTimeout(stuckTimer);
+        stuckTimer = 0;
         Object.keys(pendingFiles).forEach((fileId) => clearReceiveWatch(pendingFiles[fileId]));
         peers = Object.create(null);
         pendingFiles = Object.create(null);
@@ -2399,12 +2411,53 @@
         updatePeerUi();
       }
 
-      /** 已连接时定时宣告在线（reply=true，对端只刷新台数、不回包，避免互刷） */
+      /** WebSocket 已关闭但库仍标着 connected 时，要主动拆掉重连，不能等刷新 */
+      function socketOpen() {
+        if (!mqttClient || !mqttClient.connected) return false;
+        const stream = mqttClient.stream;
+        return !stream || stream.readyState === undefined || stream.readyState === 1;
+      }
+
+      /** 库自己的重连卡住时，到点换一条新连接 */
+      function armStuckWatch() {
+        clearTimeout(stuckTimer);
+        stuckTimer = setTimeout(() => {
+          stuckTimer = 0;
+          if (topic && !connected) forceReconnect("重连超时，换一条新连接");
+        }, STUCK_RECONNECT_MS);
+      }
+
+      /**
+       * 强制新建连接。4 秒内只做一次，避免心跳、切页、断线回调叠在一起狂连。
+       * 曾经连上过的会话不会就此放弃，断线后会一直退避重试。
+       */
+      function forceReconnect(reason) {
+        if (!topic) return;
+        const now = Date.now();
+        if (now - lastForceReconnectAt < 4000) return;
+        lastForceReconnectAt = now;
+        console.info("剪贴板重新连接：" + reason);
+        clearTimeout(reconnectTimer);
+        reconnectTimer = 0;
+        clearTimeout(stuckTimer);
+        stuckTimer = 0;
+        mqttUrlIndex = mqttUrlIndex % MQTT_URLS.length;
+        openMqtt();
+      }
+
+      /** 定时探活：套接字已经死了就重连，还活着就发一次不回包的在线宣告 */
+      function probeConnection() {
+        if (!topic) return;
+        if (!socketOpen()) {
+          forceReconnect("心跳发现连接已断开");
+          return;
+        }
+        publishHello(true);
+      }
+
       function startHeartbeat() {
         if (heartbeatTimer) return;
-        heartbeatTimer = setInterval(() => {
-          if (connected) publishHello(true);
-        }, HEARTBEAT_MS);
+        heartbeatTimer = setInterval(probeConnection, HEARTBEAT_MS);
       }
 
       function showJoinedUi(joined) {
@@ -2482,6 +2535,8 @@
        */
       async function openMqtt() {
         if (!topic) return;
+        clearTimeout(stuckTimer);
+        stuckTimer = 0;
         closeMqttQuiet();
         const seq = openSeq;
         const line = mqttUrlIndex % MQTT_URLS.length;
@@ -2506,6 +2561,7 @@
             clean: true,
             reconnectPeriod: 5000,
             connectTimeout: 12000,
+            keepalive: MQTT_KEEPALIVE_SEC,
             protocolVersion: 4,
             will: will ? { topic, payload: will, qos: 0, retain: false } : undefined
           });
@@ -2520,7 +2576,12 @@
         client.on("connect", () => {
           clearTimeout(connectTimer);
           connectTimer = 0;
+          clearTimeout(stuckTimer);
+          stuckTimer = 0;
+          clearTimeout(reconnectTimer);
+          reconnectTimer = 0;
           connected = true;
+          sessionUpOnce = true;
           setStatus("on", "已连接");
           client.subscribe([topic, legacyTopic], { qos: 0 }, (err) => {
             if (!err) {
@@ -2549,11 +2610,13 @@
         client.on("close", () => {
           connected = false;
           if (topic) setStatus("busy", "连接断了，正在自动重连…");
+          if (topic) armStuckWatch();
         });
 
         client.on("offline", () => {
           connected = false;
           setStatus("busy", "网络断开，恢复后自动重连…");
+          if (topic) armStuckWatch();
         });
 
         client.on("error", (err) => {
@@ -2566,14 +2629,27 @@
         }, CONNECT_FALLBACK_MS);
       }
 
-      /** 每条线路最多试两轮，仍连不上就停下等用户点「重新连接」，避免无限重试 */
+      /**
+       * 初次进房：每条线路最多试两轮，仍失败就停下等用户点「重新连接」。
+       * 曾经连上过：不放弃，两条线路轮完后隔一会儿再试，避免挂一夜就得刷新。
+       */
       function tryNextBroker() {
         if (!topic) return;
         closeMqttQuiet();
         mqttUrlIndex += 1;
         if (mqttUrlIndex >= MQTT_URLS.length * 2) {
-          setStatus("err", "连接失败");
-          toast("两条线路都连不上：请检查网络，公司网络可能拦了 8084 / 8884 端口。可点「重新连接」再试", { warn: true });
+          mqttUrlIndex = 0;
+          if (!sessionUpOnce) {
+            setStatus("err", "连接失败");
+            toast("两条线路都连不上：请检查网络，公司网络可能拦了 8084 / 8884 端口。可点「重新连接」再试", { warn: true });
+            return;
+          }
+          setStatus("busy", "连接断了，正在自动重连…");
+          clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(() => {
+            reconnectTimer = 0;
+            if (topic && !connected) openMqtt();
+          }, RECONNECT_BACKOFF_MS);
           return;
         }
         openMqtt();
@@ -2585,12 +2661,11 @@
         openMqtt();
       }
 
-      /** 切回页面、网络恢复、从后台缓存恢复时，连接若已断就立刻重连，不等自动重连的间隔 */
+      /** 切回页面、网络恢复时：套接字已死就立刻重连，还活着就再宣告一次在线 */
       function reconnectIfStale(reason) {
-        if (!topic || (mqttClient && mqttClient.connected)) return;
-        console.info("页面恢复（" + reason + "），连接已断开，立即重连");
-        mqttUrlIndex = mqttUrlIndex % MQTT_URLS.length;
-        openMqtt();
+        if (!topic) return;
+        if (!socketOpen()) forceReconnect(reason);
+        else publishHello(false);
       }
 
       /** 跨工具发送时等连接就绪；超时、出错或已离开房间返回 false */
@@ -2632,9 +2707,10 @@
        * isReply=true：定时心跳，对端只更新「谁在线」、不再回包。
        */
       function publishHello(isReply) {
-        if (!topic || !mqttClient || !mqttClient.connected) return;
+        if (!topic || !socketOpen()) return;
         publishPacket({ type: "hello", id: uid(), at: Date.now(), reply: Boolean(isReply) }, null, 0).catch((err) => {
           console.error("在线宣告失败", err);
+          forceReconnect("在线宣告发不出去");
         });
       }
 
@@ -3356,8 +3432,6 @@
           if (document.hidden) return;
           resetUnreadTitle();
           reconnectIfStale("切回页面");
-          // 后台时心跳可能被拖慢，切回来立刻探一次，把台数补齐
-          if (connected) publishHello(false);
         });
         window.addEventListener("online", () => reconnectIfStale("网络恢复"));
         window.addEventListener("pageshow", (event) => {

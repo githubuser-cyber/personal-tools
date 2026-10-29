@@ -903,7 +903,9 @@
     .preview-panel {
       display: flex;
       flex-direction: column;
-      max-height: calc(100vh - 110px);
+      /* 固定高度，本周、下周各自滚动；底栏不挡住下周计划 */
+      height: calc(100vh - 148px);
+      max-height: calc(100vh - 148px);
     }
 
     .preview-head {
@@ -930,13 +932,30 @@
       flex: 1 1 auto;
       display: flex;
       flex-direction: column;
+      gap: 8px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* 本周占剩余高度，下周单独一块、最多四成五，条目再多也不会把下周挤出视野 */
+    .preview-pane {
+      display: flex;
+      flex-direction: column;
       gap: 6px;
-      min-height: 200px;
+      min-height: 0;
       overflow: auto;
-      padding: 12px;
+      padding: 10px 12px;
       background: var(--fill);
       border: 1px solid var(--border-lighter);
       border-radius: var(--radius);
+    }
+
+    .preview-pane.is-this { flex: 1 1 auto; }
+
+    .preview-pane.is-next {
+      flex: 0 1 auto;
+      max-height: 45%;
+      min-height: 96px;
     }
 
     .preview-section-title {
@@ -1368,7 +1387,17 @@
 
       .preview-col { position: static; }
 
-      .preview-panel { max-height: none; }
+      .preview-panel { height: auto; max-height: none; }
+
+      .preview-text { overflow: visible; }
+
+      .preview-pane.is-this,
+      .preview-pane.is-next {
+        flex: none;
+        max-height: none;
+        min-height: 0;
+        overflow: visible;
+      }
     }
 
     @media (max-width: 700px) {
@@ -2539,7 +2568,9 @@
   }
 
   function refreshPreview() {
-    els.preview.innerHTML = previewSectionHtml("this", "本周工作重点：") + previewSectionHtml("next", "下周工作计划：");
+    els.preview.innerHTML =
+      `<div class="preview-pane is-this">${previewSectionHtml("this", "本周工作重点：")}</div>` +
+      `<div class="preview-pane is-next">${previewSectionHtml("next", "下周工作计划：")}</div>`;
     updateFillBanner();
     updateWeekChip();
     requestAnimationFrame(syncLayoutSplit);
