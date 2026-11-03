@@ -1220,14 +1220,18 @@
       const MAX_SAVED_BYTES = 120 * 1024 * 1024;
       // 硬上限：超过就拒发；图片会先压到 MQTT_FALLBACK_MAX 以下再考虑中继
       const MAX_FILE_BYTES = 80 * 1024 * 1024;
-      const MQTT_FILE_PREFER_MAX = 2 * 1024 * 1024;
+      // 有对端时，超过该体积优先 WebRTC（截图/小图也走直连，避免 MQTT 分片慢、易卡）
+      const MQTT_FILE_PREFER_MAX = 64 * 1024;
+      // 图片超过该体积才压 JPEG（与直连门槛分开，避免小图也被压）
+      const IMAGE_COMPRESS_MIN = 2 * 1024 * 1024;
       const MQTT_FALLBACK_MAX = 8 * 1024 * 1024;
       const MAX_INLINE_BYTES = 96 * 1024;
-      const FILE_CHUNK_BYTES = 120 * 1024;
+      const FILE_CHUNK_BYTES = 160 * 1024;
       const RTC_CHUNK_BYTES = 64 * 1024;
       const UPLOAD_CONCURRENCY = 2;
-      const CHUNK_INFLIGHT = 3;
+      const CHUNK_INFLIGHT = 6;
       const RECEIVE_STALL_MS = 5000;
+      const RECEIVE_AUTO_ASK_MAX = 2;
       const CONNECT_FALLBACK_MS = 14000;
       const SHARE_WAIT_MS = 20000;
       const RTC_CONNECT_TIMEOUT_MS = 22000;
@@ -1878,7 +1882,8 @@
         } else {
           const status = item.upload ? item.upload.status : "";
           const transferring = status === "uploading" || status === "pending" || status === "receiving";
-          const canRereceive = !item.self && !item.url && (status === "receiving" || status === "stalled" || status === "error");
+          // 接收中（含卡在 100%）、卡住、拼装失败都允许重收
+          const canRereceive = !item.self && (status === "receiving" || status === "stalled" || status === "error") && !item.blob;
           const showImage = isImageMime(item.mime) && item.url && !transferring;
           const canPick = IN_SHELL && showImage;
 
@@ -2887,16 +2892,27 @@
         bag.stallTimer = setTimeout(() => onReceiveStalled(fileId), RECEIVE_STALL_MS);
       }
 
-      /** 分片停更超过 RECEIVE_STALL_MS 视为卡住：标记并自动向发送端补要一次缺片 */
+      /** 本机是否已有该 id 的完整文件（有 blob/url 且不在传输中） */
+      function alreadyHaveCompleteFile(id) {
+        const item = findClip(id);
+        return Boolean(item && item.blob && item.url && !item.upload);
+      }
+
+      /** 分片停更超过 RECEIVE_STALL_MS 视为卡住：标记并自动向发送端补要缺片（有限次） */
       function onReceiveStalled(fileId) {
         const bag = pendingFiles[fileId];
-        if (!bag || bag.got >= bag.total) return;
+        if (!bag) return;
+        // 片数已齐却还没出图：直接组包，避免停在「接收中 100%」
+        if (bag.got >= bag.total) {
+          finalizeMqttReceive(fileId, bag);
+          return;
+        }
         const missing = listMissingChunks(bag);
         patchLocal(fileId, {
           upload: { done: bag.got, total: bag.total, status: "stalled", error: "缺 " + missing.length + " 片" }
         });
-        if (bag.autoAsked) return;
-        bag.autoAsked = true;
+        if ((bag.autoAsked || 0) >= RECEIVE_AUTO_ASK_MAX) return;
+        bag.autoAsked = (bag.autoAsked || 0) + 1;
         askFileChunks(fileId, missing, false);
       }
 
@@ -2924,7 +2940,7 @@
         });
       }
 
-      function newReceiveBag(source, total, autoAsked) {
+      function newReceiveBag(source, total, autoAskedCount) {
         return {
           from: source.from || "对端",
           at: source.at || Date.now(),
@@ -2934,8 +2950,9 @@
           total,
           chunks: [],
           got: 0,
-          autoAsked,
-          stallTimer: 0
+          autoAsked: autoAskedCount ? 1 : 0,
+          stallTimer: 0,
+          finalizing: false
         };
       }
 
@@ -2956,7 +2973,7 @@
         };
       }
 
-      /** 手动重收：清空已收分片，请发送端整份重发 */
+      /** 手动重收：清掉已见标记与分片，请发送端整份重发 */
       function requestRereceive(id) {
         const item = findClip(id);
         if (!item) return;
@@ -2964,6 +2981,8 @@
           toast("还没连上，连上后再点「重新接收」", { warn: true });
           return;
         }
+        delete seenIds[item.id];
+        if (item.url && String(item.url).indexOf("blob:") === 0) URL.revokeObjectURL(item.url);
         let bag = pendingFiles[item.id];
         if (!bag) {
           bag = newReceiveBag(item, (item.upload && item.upload.total) || 1, false);
@@ -2972,15 +2991,66 @@
           clearReceiveWatch(bag);
           bag.chunks = [];
           bag.got = 0;
-          bag.autoAsked = false;
+          bag.autoAsked = 0;
+          bag.finalizing = false;
         }
         patchLocal(item.id, { url: "", blob: null, upload: { done: 0, total: bag.total, status: "receiving" } });
         askFileChunks(item.id, rangeIndices(bag.total), true);
       }
 
-      /** 发送端宣告发完：一片都没收到就建占位整份重要，收到部分则只补缺片 */
+      /**
+       * MQTT 分片收齐后组 Blob 并清掉接收态。必须先组包成功再 markSeen，
+       * 避免停在「接收中 100%」且重收被 seenIds 挡掉。
+       */
+      function finalizeMqttReceive(id, bag) {
+        if (!id || !bag) return;
+        if (bag.finalizing) return;
+        bag.finalizing = true;
+        clearReceiveWatch(bag);
+        if (alreadyHaveCompleteFile(id)) {
+          markSeen(id);
+          delete pendingFiles[id];
+          return;
+        }
+        try {
+          const missing = listMissingChunks(bag);
+          if (missing.length) throw new Error("分片不完整，缺 " + missing.length + " 片");
+          const parts = [];
+          for (let index = 0; index < bag.total; index += 1) parts.push(bag.chunks[index]);
+          const blob = new Blob(parts, { type: bag.mime });
+          if (!blob.size) throw new Error("拼出的文件为空");
+          const done = patchLocal(id, {
+            url: URL.createObjectURL(blob),
+            blob: blob,
+            size: bag.size || blob.size,
+            mime: bag.mime,
+            upload: null,
+            fresh: true
+          });
+          markSeen(id);
+          saveClip(done);
+          enforceSavedBytes();
+          toast("收到「" + bag.from + "」发来的 " + bag.fileName);
+          notifyReceived(bag.from, fileSummary(bag.fileName, bag.mime, bag.size || blob.size));
+          delete pendingFiles[id];
+        } catch (err) {
+          console.error("组装文件失败", err);
+          bag.finalizing = false;
+          delete seenIds[id];
+          patchLocal(id, {
+            upload: { done: bag.got, total: bag.total, status: "error", error: "拼装失败，请点「重新接收」" }
+          });
+          toast("收到 " + bag.fileName + " 但拼装失败，请点「重新接收」", { warn: true });
+        }
+      }
+
+      /** 发送端宣告发完：一片都没收到就建占位整份重要；已齐则组包；缺片则补要 */
       function handleFileDone(header) {
-        if (!header.id || seenIds[header.id]) return;
+        if (!header.id) return;
+        if (alreadyHaveCompleteFile(header.id)) {
+          markSeen(header.id);
+          return;
+        }
         let bag = pendingFiles[header.id];
         if (!bag) {
           bag = newReceiveBag(header, header.total || 1, true);
@@ -2989,10 +3059,16 @@
           askFileChunks(header.id, rangeIndices(bag.total), false);
           return;
         }
-        if (bag.got >= bag.total) return;
+        if (bag.got >= bag.total) {
+          finalizeMqttReceive(header.id, bag);
+          return;
+        }
         const missing = listMissingChunks(bag);
-        if (!missing.length) return;
-        bag.autoAsked = true;
+        if (!missing.length) {
+          finalizeMqttReceive(header.id, bag);
+          return;
+        }
+        bag.autoAsked = (bag.autoAsked || 0) + 1;
         askFileChunks(header.id, missing, false);
       }
 
@@ -3017,7 +3093,18 @@
       }
 
       function acceptFileChunk(header, body) {
-        if (!header.id || seenIds[header.id]) return;
+        if (!header.id) return;
+        // 已完整落盘的只忽略重复片；卡在接收中的允许继续收并组包
+        if (alreadyHaveCompleteFile(header.id)) {
+          markSeen(header.id);
+          if (pendingFiles[header.id]) {
+            clearReceiveWatch(pendingFiles[header.id]);
+            delete pendingFiles[header.id];
+          }
+          return;
+        }
+        delete seenIds[header.id];
+
         let bag = pendingFiles[header.id];
         const isNew = !bag;
         if (isNew) {
@@ -3026,6 +3113,7 @@
           pushLocal(receivingItem(header.id, bag));
           toast("「" + bag.from + "」正在发来 " + bag.fileName + "…");
         }
+        if (bag.finalizing) return;
 
         const index = header.index;
         if (index == null || index < 0 || index >= bag.total) return;
@@ -3035,40 +3123,14 @@
         }
         touchReceiveWatch(header.id);
 
-        const complete = bag.got >= bag.total;
-        if (!complete) {
+        if (bag.got < bag.total) {
           patchLocal(header.id, { upload: { done: bag.got, total: bag.total, status: "receiving" } });
           return;
         }
 
-        clearReceiveWatch(bag);
-        if (markSeen(header.id)) {
-          delete pendingFiles[header.id];
-          return;
-        }
-        try {
-          if (listMissingChunks(bag).length) throw new Error("分片不完整");
-          const blob = new Blob(bag.chunks, { type: bag.mime });
-          const done = patchLocal(header.id, {
-            url: URL.createObjectURL(blob),
-            blob,
-            size: bag.size || blob.size,
-            mime: bag.mime,
-            upload: null,
-            fresh: true
-          });
-          saveClip(done);
-          enforceSavedBytes();
-          toast("收到「" + bag.from + "」发来的 " + bag.fileName);
-          notifyReceived(bag.from, fileSummary(bag.fileName, bag.mime, bag.size || blob.size));
-        } catch (err) {
-          console.error("组装文件失败", err);
-          patchLocal(header.id, {
-            upload: { done: bag.got, total: bag.total, status: "error", error: "拼装失败，请点「重新接收」" }
-          });
-          toast("收到 " + bag.fileName + " 但拼装失败，请点「重新接收」", { warn: true });
-        }
-        delete pendingFiles[header.id];
+        // 先把进度刷到 100%，再组包出图，避免界面停在满进度无缩略图
+        patchLocal(header.id, { upload: { done: bag.got, total: bag.total, status: "receiving" } });
+        finalizeMqttReceive(header.id, bag);
       }
 
       /* —— 发送 —— */
@@ -3116,7 +3178,7 @@
         const originalSize = file.size;
         const name = file.name || "文件";
         const mime = file.type || "application/octet-stream";
-        if (!isImageMime(mime) || originalSize <= MQTT_FILE_PREFER_MAX) {
+        if (!isImageMime(mime) || originalSize <= IMAGE_COMPRESS_MIN) {
           return { blob: file, fileName: name, mime: mime, note: "", originalSize: originalSize };
         }
         try {
@@ -3403,19 +3465,28 @@
           }
           if (message.t === "meta") {
             session.meta = message;
-            if (markSeen(message.id)) return;
-            pushLocal({
-              kind: "file",
-              id: message.id,
-              from: offerHeader.from || "对端",
-              at: message.at || Date.now(),
-              fileName: message.fileName || "文件",
-              mime: message.mime || "application/octet-stream",
-              size: message.size || 0,
-              self: false,
-              fresh: true,
-              upload: { done: 0, total: Math.max(1, Math.ceil((message.size || 1) / RTC_CHUNK_BYTES)), status: "receiving" }
-            });
+            // 完整文件已在列表里则忽略；勿在收齐前 markSeen，否则失败后无法重收
+            if (alreadyHaveCompleteFile(message.id)) return;
+            if (!findClip(message.id)) {
+              pushLocal({
+                kind: "file",
+                id: message.id,
+                from: offerHeader.from || "对端",
+                at: message.at || Date.now(),
+                fileName: message.fileName || "文件",
+                mime: message.mime || "application/octet-stream",
+                size: message.size || 0,
+                self: false,
+                fresh: true,
+                upload: { done: 0, total: Math.max(1, Math.ceil((message.size || 1) / RTC_CHUNK_BYTES)), status: "receiving" }
+              });
+            } else {
+              patchLocal(message.id, {
+                url: "",
+                blob: null,
+                upload: { done: 0, total: Math.max(1, Math.ceil((message.size || 1) / RTC_CHUNK_BYTES)), status: "receiving" }
+              });
+            }
             return;
           }
           if (message.t === "done") {
@@ -3430,6 +3501,10 @@
           const total = Math.max(1, Math.ceil(session.meta.size / RTC_CHUNK_BYTES));
           const done = Math.min(total, Math.ceil(session.received / RTC_CHUNK_BYTES));
           patchLocal(session.meta.id, { upload: { done: done, total: total, status: "receiving" } });
+          // done 信令丢失时，字节收齐也直接组包，避免停在 100% 无图
+          if (session.meta.size > 0 && session.received >= session.meta.size) {
+            finishRtcReceive(session, key, offerHeader);
+          }
         }
       }
 
@@ -3440,24 +3515,41 @@
         }
         session.settled = true;
         const meta = session.meta;
-        let offset = 0;
-        const merged = new Uint8Array(session.received);
-        session.chunks.forEach((chunk) => {
-          merged.set(chunk, offset);
-          offset += chunk.length;
-        });
-        const blob = new Blob([merged], { type: meta.mime || "application/octet-stream" });
-        const url = URL.createObjectURL(blob);
-        patchLocal(meta.id, {
-          url: url,
-          blob: blob,
-          size: blob.size,
-          upload: null
-        });
-        saveClip(findClip(meta.id));
-        const from = offerHeader.from || "对端";
-        toast("收到「" + from + "」发来的 " + (meta.fileName || "文件") + "（直连）");
-        notifyReceived(from, fileSummary(meta.fileName, meta.mime, blob.size));
+        try {
+          let offset = 0;
+          const merged = new Uint8Array(session.received);
+          session.chunks.forEach((chunk) => {
+            merged.set(chunk, offset);
+            offset += chunk.length;
+          });
+          if (!merged.byteLength) throw new Error("直连收到空文件");
+          const blob = new Blob([merged], { type: meta.mime || "application/octet-stream" });
+          const url = URL.createObjectURL(blob);
+          patchLocal(meta.id, {
+            url: url,
+            blob: blob,
+            size: blob.size,
+            upload: null,
+            fresh: true
+          });
+          markSeen(meta.id);
+          saveClip(findClip(meta.id));
+          const from = offerHeader.from || "对端";
+          toast("收到「" + from + "」发来的 " + (meta.fileName || "文件") + "（直连）");
+          notifyReceived(from, fileSummary(meta.fileName, meta.mime, blob.size));
+        } catch (err) {
+          console.error("直连组包失败", err);
+          delete seenIds[meta.id];
+          patchLocal(meta.id, {
+            upload: {
+              done: Math.max(1, Math.ceil(session.received / RTC_CHUNK_BYTES)),
+              total: Math.max(1, Math.ceil((meta.size || 1) / RTC_CHUNK_BYTES)),
+              status: "error",
+              error: "直连拼装失败，请让对方重发"
+            }
+          });
+          toast("直连收到文件但拼装失败", { warn: true });
+        }
         closeRtcSession(rtcInbound, key);
       }
 
@@ -3601,8 +3693,8 @@
       }
 
       /**
-       * 真正把文件送出去：有对端且文件偏大时优先 WebRTC 直连；
-       * 直连失败或文件仍 ≤ MQTT_FALLBACK_MAX 时走加密 MQTT 分片。
+       * 真正把文件送出去：有对端且超过 MQTT_FILE_PREFER_MAX 时优先 WebRTC 直连；
+       * 直连失败且体积 ≤ MQTT_FALLBACK_MAX 时走加密 MQTT 分片。
        */
       async function deliverPreparedFile(prepared, id, at, options) {
         const opts = options || {};
