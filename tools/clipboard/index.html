@@ -703,6 +703,33 @@
 
     .clip-actions .btn-text-danger { margin-left: auto; }
 
+    .clip.is-pickable { cursor: default; }
+
+    .clip.is-picked {
+      border-color: var(--primary-border);
+      box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.18);
+    }
+
+    .clip-pick {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-regular);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .clip-pick input {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
     .clip-thumb {
       display: block;
       max-width: 100%;
@@ -1102,10 +1129,10 @@
           </div>
           <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="选择要发送的文件">
             <div class="dz-title">把文件拖到这里，或<b>点击选择</b></div>
-            <div class="dz-sub">图片、文档都行，可多选，单个不超过 8MB</div>
+            <div class="dz-sub">图片、文档可多选；大图会自动压小，优先设备直连（WebRTC），不通再走中继</div>
           </div>
           <input id="fileInput" type="file" hidden multiple />
-          <p class="hint">在本页空白处直接 Ctrl + V：文字立即发出，截图和文件直接上传。</p>
+          <p class="hint">在本页空白处直接 Ctrl + V：文字立即发出，截图和文件直接上传。发之前会先检查连接，断了会自动重连。</p>
         </section>
       </div>
 
@@ -1114,6 +1141,7 @@
           <div class="history-head">
             <h2 class="card-title">最近同步<span class="count" id="historyCount"></span></h2>
             <div class="history-actions">
+              <button type="button" class="btn btn-sm btn-primary" id="stitchSelectedBtn" hidden title="把勾选的图片按时间顺序送去「图片拼接」">拿去拼接</button>
               <button type="button" class="btn btn-sm btn-accent" id="stitchRecentBtn" hidden></button>
               <button type="button" class="btn btn-sm btn-text-danger" id="clearBtn" title="只清空本机列表，其他设备不受影响" hidden>清空本机</button>
             </div>
@@ -1190,14 +1218,27 @@
       const DB_STORE = "clips";
       const MAX_HISTORY = 500;
       const MAX_SAVED_BYTES = 120 * 1024 * 1024;
-      const MAX_FILE_BYTES = 8 * 1024 * 1024;
+      // 硬上限：超过就拒发；图片会先压到 MQTT_FALLBACK_MAX 以下再考虑中继
+      const MAX_FILE_BYTES = 80 * 1024 * 1024;
+      const MQTT_FILE_PREFER_MAX = 2 * 1024 * 1024;
+      const MQTT_FALLBACK_MAX = 8 * 1024 * 1024;
       const MAX_INLINE_BYTES = 96 * 1024;
       const FILE_CHUNK_BYTES = 120 * 1024;
+      const RTC_CHUNK_BYTES = 64 * 1024;
       const UPLOAD_CONCURRENCY = 2;
       const CHUNK_INFLIGHT = 3;
       const RECEIVE_STALL_MS = 5000;
       const CONNECT_FALLBACK_MS = 14000;
-      const SHARE_WAIT_MS = 12000;
+      const SHARE_WAIT_MS = 20000;
+      const RTC_CONNECT_TIMEOUT_MS = 22000;
+      const IMAGE_COMPRESS_MAX_EDGE = 2560;
+      const IMAGE_COMPRESS_QUALITY = 0.82;
+      const RTC_CONFIG = {
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" }
+        ]
+      };
       // 在线台数靠对方发来的包刷新；心跳同时用来发现假连接。后台页定时器会被拖慢，TTL 要比心跳宽裕
       const PEER_TTL_MS = 20 * 60 * 1000;
       const PEER_PRUNE_MS = 5000;
@@ -1235,6 +1276,7 @@
         dropzone: document.getElementById("dropzone"),
         fileInput: document.getElementById("fileInput"),
         historyCount: document.getElementById("historyCount"),
+        stitchSelectedBtn: document.getElementById("stitchSelectedBtn"),
         stitchRecentBtn: document.getElementById("stitchRecentBtn"),
         clearBtn: document.getElementById("clearBtn"),
         clipList: document.getElementById("clipList"),
@@ -1311,6 +1353,10 @@
       let clips = [];
       let peers = Object.create(null);
       let pendingFiles = Object.create(null);
+      // 勾选要拿去拼接的图片 id；WebRTC 会话按 transferId+peer 存
+      const stitchSelected = new Set();
+      const rtcOutbound = Object.create(null);
+      const rtcInbound = Object.create(null);
       let lastPasteAt = 0;
       let uidSeq = 0;
       let progressTimer = 0;
@@ -1834,13 +1880,35 @@
           const transferring = status === "uploading" || status === "pending" || status === "receiving";
           const canRereceive = !item.self && !item.url && (status === "receiving" || status === "stalled" || status === "error");
           const showImage = isImageMime(item.mime) && item.url && !transferring;
+          const canPick = IN_SHELL && showImage;
+
+          if (canPick) {
+            el.classList.add("is-pickable");
+            if (stitchSelected.has(item.id)) el.classList.add("is-picked");
+            const pick = document.createElement("label");
+            pick.className = "clip-pick";
+            pick.title = "勾选后点上方「拿去拼接」";
+            const box = document.createElement("input");
+            box.type = "checkbox";
+            box.checked = stitchSelected.has(item.id);
+            box.addEventListener("click", (event) => event.stopPropagation());
+            box.addEventListener("change", () => {
+              if (box.checked) stitchSelected.add(item.id);
+              else stitchSelected.delete(item.id);
+              el.classList.toggle("is-picked", box.checked);
+              updateHistoryChrome();
+            });
+            pick.appendChild(box);
+            pick.appendChild(document.createTextNode("选去拼接"));
+            meta.insertBefore(pick, meta.firstChild);
+          }
 
           const fileRow = document.createElement("div");
           fileRow.className = "clip-file";
           fileRow.innerHTML =
             '<span class="file-ext">' + escapeHtml(fileExtLabel(item.fileName)) + "</span>" +
             '<div class="file-info"><div class="file-name">' + escapeHtml(item.fileName || "文件") + "</div>" +
-            '<div class="file-size">' + formatBytes(item.size || 0) + "</div></div>";
+            '<div class="file-size">' + formatBytes(item.size || 0) + (item.compressedNote ? " · " + escapeHtml(item.compressedNote) : "") + "</div></div>";
           fileRow.querySelector(".file-name").title = item.fileName || "";
           el.appendChild(fileRow);
 
@@ -1858,7 +1926,7 @@
             el.appendChild(img);
             actions.appendChild(makeButton("复制图片", "btn btn-sm btn-accent", () => copyImage(item.id)));
             if (IN_SHELL) {
-              actions.appendChild(makeButton("拿去拼接", "btn btn-sm", () => openInStitch([item.id]), "在「图片拼接」里打开这张图"));
+              actions.appendChild(makeButton("拿去拼接", "btn btn-sm", () => openInStitch([item.id]), "只送这一张到「图片拼接」"));
             }
           }
           if (item.url && !transferring) {
@@ -1894,6 +1962,14 @@
           .reverse();
       }
 
+      /** 勾选顺序按消息时间从早到晚，和聊天里出现的先后一致 */
+      function selectedImageIdsInOrder() {
+        return clips
+          .filter((item) => stitchSelected.has(item.id) && item.kind === "file" && isImageMime(item.mime) && item.url && !item.upload)
+          .map((item) => item.id)
+          .reverse();
+      }
+
       /** 列表外围：空提示、条数、批量按钮 */
       function updateHistoryChrome() {
         els.emptyHint.hidden = clips.length > 0;
@@ -1902,10 +1978,18 @@
           : "进入房间后，各设备互传的文字、图片和文件都会显示在这里。";
         els.historyCount.textContent = clips.length ? clips.length + " 条" : "";
         els.clearBtn.hidden = !clips.length;
+        // 勾选失效的 id（已删/没收完）清掉
+        Array.from(stitchSelected).forEach((id) => {
+          const item = findClip(id);
+          if (!item || !item.url || item.upload || !isImageMime(item.mime)) stitchSelected.delete(id);
+        });
+        const picked = IN_SHELL ? selectedImageIdsInOrder() : [];
+        els.stitchSelectedBtn.hidden = picked.length === 0;
+        els.stitchSelectedBtn.textContent = picked.length ? "拿去拼接（" + picked.length + "）" : "拿去拼接";
         const imageCount = IN_SHELL ? recentImageItems().length : 0;
         els.stitchRecentBtn.hidden = imageCount < 2;
         els.stitchRecentBtn.textContent = "拼接最近 " + imageCount + " 张图";
-        els.stitchRecentBtn.title = "把最近收到 / 发出的 " + imageCount + " 张图片按时间顺序送去「图片拼接」";
+        els.stitchRecentBtn.title = "把最近收到 / 发出的 " + imageCount + " 张图片按时间顺序送去「图片拼接」；要自己挑几张就勾选后点「拿去拼接」";
       }
 
       function renderHistory() {
@@ -1992,6 +2076,7 @@
         if (!els.lightbox.hidden && item.url && els.lightboxImg.getAttribute("src") === item.url) closeLightbox();
         releaseHistoryItem(item);
         clips.splice(index, 1);
+        stitchSelected.delete(id);
         const node = clipNodes.get(id);
         if (node) node.remove();
         clipNodes.delete(id);
@@ -2005,6 +2090,7 @@
         if (!window.confirm("清空本机的 " + clips.length + " 条记录？其他设备上的不受影响。")) return;
         clips.forEach(releaseHistoryItem);
         clips = [];
+        stitchSelected.clear();
         renderHistory();
         clearSavedClips();
         toast("已清空本机列表");
@@ -2404,9 +2490,11 @@
         reconnectTimer = 0;
         clearTimeout(stuckTimer);
         stuckTimer = 0;
+        closeAllRtcSessions();
         Object.keys(pendingFiles).forEach((fileId) => clearReceiveWatch(pendingFiles[fileId]));
         peers = Object.create(null);
         pendingFiles = Object.create(null);
+        stitchSelected.clear();
         connId = "";
         updatePeerUi();
       }
@@ -2773,6 +2861,10 @@
           notifyReceived(from, textSummary(text));
           return;
         }
+        if (header.type === "rtc-signal") {
+          handleRtcSignal(header).catch((err) => console.error("处理直连信令失败", err));
+          return;
+        }
         if (header.type === "file-chunk") acceptFileChunk(header, packet.body);
         else if (header.type === "file-done") handleFileDone(header);
         else if (header.type === "file-need") handleFileNeed(header);
@@ -2990,11 +3082,383 @@
           toast("没连上服务器，请先点「重新连接」", { warn: true });
           return false;
         }
-        if (!connected) {
+        if (!connected && !socketOpen()) {
           toast("还在连接，等状态变成绿色「已连接」再发", { warn: true });
           return false;
         }
         return true;
+      }
+
+      /** 发送前探活：套接字已死就强制重连，并等到变绿或超时 */
+      async function ensureConnectedForSend(timeoutMs) {
+        if (!room) return false;
+        if (socketOpen() && connected) return true;
+        forceReconnect("发送前发现连接已断");
+        const ok = await waitForConnection(timeoutMs || SHARE_WAIT_MS);
+        if (!ok) toast("没能连上服务器：请检查网络后点「重新连接」", { warn: true });
+        return ok;
+      }
+
+      function onlinePeerIds() {
+        const now = Date.now();
+        return Object.keys(peers).filter((id) => {
+          if (id === deviceId) return false;
+          const peer = peers[id];
+          return peer && now - peer.at <= PEER_TTL_MS;
+        });
+      }
+
+      /**
+       * 图片超过 MQTT 中继舒适上限时压成 JPEG；非图片或压完仍超硬上限则原样返回。
+       * 返回 { blob, fileName, mime, note, originalSize }
+       */
+      async function prepareOutgoingFile(file) {
+        const originalSize = file.size;
+        const name = file.name || "文件";
+        const mime = file.type || "application/octet-stream";
+        if (!isImageMime(mime) || originalSize <= MQTT_FILE_PREFER_MAX) {
+          return { blob: file, fileName: name, mime: mime, note: "", originalSize: originalSize };
+        }
+        try {
+          const bitmap = await createImageBitmap(file);
+          const scale = Math.min(1, IMAGE_COMPRESS_MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+          const width = Math.max(1, Math.round(bitmap.width * scale));
+          const height = Math.max(1, Math.round(bitmap.height * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(bitmap, 0, 0, width, height);
+          bitmap.close();
+          let quality = IMAGE_COMPRESS_QUALITY;
+          let blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+          while (blob && blob.size > MQTT_FALLBACK_MAX && quality > 0.45) {
+            quality -= 0.12;
+            blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+          }
+          if (!blob || blob.size >= originalSize) {
+            return { blob: file, fileName: name, mime: mime, note: "", originalSize: originalSize };
+          }
+          const base = name.replace(/\.[^.]+$/, "") || "图片";
+          return {
+            blob: blob,
+            fileName: base + ".jpg",
+            mime: "image/jpeg",
+            note: "已压到 " + formatBytes(blob.size) + "（原 " + formatBytes(originalSize) + "）",
+            originalSize: originalSize
+          };
+        } catch (err) {
+          console.error("压缩图片失败，改发原图", err);
+          return { blob: file, fileName: name, mime: mime, note: "", originalSize: originalSize };
+        }
+      }
+
+      function closeRtcSession(map, key) {
+        const session = map[key];
+        if (!session) return;
+        clearTimeout(session.timer);
+        try {
+          if (session.channel) session.channel.close();
+        } catch (err) {
+          console.warn("关闭 DataChannel 失败", err);
+        }
+        try {
+          if (session.pc) session.pc.close();
+        } catch (err) {
+          console.warn("关闭 RTCPeerConnection 失败", err);
+        }
+        delete map[key];
+      }
+
+      function closeAllRtcSessions() {
+        Object.keys(rtcOutbound).forEach((key) => closeRtcSession(rtcOutbound, key));
+        Object.keys(rtcInbound).forEach((key) => closeRtcSession(rtcInbound, key));
+      }
+
+      function publishRtcSignal(payload) {
+        return publishPacket(Object.assign({ type: "rtc-signal", id: uid(), at: Date.now() }, payload), null, 0);
+      }
+
+      function wireIce(pc, transferId, peerId, outbound) {
+        pc.onicecandidate = (event) => {
+          if (!event.candidate) return;
+          publishRtcSignal({
+            signal: "ice",
+            transferId: transferId,
+            toDeviceId: peerId,
+            outbound: Boolean(outbound),
+            candidate: event.candidate.toJSON()
+          }).catch((err) => console.error("转发 ICE 失败", err));
+        };
+      }
+
+      function sendDcJson(channel, obj) {
+        channel.send(JSON.stringify(obj));
+      }
+
+      async function pumpFileOverChannel(channel, blob, meta, onProgress) {
+        const buffer = new Uint8Array(await blob.arrayBuffer());
+        sendDcJson(channel, {
+          t: "meta",
+          id: meta.id,
+          at: meta.at,
+          fileName: meta.fileName,
+          mime: meta.mime,
+          size: buffer.length
+        });
+        const total = Math.max(1, Math.ceil(buffer.length / RTC_CHUNK_BYTES));
+        for (let index = 0; index < total; index++) {
+          if (channel.readyState !== "open") throw new Error("DataChannel 已关闭");
+          const slice = buffer.subarray(index * RTC_CHUNK_BYTES, (index + 1) * RTC_CHUNK_BYTES);
+          // 缓冲过大时等一等，避免把通道塞爆
+          while (channel.bufferedAmount > RTC_CHUNK_BYTES * 8) {
+            await new Promise((resolve) => setTimeout(resolve, 16));
+            if (channel.readyState !== "open") throw new Error("DataChannel 已关闭");
+          }
+          channel.send(slice);
+          if (onProgress) onProgress(index + 1, total);
+        }
+        sendDcJson(channel, { t: "done", id: meta.id });
+      }
+
+      /**
+       * 向一名在线对端建 WebRTC 直连并发送文件。信令走已加密的 MQTT。
+       * 超时或失败抛错，由上层决定是否改走 MQTT 中继。
+       */
+      function sendFileToPeerRtc(peerId, blob, fileName, mime, id, at, onProgress) {
+        return new Promise((resolve, reject) => {
+          const key = id + ":" + peerId;
+          closeRtcSession(rtcOutbound, key);
+          const pc = new RTCPeerConnection(RTC_CONFIG);
+          const channel = pc.createDataChannel("file", { ordered: true });
+          const session = { pc: pc, channel: channel, peerId: peerId, timer: 0, settled: false };
+          rtcOutbound[key] = session;
+          wireIce(pc, id, peerId, true);
+
+          const finish = (err) => {
+            if (session.settled) return;
+            session.settled = true;
+            clearTimeout(session.timer);
+            closeRtcSession(rtcOutbound, key);
+            if (err) reject(err);
+            else resolve();
+          };
+
+          session.timer = setTimeout(() => finish(new Error("直连超时")), RTC_CONNECT_TIMEOUT_MS);
+
+          channel.binaryType = "arraybuffer";
+          channel.onopen = () => {
+            pumpFileOverChannel(channel, blob, { id: id, at: at, fileName: fileName, mime: mime }, onProgress)
+              .then(() => finish(null))
+              .catch((err) => finish(err));
+          };
+          channel.onerror = () => finish(new Error("DataChannel 出错"));
+          channel.onclose = () => {
+            if (!session.settled) finish(new Error("DataChannel 关闭"));
+          };
+
+          pc.createOffer()
+            .then((offer) => pc.setLocalDescription(offer))
+            .then(() => publishRtcSignal({
+              signal: "offer",
+              transferId: id,
+              toDeviceId: peerId,
+              sdp: pc.localDescription,
+              fileName: fileName,
+              mime: mime,
+              size: blob.size,
+              fileAt: at
+            }))
+            .catch((err) => finish(err));
+        });
+      }
+
+      /** 有在线对端时走直连；全部失败返回 false，让上层改走 MQTT */
+      async function publishFileViaRtc(blob, fileName, mime, id, at, options) {
+        const opts = options || {};
+        const peerIds = onlinePeerIds();
+        if (!peerIds.length) return false;
+        const totalPeers = peerIds.length;
+        let donePeers = 0;
+        let okCount = 0;
+        await Promise.all(peerIds.map(async (peerId) => {
+          try {
+            await sendFileToPeerRtc(peerId, blob, fileName, mime, id, at, (done, total) => {
+              // 多对端时进度取平均完成度
+              const ratio = (donePeers + done / total) / totalPeers;
+              patchLocal(id, {
+                upload: {
+                  done: Math.max(1, Math.round(ratio * 100)),
+                  total: 100,
+                  status: "uploading"
+                }
+              });
+            });
+            okCount += 1;
+          } catch (err) {
+            console.error("WebRTC 发给「" + (peers[peerId] && peers[peerId].name || peerId) + "」失败", err);
+          } finally {
+            donePeers += 1;
+          }
+        }));
+        if (!okCount) return false;
+        markSeen(id);
+        patchLocal(id, { upload: null, blob: blob, size: blob.size });
+        const item = findClip(id);
+        if (item) saveClip(item);
+        return true;
+      }
+
+      async function handleRtcSignal(header) {
+        if (!header || !header.signal || !header.transferId) return;
+        // 定向信令：不是给我的忽略
+        if (header.toDeviceId && header.toDeviceId !== deviceId) return;
+        const fromId = header.deviceId;
+        if (!fromId || fromId === deviceId) return;
+
+        if (header.signal === "offer") {
+          await acceptRtcOffer(header, fromId);
+          return;
+        }
+        if (header.signal === "answer") {
+          const key = header.transferId + ":" + fromId;
+          const session = rtcOutbound[key];
+          if (!session || !session.pc) return;
+          try {
+            await session.pc.setRemoteDescription(header.sdp);
+          } catch (err) {
+            console.error("设置 RTC answer 失败", err);
+          }
+          return;
+        }
+        if (header.signal === "ice") {
+          const key = header.transferId + ":" + fromId;
+          // 发送端的 ICE outbound=true → 落在接收端 inbound；接收端回的 ICE → 落在发送端 outbound
+          const session = header.outbound ? rtcInbound[key] : rtcOutbound[key];
+          if (!session || !session.pc || !header.candidate) return;
+          try {
+            await session.pc.addIceCandidate(header.candidate);
+          } catch (err) {
+            console.warn("添加 ICE 候选失败", err);
+          }
+        }
+      }
+
+      async function acceptRtcOffer(header, fromId) {
+        const key = header.transferId + ":" + fromId;
+        closeRtcSession(rtcInbound, key);
+        if (typeof RTCPeerConnection !== "function") {
+          toast("当前浏览器不支持直连收文件，请升级浏览器", { warn: true });
+          return;
+        }
+        const pc = new RTCPeerConnection(RTC_CONFIG);
+        const session = {
+          pc: pc,
+          channel: null,
+          peerId: fromId,
+          timer: 0,
+          settled: false,
+          meta: null,
+          chunks: [],
+          received: 0
+        };
+        rtcInbound[key] = session;
+        wireIce(pc, header.transferId, fromId, false);
+        session.timer = setTimeout(() => closeRtcSession(rtcInbound, key), RTC_CONNECT_TIMEOUT_MS + 10000);
+
+        pc.ondatachannel = (event) => {
+          const channel = event.channel;
+          session.channel = channel;
+          channel.binaryType = "arraybuffer";
+          channel.onmessage = (msgEvent) => onRtcReceiveMessage(session, key, header, fromId, msgEvent.data);
+          channel.onclose = () => closeRtcSession(rtcInbound, key);
+        };
+
+        try {
+          await pc.setRemoteDescription(header.sdp);
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await publishRtcSignal({
+            signal: "answer",
+            transferId: header.transferId,
+            toDeviceId: fromId,
+            sdp: pc.localDescription
+          });
+        } catch (err) {
+          console.error("应答 RTC offer 失败", err);
+          closeRtcSession(rtcInbound, key);
+        }
+      }
+
+      function onRtcReceiveMessage(session, key, offerHeader, fromId, data) {
+        if (typeof data === "string") {
+          let message = null;
+          try {
+            message = JSON.parse(data);
+          } catch (err) {
+            console.warn("直连控制消息无法解析", err);
+            return;
+          }
+          if (message.t === "meta") {
+            session.meta = message;
+            if (markSeen(message.id)) return;
+            pushLocal({
+              kind: "file",
+              id: message.id,
+              from: offerHeader.from || "对端",
+              at: message.at || Date.now(),
+              fileName: message.fileName || "文件",
+              mime: message.mime || "application/octet-stream",
+              size: message.size || 0,
+              self: false,
+              fresh: true,
+              upload: { done: 0, total: Math.max(1, Math.ceil((message.size || 1) / RTC_CHUNK_BYTES)), status: "receiving" }
+            });
+            return;
+          }
+          if (message.t === "done") {
+            finishRtcReceive(session, key, offerHeader);
+          }
+          return;
+        }
+        const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : new Uint8Array(data.buffer || data);
+        session.chunks.push(bytes);
+        session.received += bytes.length;
+        if (session.meta) {
+          const total = Math.max(1, Math.ceil(session.meta.size / RTC_CHUNK_BYTES));
+          const done = Math.min(total, Math.ceil(session.received / RTC_CHUNK_BYTES));
+          patchLocal(session.meta.id, { upload: { done: done, total: total, status: "receiving" } });
+        }
+      }
+
+      function finishRtcReceive(session, key, offerHeader) {
+        if (session.settled || !session.meta) {
+          closeRtcSession(rtcInbound, key);
+          return;
+        }
+        session.settled = true;
+        const meta = session.meta;
+        let offset = 0;
+        const merged = new Uint8Array(session.received);
+        session.chunks.forEach((chunk) => {
+          merged.set(chunk, offset);
+          offset += chunk.length;
+        });
+        const blob = new Blob([merged], { type: meta.mime || "application/octet-stream" });
+        const url = URL.createObjectURL(blob);
+        patchLocal(meta.id, {
+          url: url,
+          blob: blob,
+          size: blob.size,
+          upload: null
+        });
+        saveClip(findClip(meta.id));
+        const from = offerHeader.from || "对端";
+        toast("收到「" + from + "」发来的 " + (meta.fileName || "文件") + "（直连）");
+        notifyReceived(from, fileSummary(meta.fileName, meta.mime, blob.size));
+        closeRtcSession(rtcInbound, key);
       }
 
       async function publishFileChunks(blob, fileName, mime, id, at, indices) {
@@ -3079,6 +3543,7 @@
           return;
         }
         if (!ensureCanSend()) return;
+        if (!(await ensureConnectedForSend())) return;
         const id = uid();
         const at = Date.now();
         const encoded = textEncoder.encode(content);
@@ -3092,7 +3557,13 @@
             toast(suffix ? "已发送" + suffix : "已发送，房间里的其他设备会马上收到", { warn: Boolean(suffix) });
             return;
           }
-          await publishFileBlob(new Blob([encoded], { type: "text/plain;charset=utf-8" }), "clipboard.txt", "text/plain", id, at);
+          await deliverPreparedFile({
+            blob: new Blob([encoded], { type: "text/plain;charset=utf-8" }),
+            fileName: "clipboard.txt",
+            mime: "text/plain",
+            note: "",
+            originalSize: encoded.length
+          }, id, at, {});
           els.textInput.value = "";
           toast("文字太长，已打包成 clipboard.txt 发送" + sentSuffix(), { warn: Boolean(sentSuffix()) });
         } catch (err) {
@@ -3104,6 +3575,7 @@
       async function resendItem(id) {
         const item = findClip(id);
         if (!item || !ensureCanSend()) return;
+        if (!(await ensureConnectedForSend())) return;
         try {
           if (item.kind === "text") {
             const textId = uid();
@@ -3119,8 +3591,9 @@
             toast("没法重发：这个文件在本机已经失效了", { warn: true });
             return;
           }
-          await publishFileBlob(blob, item.fileName || "文件", item.mime || blob.type || "application/octet-stream", uid(), Date.now());
-          toast("已重发 " + (item.fileName || "文件") + sentSuffix(), { warn: Boolean(sentSuffix()) });
+          const prepared = await prepareOutgoingFile(new File([blob], item.fileName || "文件", { type: item.mime || blob.type || "application/octet-stream" }));
+          await deliverPreparedFile(prepared, uid(), Date.now(), {});
+          toast("已重发 " + prepared.fileName + (prepared.note ? "（" + prepared.note + "）" : "") + sentSuffix(), { warn: Boolean(sentSuffix()) });
         } catch (err) {
           console.error("重发失败", err);
           toast("重发失败：连接可能断了，稍等变绿后再试", { warn: true });
@@ -3128,65 +3601,154 @@
       }
 
       /**
+       * 真正把文件送出去：有对端且文件偏大时优先 WebRTC 直连；
+       * 直连失败或文件仍 ≤ MQTT_FALLBACK_MAX 时走加密 MQTT 分片。
+       */
+      async function deliverPreparedFile(prepared, id, at, options) {
+        const opts = options || {};
+        const blob = prepared.blob;
+        const fileName = prepared.fileName;
+        const mime = prepared.mime;
+        if (blob.size > MAX_FILE_BYTES) throw new Error("文件超过 " + formatBytes(MAX_FILE_BYTES));
+
+        const localUrl = opts.url || URL.createObjectURL(blob);
+        if (opts.alreadyInList) {
+          patchLocal(id, {
+            url: localUrl,
+            blob: blob,
+            fileName: fileName,
+            mime: mime,
+            size: blob.size,
+            compressedNote: prepared.note || "",
+            upload: { done: 0, total: 100, status: "uploading" }
+          });
+        } else {
+          pushLocal({
+            kind: "file",
+            id: id,
+            from: displayName,
+            at: at,
+            fileName: fileName,
+            mime: mime,
+            size: blob.size,
+            url: localUrl,
+            blob: blob,
+            self: true,
+            compressedNote: prepared.note || "",
+            upload: { done: 0, total: 100, status: "uploading" }
+          });
+        }
+
+        const preferRtc = blob.size > MQTT_FILE_PREFER_MAX && onlinePeerIds().length > 0 && typeof RTCPeerConnection === "function";
+        if (preferRtc) {
+          const ok = await publishFileViaRtc(blob, fileName, mime, id, at, { alreadyInList: true });
+          if (ok) return { mode: "rtc" };
+        }
+        if (blob.size > MQTT_FALLBACK_MAX) {
+          patchLocal(id, {
+            upload: {
+              done: 0,
+              total: 1,
+              status: "error",
+              error: "直连失败，且文件超过中继上限 " + formatBytes(MQTT_FALLBACK_MAX)
+            }
+          });
+          throw new Error("直连失败且超过中继上限");
+        }
+        await publishFileBlob(blob, fileName, mime, id, at, { alreadyInList: true, url: localUrl });
+        return { mode: "mqtt" };
+      }
+
+      /**
        * 发文件；quiet 为 true 时不弹提示（跨工具发送由外壳转告结果）。
-       * 返回 { okCount, failCount, message }：message 是给用户看的完整结果。
+       * 返回 { okCount, failCount, message, warn }
        */
       async function sendFiles(fileList, options) {
         const opts = options || {};
         const files = Array.from(fileList || []);
-        const result = { okCount: 0, failCount: 0, message: "" };
+        const result = { okCount: 0, failCount: 0, message: "", warn: false };
         if (!files.length) return result;
         if (!opts.quiet && !ensureCanSend()) return result;
-        const oversized = files.filter((file) => file.size > MAX_FILE_BYTES);
-        const jobs = files.filter((file) => file.size <= MAX_FILE_BYTES).map((file) => {
-          const job = { file, id: uid(), at: Date.now(), url: URL.createObjectURL(file) };
-          pushLocal({
-            kind: "file",
-            id: job.id,
-            from: displayName,
-            at: job.at,
-            fileName: file.name || "图片.png",
-            mime: file.type || "application/octet-stream",
-            size: file.size,
-            url: job.url,
-            blob: file,
-            self: true,
-            upload: { done: 0, total: Math.max(1, Math.ceil(file.size / FILE_CHUNK_BYTES)), status: "pending" }
-          });
-          return job;
-        });
-        const skippedText = oversized.length
-          ? "；" + oversized.length + " 个超过 8MB 没发：" + oversized.map((file) => file.name).join("、")
-          : "";
-        if (!jobs.length) {
-          result.message = "没有发送：" + oversized.map((file) => file.name).join("、") + " 超过 8MB";
+        if (!(await ensureConnectedForSend())) {
+          result.message = "没连上服务器，请点「重新连接」后再发";
+          result.warn = true;
           if (!opts.quiet) toast(result.message, { warn: true });
           return result;
         }
 
+        const hardReject = [];
+        const jobs = [];
+        for (const file of files) {
+          if (file.size > MAX_FILE_BYTES && !isImageMime(file.type)) {
+            hardReject.push(file.name || "文件");
+            continue;
+          }
+          const prepared = await prepareOutgoingFile(file);
+          if (prepared.blob.size > MAX_FILE_BYTES) {
+            hardReject.push(file.name || "文件");
+            continue;
+          }
+          const id = uid();
+          const at = Date.now();
+          const url = URL.createObjectURL(prepared.blob);
+          pushLocal({
+            kind: "file",
+            id: id,
+            from: displayName,
+            at: at,
+            fileName: prepared.fileName,
+            mime: prepared.mime,
+            size: prepared.blob.size,
+            url: url,
+            blob: prepared.blob,
+            self: true,
+            compressedNote: prepared.note || "",
+            upload: { done: 0, total: 100, status: "pending" }
+          });
+          jobs.push({ prepared: prepared, id: id, at: at, url: url });
+        }
+
+        const skippedText = hardReject.length
+          ? "；" + hardReject.length + " 个超过 " + formatBytes(MAX_FILE_BYTES) + " 没发：" + hardReject.join("、")
+          : "";
+        if (!jobs.length) {
+          result.message = "没有发送：" + (hardReject.join("、") || "没有可选文件");
+          result.warn = true;
+          if (!opts.quiet) toast(result.message, { warn: true });
+          return result;
+        }
+
+        let compressedCount = 0;
+        let rtcCount = 0;
         await runPool(jobs, UPLOAD_CONCURRENCY, async (job) => {
           try {
-            await publishFileBlob(job.file, job.file.name || "图片.png", job.file.type || "application/octet-stream", job.id, job.at, { alreadyInList: true, url: job.url });
+            const delivered = await deliverPreparedFile(job.prepared, job.id, job.at, { alreadyInList: true, url: job.url });
             result.okCount += 1;
+            if (job.prepared.note) compressedCount += 1;
+            if (delivered.mode === "rtc") rtcCount += 1;
           } catch (err) {
             result.failCount += 1;
-            console.error("发送文件失败", job.file.name, err);
+            console.error("发送文件失败", job.prepared.fileName, err);
             patchLocal(job.id, {
               upload: {
                 done: 0,
-                total: Math.max(1, Math.ceil(job.file.size / FILE_CHUNK_BYTES)),
+                total: 1,
                 status: "error",
-                error: "连接可能断了，变绿后点「重发」"
+                error: String(err && err.message || "发送失败，变绿后点「重发」")
               }
             });
           }
         });
 
         const suffix = result.okCount ? sentSuffix() : "";
-        if (result.failCount && result.okCount) result.message = "发出 " + result.okCount + " 个，失败 " + result.failCount + " 个（可点「重发」）" + skippedText;
+        const extras = [];
+        if (compressedCount) extras.push(compressedCount + " 张已自动压小");
+        if (rtcCount) extras.push(rtcCount + " 个走了设备直连");
+        const extraText = extras.length ? "（" + extras.join("，") + "）" : "";
+        if (result.failCount && result.okCount) result.message = "发出 " + result.okCount + " 个，失败 " + result.failCount + " 个（可点「重发」）" + extraText + skippedText;
         else if (result.failCount) result.message = "发送失败，变绿后点「重发」再试" + skippedText;
-        else result.message = "已发送 " + result.okCount + " 个文件" + skippedText + suffix;
-        result.warn = Boolean(result.failCount || oversized.length || suffix);
+        else result.message = "已发送 " + result.okCount + " 个文件" + extraText + skippedText + suffix;
+        result.warn = Boolean(result.failCount || hardReject.length || suffix);
         if (!opts.quiet) toast(result.message, { warn: result.warn });
         return result;
       }
@@ -3207,7 +3769,7 @@
           reply(false, "共享剪贴板还没进房间：先到「共享剪贴板」填口令进房", { needRoom: true });
           return;
         }
-        if (!(await waitForConnection(SHARE_WAIT_MS))) {
+        if (!(await ensureConnectedForSend(SHARE_WAIT_MS))) {
           reply(false, "共享剪贴板没连上服务器，稍后再试；也可以到剪贴板页点「重新连接」");
           return;
         }
@@ -3221,13 +3783,26 @@
 
       async function openInStitch(ids) {
         const items = ids.map(findClip).filter((item) => item && item.url);
-        if (!items.length) return;
+        if (!items.length) {
+          toast("没有可送去拼接的图片", { warn: true });
+          return;
+        }
         try {
           const files = await Promise.all(items.map(async (item) => {
             const blob = await blobOfItem(item);
             return new File([blob], item.fileName || "图片.png", { type: blob.type || item.mime || "image/png" });
           }));
           postToShell({ type: "open-in-stitch", files: files });
+          ids.forEach((id) => {
+            stitchSelected.delete(id);
+            const node = clipNodes.get(id);
+            if (!node) return;
+            node.classList.remove("is-picked");
+            const box = node.querySelector(".clip-pick input");
+            if (box) box.checked = false;
+          });
+          updateHistoryChrome();
+          toast("已把 " + files.length + " 张图送到「图片拼接」");
         } catch (err) {
           console.error("送去拼接失败", err);
           toast("图片读取失败，没能送去拼接", { warn: true });
@@ -3406,6 +3981,9 @@
           els.fileInput.value = "";
         });
         els.clearBtn.addEventListener("click", clearLocalHistory);
+        els.stitchSelectedBtn.addEventListener("click", () => {
+          openInStitch(selectedImageIdsInOrder());
+        });
         els.stitchRecentBtn.addEventListener("click", () => {
           const items = recentImageItems();
           openInStitch(items.map((item) => item.id));
