@@ -827,7 +827,9 @@
   const META_RETRY_MS = 6000;
   const RELAY_WINDOW = 6;
   const DIRECT_WINDOW = 16;
-  const RELAY_STALL_MS = 12000;
+  const RELAY_STALL_MS = 8000;
+  // 中继一轮里已经收到过片，短暂没动静就重要或切直连，别空等整段 stall
+  const RELAY_IDLE_MS = 2500;
   const DIRECT_STALL_MS = 6000;
   const MAX_IDLE_ROUNDS = 4;
   const IDLE_ROUNDS_PER_SOURCE = 2;
@@ -1787,8 +1789,11 @@
       channel.binaryType = "arraybuffer";
       channel.bufferedAmountLowThreshold = DIRECT_BUFFER_LOW_BYTES;
       const markOpen = () => {
+        if (conn.state === "open") return;
         conn.state = "open";
         settle(conn, true);
+        // 中继轮次可能正卡在等剩余分片：直连通了立刻打断，下一轮改走直连
+        wakeRelayForPeer(conn.peerId);
       };
       channel.onopen = markOpen;
       if (channel.readyState === "open") markOpen();
@@ -2361,7 +2366,7 @@
     if (manual) item.auto = true;
     let job = fetchJobs.get(item.id);
     if (!job) {
-      job = { pieces: new Array(pieceCount(item.size)), have: 0, bytes: 0, parts: new Map(), running: false, cancelled: false, onActivity: null, idleBySource: new Map(), via: "" };
+      job = { pieces: new Array(pieceCount(item.size)), have: 0, bytes: 0, parts: new Map(), running: false, cancelled: false, onActivity: null, idleBySource: new Map(), via: "", source: "", preferDirect: false };
       fetchJobs.set(item.id, job);
     }
     if (job.running || fetchQueue.includes(item.id)) return;
@@ -2408,7 +2413,7 @@
 
   /**
    * 这一轮走直连还是中继：true 直连，false 中继，null 两条路都不行。
-   * 中继能承受的大小以内：先走中继马上开始，直连通了下一轮自动切过去；
+   * 中继能承受的大小以内：先走中继马上开始，直连通了当前轮立刻打断切过去；
    * 太大的只能等直连。
    */
   async function chooseDirect(item, source) {
@@ -2429,27 +2434,52 @@
     return missing;
   }
 
-  /** 等这一轮要的分片到齐；期间只要还有数据到就一直等，停顿超过 stallMs 才算卡住 */
-  function waitRound(job, wanted, stallMs) {
+  /** 直连刚开上：正在中继等待的接收立刻结束本轮，改走直连 */
+  function wakeRelayForPeer(peerId) {
+    fetchJobs.forEach((job) => {
+      if (job.via !== "relay" || job.source !== peerId || !job.onActivity) return;
+      job.preferDirect = true;
+      job.onActivity(false);
+    });
+  }
+
+  /**
+   * 等这一轮要的分片到齐。
+   * 有数据到就刷新空闲计时；中继轮若直连已通，或空闲超过 idleMs，提前结束好换路 / 重要
+   */
+  function waitRound(job, wanted, stallMs, idleMs) {
     return new Promise((resolve) => {
       let timer = 0;
+      let sawProgress = false;
+      let settled = false;
       const finish = (outcome) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timer);
         job.onActivity = null;
         resolve(outcome);
       };
-      const check = (refused) => {
+      const arm = (wait) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => finish("stall"), wait);
+      };
+      const check = (refused, fromPiece) => {
         if (job.cancelled) finish("cancelled");
         else if (refused) finish("refused");
+        else if (job.preferDirect && job.via === "relay") finish("upgrade");
         else if (wanted.every((index) => job.pieces[index])) finish("ok");
-        else arm();
-      };
-      const arm = () => {
-        clearTimeout(timer);
-        timer = setTimeout(() => finish("stall"), stallMs);
+        else {
+          if (fromPiece) sawProgress = true;
+          arm(sawProgress && idleMs ? Math.min(stallMs, idleMs) : stallMs);
+        }
       };
       job.onActivity = check;
-      check(false);
+      if (job.preferDirect && job.via === "relay") {
+        finish("upgrade");
+        return;
+      }
+      arm(stallMs);
+      if (wanted.every((index) => job.pieces[index])) finish("ok");
     });
   }
 
@@ -2469,6 +2499,7 @@
         else setStatus(item, "waiting");
         return;
       }
+      job.source = source;
       const viaDirect = await chooseDirect(item, source);
       if (job.cancelled || item.done || !items.has(item.id)) return;
       if (viaDirect === null) {
@@ -2476,13 +2507,17 @@
         return;
       }
       job.via = viaDirect ? "direct" : "relay";
+      job.preferDirect = false;
       setStatus(item, "receiving");
       const wanted = nextMissing(job, viaDirect ? DIRECT_WINDOW : RELAY_WINDOW);
       const request = { t: "req", id: item.id, list: wanted };
       const haveBefore = job.have;
       const requested = viaDirect ? direct.send(source, request, null) : await sendToPeer(source, request, null);
-      const outcome = requested ? await waitRound(job, wanted, viaDirect ? DIRECT_STALL_MS : RELAY_STALL_MS) : "stall";
+      const outcome = requested
+        ? await waitRound(job, wanted, viaDirect ? DIRECT_STALL_MS : RELAY_STALL_MS, viaDirect ? 0 : RELAY_IDLE_MS)
+        : "stall";
       if (outcome === "cancelled") return;
+      if (outcome === "upgrade") continue;
       if (outcome === "refused") {
         const holderSet = holders.get(item.id);
         if (holderSet) holderSet.delete(source);
@@ -2523,7 +2558,7 @@
     job.have += 1;
     job.bytes += bytes.length;
     markDirty(item);
-    if (job.onActivity) job.onActivity(false);
+    if (job.onActivity) job.onActivity(false, true);
   }
 
   /** 直连把一个分片拆成几帧按顺序发来；顺序对不上就丢掉这片，等下一轮重新要 */
@@ -2550,7 +2585,7 @@
       acceptPiece(header.id, index, concatBytes(partial.chunks));
       return;
     }
-    if (job.onActivity) job.onActivity(false);
+    if (job.onActivity) job.onActivity(false, true);
   }
 
   function onRefused(header) {
