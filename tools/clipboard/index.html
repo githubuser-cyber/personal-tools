@@ -2282,6 +2282,12 @@
     const epoch = roomEpoch;
     item.sendState = "sending";
     markDirty(item);
+    // 已经明确没网 / 没连上时，别先显示「发送中」再干等，直接失败好点重试
+    if (!relayUp()) {
+      item.sendState = "failed";
+      markDirty(item);
+      return false;
+    }
     const inline = item.size <= PIECE_BYTES;
     let delivered = false;
     try {
