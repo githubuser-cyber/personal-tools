@@ -630,11 +630,11 @@
         <div class="welcome-inner">
           <p class="eyebrow">个人工具箱</p>
           <h1>今天想用哪个工具？</h1>
-          <p class="lead">三个工具在同一个窗口里切换，互不打断：剪贴板进房后，切去写周报、拼图也一直在线；拼好的长图一键发到手机，手机传来的截图一键拿去拼。</p>
+          <p class="lead">三个工具在同一个窗口里切换，互不打断：剪贴板进房后，切去写周报、拼图也一直在线；拼好的长图一键发到手机，手机传来的截图点一下就加进拼图。</p>
           <div class="welcome-grid" id="welcomeGrid"></div>
           <div class="welcome-foot">
             <span>周报、拼图全程在本机处理，不上传</span>
-            <span>剪贴板用房间口令端到端加密</span>
+            <span>剪贴板用房间码端到端加密</span>
             <span id="installTip">装到桌面后断网也能打开（iPhone 用 Safari「分享 → 添加到主屏幕」）</span>
           </div>
         </div>
@@ -656,10 +656,8 @@
   const LAST_KEY = "pt-shell-last-tab";
   const CLIPBOARD_ROOM_KEY = "pt-clipboard-room";
   const CLIPBOARD_JOINED_KEY = "pt-clipboard-joined";
-  const CLIPBOARD_NOTIFY_KEY = "pt-clipboard-notify";
   const SHELL_SOURCE = "pt-shell";
   const TOOL_SOURCES = { "pt-weekly": "weekly", "pt-stitch": "stitch", "pt-clipboard": "clipboard" };
-  const SW_OPEN_TOOL_MESSAGE = "pt-open-tool";
   const CLIPBOARD_PRELOAD_DELAY_MS = 800;
   const NOTICE_MS = 6000;
   const ICONS = {
@@ -689,8 +687,8 @@
       id: "clipboard",
       name: "共享剪贴板",
       src: "./tools/clipboard/",
-      desc: "手机、电脑互传文字、截图和文件；同一个口令就连上，手机扫码直接进房",
-      tags: ["端到端加密", "扫码进房", "后台通知"],
+      desc: "几台设备进同一个房间，互传文字、图片和文件；连接、发送进度、失败重试都看得见",
+      tags: ["多设备同房间", "大文件直连", "端到端加密"],
       grad: "linear-gradient(135deg, #1677ff, #7c5cff)"
     }
   ];
@@ -929,30 +927,6 @@
     els.notice.classList.remove("show");
   }
 
-  /** 工具箱不在前台时，收到剪贴板内容弹系统通知（需在剪贴板里打开「后台通知」并授权） */
-  function notifySystem(title, body) {
-    if (readStorage(CLIPBOARD_NOTIFY_KEY) !== "1") return;
-    if (!("Notification" in window) || Notification.permission !== "granted") return;
-    if (!document.hidden && document.hasFocus()) return;
-    const options = { body: body, tag: "pt-clipboard", renotify: true, icon: "./icons/icon-192.png", data: { tool: "clipboard" } };
-    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready
-        .then((registration) => registration.showNotification(title, options))
-        .catch((err) => console.error("系统通知发送失败", err));
-      return;
-    }
-    try {
-      const notification = new Notification(title, options);
-      notification.onclick = () => {
-        window.focus();
-        activate("clipboard", true);
-        notification.close();
-      };
-    } catch (err) {
-      console.error("系统通知发送失败", err);
-    }
-  }
-
   function handleClipboardMessage(data) {
     if (data.type === "status") {
       clipboardState.status = String(data.status || "");
@@ -963,7 +937,6 @@
     if (data.type === "received") {
       const title = "共享剪贴板 · 来自「" + String(data.from || "对端") + "」";
       const summary = String(data.summary || "收到新内容");
-      notifySystem(title, summary);
       if (activeId === "clipboard" && !document.hidden) return;
       clipboardState.unread += 1;
       renderClipboardIndicators();
@@ -979,13 +952,14 @@
         message: String(data.message || "")
       });
       if (!data.ok && data.needRoom) {
-        showNotice({ toolId: "clipboard", warn: true, title: "共享剪贴板还没进房间", text: "填好口令进房后，再回来点「发到剪贴板」", hint: "点击去进房" });
+        showNotice({ toolId: "clipboard", warn: true, title: "共享剪贴板还没进房间", text: "填好房间码进房后，再回来点「发到剪贴板」", hint: "点击去进房" });
       }
       return;
     }
+    // 不自动切走：可以在剪贴板里连着点几张，再点提醒过去拼
     if (data.type === "open-in-stitch" && Array.isArray(data.files) && data.files.length) {
-      activate("stitch", true);
       postToTool("stitch", { type: "add-images", files: data.files, from: "共享剪贴板" });
+      showNotice({ toolId: "stitch", title: "已加到图片拼接", text: String(data.files[0].name || "图片"), hint: "点击去拼接" });
     }
   }
 
@@ -1092,12 +1066,6 @@
       clipboardState.unread = 0;
       renderClipboardIndicators();
     });
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.addEventListener("message", (event) => {
-        const data = event.data || {};
-        if (data.type === SW_OPEN_TOOL_MESSAGE && toolById(data.tool)) activate(data.tool, true);
-      });
-    }
     bindInstall();
   }
 

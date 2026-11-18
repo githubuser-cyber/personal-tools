@@ -1596,7 +1596,7 @@
   const TOAST_WARN_MS = 5200;
   const JPEG_QUALITY = 0.92;
   const JPEG_SHARE_QUALITY = 0.75;
-  // 与共享剪贴板单个文件的上限一致
+  // 发到共享剪贴板的图压到 8 MB 以内：设备直连不通、改走服务器中继时也能很快传完
   const SHARE_MAX_BYTES = 8 * 1024 * 1024;
   const SHARE_TIMEOUT_MS = 90000;
   // 长截图去重：每行压成 64 个灰度采样比对；超过 2 万行的图不参与，免得卡顿。误差单位都是 0~255 的平均灰度差
@@ -3693,7 +3693,7 @@
   }
 
   /**
-   * 经工具箱外壳发进共享剪贴板的房间。按导出格式编码；超过剪贴板单个文件 8 MB 上限时，
+   * 经工具箱外壳发进共享剪贴板的房间。按导出格式编码；超过 8 MB 时，
    * PNG 先改用 JPG，仍超限再降低 JPG 质量，还是太大就提示调小导出宽度。
    * 同一时间只发一张；结果由剪贴板回传（share-result）后再提示，久等没回音也会说明
    */
@@ -3725,7 +3725,7 @@
       })
       .then((blob) => {
         if (blob.size > SHARE_MAX_BYTES) {
-          finishShare(requestId, false, label + "压缩后仍有 " + formatBytes(blob.size) + "，超过共享剪贴板 8 MB 上限：把「导出宽度」调小再发");
+          finishShare(requestId, false, label + "压缩后仍有 " + formatBytes(blob.size) + "，超过 8 MB：把「导出宽度」调小再发");
           return;
         }
         const ext = blob.type === "image/jpeg" ? "jpg" : "png";
