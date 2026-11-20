@@ -3280,27 +3280,27 @@
     return fromItems.length ? fromItems : Array.from(transfer.files || []);
   }
 
-  /** 粘贴：有文字就进输入框（由用户点发送），只有图片或文件才直接发出 */
+  /** 粘贴：文字、图片、文件都直接发出（在输入框里 Ctrl+V 也会发剪贴板里的文字，不会只填进输入框） */
   function onPaste(event) {
     if (!room || !event.clipboardData) return;
-    const text = event.clipboardData.getData("text/plain");
-    if (text) {
-      if (document.activeElement === els.textInput) return;
+    const files = filesFromTransfer(event.clipboardData);
+    if (files.length) {
       event.preventDefault();
-      els.textInput.focus({ preventScroll: true });
-      els.textInput.setRangeText(text, els.textInput.selectionStart, els.textInput.selectionEnd, "end");
+      sendFiles(files);
       return;
     }
-    const files = filesFromTransfer(event.clipboardData);
-    if (!files.length) return;
+    const text = event.clipboardData.getData("text/plain");
+    if (!text) return;
     event.preventDefault();
-    sendFiles(files);
+    sendText(text).then((sent) => {
+      if (sent) els.textInput.value = "";
+    });
   }
 
   function bindComposer() {
     const coarsePointer = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-    els.textInput.placeholder = coarsePointer ? "输入或粘贴要发送的文字" : "输入文字，Enter 发送，Shift + Enter 换行";
-    els.composerTip.textContent = coarsePointer ? "选图片或文件后会直接发出" : "粘贴或拖入图片、文件会直接发出";
+    els.textInput.placeholder = coarsePointer ? "输入或粘贴要发送的文字" : "输入文字，Enter 发送，Shift + Enter 换行；Ctrl+V 粘贴文字会直接发出";
+    els.composerTip.textContent = coarsePointer ? "粘贴文字、图片或文件后会直接发出" : "粘贴或拖入文字、图片、文件会直接发出";
     els.btnSend.addEventListener("click", submitText);
     els.textInput.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" || event.shiftKey || event.isComposing || coarsePointer) return;
